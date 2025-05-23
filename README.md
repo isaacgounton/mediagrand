@@ -1,4 +1,4 @@
-![DahoPevi Logo](https://github.com/user-attachments/assets/75173cf4-2502-4710-998b-6b81740ae1bd)
+![DahoPevi Logo](https://www.etugrand.com/logo.png)
 
 # DahoPevi API
 
