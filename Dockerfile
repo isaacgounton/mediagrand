@@ -230,16 +230,20 @@ COPY --from=builder /usr/share/fonts /usr/share/fonts
 COPY --from=builder /usr/local/share/nltk_data /usr/local/share/nltk_data
 COPY --from=builder /app /app
 
+# Add non-free repositories for multimedia packages
+RUN echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list
+
 # Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
     curl \
     fontconfig \
     libssl3 \
     libvpx7 \
-    libx264 \
-    libx265 \
     libnuma1 \
     libmp3lame0 \
     libopus0 \
@@ -249,44 +253,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6 \
     libfontconfig1 \
     libgnutls30 \
-    libaom0 \
-    libdav1d5 \
-    librav1e0 \
     libzimg2 \
     libwebpmux3 \
     libfribidi0 \
     libharfbuzz0b \
+    imagemagick && \
+    # Try to install optional multimedia packages    libwebpmux3 \
+    (apt-get install -y --no-install-recommends libx264-164 libx265-199 libaom3 libdav1d6 librav1e0 || true) && \
+    rm -rf /var/lib/apt/lists/*uzz0b \
     imagemagick \
-    && rm -rf /var/lib/apt/lists/*
-
-# Update library cache
+# Update library cachests/*
 RUN ldconfig
 
-# Create required directories
+# Create required directoriesRUN ldconfig
 RUN mkdir -p /tmp/assets && \
-    mkdir -p /app/public/assets
-
+    mkdir -p /app/public/assetsuired directories
+RUN mkdir -p /tmp/assets && \
 # Set working directory
 WORKDIR /app
-
+# Set working directory
 # Update library cache again after all copies
 RUN ldconfig
-
-# Create appuser
+r all copies
+# Create appuserRUN ldconfig
 RUN useradd -m appuser && \
-    chown -R appuser:appuser /app
-
-# Switch to appuser
+    chown -R appuser:appuser /appuser
+RUN useradd -m appuser && \
+# Switch to appuserappuser:appuser /app
 USER appuser
-
+# Switch to appuser
 # Expose port
 EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
+    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \# Set environment variables
+    PEXELS_API_KEY="" \1 \
+    PATH="/usr/local/bin:${PATH}"O="/tmp/assets/placeholder.mp4" \
     PEXELS_API_KEY="" \
-    PATH="/usr/local/bin:${PATH}"
+
+
+
+CMD ["/app/run_gunicorn.sh"]# Run the application    PATH="/usr/local/bin:${PATH}"
 
 # Run the application
 CMD ["/app/run_gunicorn.sh"]
