@@ -1,5 +1,3 @@
-![DahoPevi Logo](https://www.etugrand.com/logo.png)
-
 # DahoPevi API
 
 A powerful media processing API built with Python and Flask, designed for seamless audio, video, and image manipulation.
@@ -88,7 +86,7 @@ Best for:
 - Automatic scaling
 - Built-in monitoring
 
-[View GCP Setup Guide](https://github.com/isaacgounton/dahopevi/blob/main/docs/cloud-installation/gcp.md)
+[View GCP Setup Guide](docs/cloud-installation/gcp.md)
 
 ### 🌊 Digital Ocean
 Best for:
@@ -96,7 +94,7 @@ Best for:
 - Simplified deployment
 - Consistent pricing
 
-[View DO Setup Guide](https://github.com/isaacgounton/dahopevi/blob/main/docs/cloud-installation/do.md)
+[View DO Setup Guide](docs/cloud-installation/do.md)
 
 ### 🐳 Docker (Self-hosted)
 Best for:
@@ -104,7 +102,7 @@ Best for:
 - Custom infrastructure
 - Local development
 
-[View Docker Guide](https://github.com/isaacgounton/dahopevi/blob/main/docker-compose.md)
+[View Docker Guide](docker-compose.md)
 
 ## Configuration
 
@@ -140,7 +138,7 @@ GUNICORN_TIMEOUT=300      # Process timeout in seconds (default: 30)
 Get dedicated support and connect with other developers:
 
 - [DahoPevi Community](https://www.skool.com/no-code-architects)
-- [Documentation](https://github.com/isaacgounton/dahopevi/docs)
+- [Documentation](docs/README.md)
 - [API GPT Assistant](https://bit.ly/4feDDk4)
 
 ## Contributing

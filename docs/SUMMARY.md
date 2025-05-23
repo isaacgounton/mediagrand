@@ -1,6 +1,6 @@
 # DahoPevi Documentation
 
-* [Welcome to DahoPevi](../README.md)
+* [Welcome to DahoPevi](README.md)
 
 ## 🎥 Video Operations
 * [Advanced Features](video/advanced_features.md)
