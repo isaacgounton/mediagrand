@@ -258,43 +258,35 @@ RUN apt-get update && \
     libfribidi0 \
     libharfbuzz0b \
     imagemagick && \
-    # Try to install optional multimedia packages    libwebpmux3 \
+    # Try to install optional multimedia packages
     (apt-get install -y --no-install-recommends libx264-164 libx265-199 libaom3 libdav1d6 librav1e0 || true) && \
-    rm -rf /var/lib/apt/lists/*uzz0b \
-    imagemagick \
-# Update library cachests/*
+    rm -rf /var/lib/apt/lists/*
+
+# Update library cache
 RUN ldconfig
 
-# Create required directoriesRUN ldconfig
+# Create required directories
 RUN mkdir -p /tmp/assets && \
-    mkdir -p /app/public/assetsuired directories
-RUN mkdir -p /tmp/assets && \
+    mkdir -p /app/public/assets
+
 # Set working directory
 WORKDIR /app
-# Set working directory
-# Update library cache again after all copies
-RUN ldconfig
-r all copies
-# Create appuserRUN ldconfig
+
+# Create appuser
 RUN useradd -m appuser && \
-    chown -R appuser:appuser /appuser
-RUN useradd -m appuser && \
-# Switch to appuserappuser:appuser /app
-USER appuser
+    chown -R appuser:appuser /app
+
 # Switch to appuser
+USER appuser
+
 # Expose port
 EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \# Set environment variables
-    PEXELS_API_KEY="" \1 \
-    PATH="/usr/local/bin:${PATH}"O="/tmp/assets/placeholder.mp4" \
+    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
     PEXELS_API_KEY="" \
-
-
-
-CMD ["/app/run_gunicorn.sh"]# Run the application    PATH="/usr/local/bin:${PATH}"
+    PATH="/usr/local/bin:${PATH}"
 
 # Run the application
 CMD ["/app/run_gunicorn.sh"]
