@@ -234,11 +234,12 @@ COPY --from=builder /app /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
+    curl \
     fontconfig \
-    libssl1.1 \
+    libssl3 \
     libvpx7 \
-    libx264-163 \
-    libx265-199 \
+    libx264 \
+    libx265 \
     libnuma1 \
     libmp3lame0 \
     libopus0 \
@@ -248,10 +249,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6 \
     libfontconfig1 \
     libgnutls30 \
-    libaom3 \
-    libdav1d6 \
+    libaom0 \
+    libdav1d5 \
     librav1e0 \
-    libsvtav1enc1 \
     libzimg2 \
     libwebpmux3 \
     libfribidi0 \
