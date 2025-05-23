@@ -1,7 +1,12 @@
-# Use Python 3.10 base image
-FROM python:3.10-slim
+# Build stage for compiling dependencies
+FROM python:3.10-slim as builder
 
-# Install system dependencies, build tools, and libraries
+# Set build arguments for better resource control
+ARG DOCKER_BUILDKIT=1
+ARG BUILDKIT_INLINE_CACHE=1
+ARG MAKEFLAGS="-j$(nproc)"
+
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -213,5 +218,75 @@ gunicorn --bind 0.0.0.0:8080 \
     app:app' > /app/run_gunicorn.sh && \
     chmod +x /app/run_gunicorn.sh
 
-# Run the shell script
+# Final stage
+FROM python:3.10-slim
+
+# Copy built artifacts from builder stage
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /usr/local/lib /usr/local/lib
+COPY --from=builder /usr/local/include /usr/local/include
+COPY --from=builder /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
+COPY --from=builder /usr/share/fonts /usr/share/fonts
+COPY --from=builder /usr/local/share/nltk_data /usr/local/share/nltk_data
+COPY --from=builder /app /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    ca-certificates \
+    fontconfig \
+    libssl1.1 \
+    libvpx7 \
+    libx264-163 \
+    libx265-199 \
+    libnuma1 \
+    libmp3lame0 \
+    libopus0 \
+    libvorbis0a \
+    libtheora0 \
+    libspeex1 \
+    libfreetype6 \
+    libfontconfig1 \
+    libgnutls30 \
+    libaom3 \
+    libdav1d6 \
+    librav1e0 \
+    libsvtav1enc1 \
+    libzimg2 \
+    libwebpmux3 \
+    libfribidi0 \
+    libharfbuzz0b \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+# Update library cache
+RUN ldconfig
+
+# Create required directories
+RUN mkdir -p /tmp/assets && \
+    mkdir -p /app/public/assets
+
+# Set working directory
+WORKDIR /app
+
+# Update library cache again after all copies
+RUN ldconfig
+
+# Create appuser
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to appuser
+USER appuser
+
+# Expose port
+EXPOSE 8080
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
+    PEXELS_API_KEY="" \
+    PATH="/usr/local/bin:${PATH}"
+
+# Run the application
 CMD ["/app/run_gunicorn.sh"]
