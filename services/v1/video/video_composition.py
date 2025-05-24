@@ -53,11 +53,18 @@ class RemotionRenderer:
         """
         try:
             # Prepare scene data
+            # Calculate duration from captions
+            duration = max(caption["end"] for caption in captions) + 1.0  # Add 1 second padding
+            
             scene_data = self._prepare_scene_data(
                 video_url=video_url,
                 audio_url=audio_url,
                 captions=captions,
-                config=config
+                config={
+                    **config,
+                    "orientation": orientation,
+                    "duration": duration
+                }
             )
             
             # Create temporary JSON file with scene data

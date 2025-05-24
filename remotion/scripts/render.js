@@ -7,6 +7,13 @@ async function bundleVideo() {
   const bundled = await bundle(path.join(__dirname, '../src/index.ts'), {
     port: 3000,
     publicPath: '/',
+    webpackOverride: (config) => {
+      // Remove the progress plugin that's causing the error
+      config.plugins = config.plugins.filter(
+        (plugin) => plugin.constructor.name !== 'ProgressPlugin'
+      );
+      return config;
+    }
   });
   return bundled;
 }
@@ -21,11 +28,13 @@ async function renderVideo(props, output) {
     const compositionId = props.config.orientation === 'portrait' ? 'PortraitVideo' : 'LandscapeVideo';
     const composition = await selectComposition({
       serveUrl: bundled.url,
-      id: compositionId,
+      id: compositionId || 'PortraitVideo',
+      inputProps: props
     });
 
-    // Calculate duration based on audio length
-    const durationInFrames = Math.ceil(props.config.duration * composition.fps);
+    // Use provided duration or fallback to 30 seconds
+    const duration = props.config?.duration || 30;
+    const durationInFrames = Math.ceil(duration * composition.fps);
 
     // Start the rendering
     await renderMedia({
