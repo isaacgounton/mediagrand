@@ -220,9 +220,17 @@ WORKDIR /app
 # Create placeholder video file
 RUN ffmpeg -f lavfi -i color=c=black:s=1280x720:d=10 -c:v libx264 /tmp/assets/placeholder.mp4
 
+# Create music directory and default music files
+RUN mkdir -p /tmp/music && \
+    ffmpeg -f lavfi -i "sine=frequency=440:duration=30" -c:a libmp3lame /tmp/music/default.mp3 && \
+    ffmpeg -f lavfi -i "sine=frequency=523:duration=30" -c:a libmp3lame /tmp/music/upbeat_default.mp3 && \
+    ffmpeg -f lavfi -i "sine=frequency=349:duration=30" -c:a libmp3lame /tmp/music/calm_default.mp3 && \
+    ffmpeg -f lavfi -i "sine=frequency=294:duration=30" -c:a libmp3lame /tmp/music/sad_default.mp3
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
+    DEFAULT_BACKGROUND_VIDEO="/tmp/assets/placeholder.mp4" \
+    DEFAULT_BACKGROUND_MUSIC="/tmp/music/default.mp3" \
     PEXELS_API_KEY=""
 
 RUN echo '#!/bin/bash\n\
@@ -245,6 +253,8 @@ COPY --from=builder /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
 COPY --from=builder /usr/share/fonts /usr/share/fonts
 COPY --from=builder /usr/local/share/nltk_data /usr/local/share/nltk_data
 COPY --from=builder /app /app
+COPY --from=builder /tmp/assets /tmp/assets
+COPY --from=builder /tmp/music /tmp/music
 
 # Add non-free repositories for multimedia packages
 RUN echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list && \
@@ -303,7 +313,8 @@ EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
+    DEFAULT_BACKGROUND_VIDEO="/tmp/assets/placeholder.mp4" \
+    DEFAULT_BACKGROUND_MUSIC="/tmp/music/default.mp3" \
     PEXELS_API_KEY="" \
     PATH="/usr/local/bin:${PATH}" \
     NODE_ENV="production"

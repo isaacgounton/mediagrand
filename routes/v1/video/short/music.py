@@ -105,3 +105,33 @@ def get_music_by_mood(mood: str):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@music_bp.route('/tags', methods=['GET'])
+def get_music_tags():
+    """Get available music tags/moods for short videos."""
+    try:
+        from services.v1.video.short.short_video_music import get_available_music_tags
+        music_tags = get_available_music_tags()
+        return jsonify({"tags": music_tags}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@music_bp.route('/by-tempo/<tempo>', methods=['GET'])
+def get_music_by_tempo(tempo: str):
+    """Get music tags filtered by tempo."""
+    try:
+        from services.v1.video.short.short_video_music import get_music_by_tempo
+        music_tags = get_music_by_tempo(tempo)
+        return jsonify({"tracks": music_tags}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@music_bp.route('/recommendations/<content_type>', methods=['GET'])
+def get_music_recommendations(content_type: str):
+    """Get music recommendations based on content type."""
+    try:
+        from services.v1.video.short.short_video_music import get_music_recommendations
+        recommendations = get_music_recommendations(content_type)
+        return jsonify({"recommendations": recommendations}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -150,6 +150,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             # Search for background video
             videos = pexels.search_videos(" ".join(scenes[i]["search_terms"]), orientation=orientation)
             
+            background_video_path = None
             if videos:
                 video = videos[0]
                 video_files = video.get("video_files", [])
@@ -162,7 +163,18 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                     video_filename = f"background_{job_id}_scene_{i}.mp4"
                     video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
                     pexels.download_video(suitable_video["link"], video_path)
-                    scene_data["background_video"] = video_path
+                    background_video_path = video_path
+            
+            # Use default background video if no background video found
+            if not background_video_path:
+                default_video = os.environ.get('DEFAULT_BACKGROUND_VIDEO', '/tmp/assets/placeholder.mp4')
+                if os.path.exists(default_video):
+                    background_video_path = default_video
+                    logger.warning(f"Job {job_id}: No background video found for scene {i+1}, using default background video")
+                else:
+                    raise Exception(f"No background video found for scene {i+1} and no default background video available")
+            
+            scene_data["background_video"] = background_video_path
         
         update_processing_stage(job_id, "video_search", "completed")
         update_processing_stage(job_id, "video_rendering", "processing")
@@ -182,6 +194,11 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             background_music = music_manager.get_music_by_mood(music_tag)
             if not background_music:
                 logger.warning(f"No music found for mood: {music_tag}")
+                # Try to use default background music from environment
+                default_music = os.environ.get('DEFAULT_BACKGROUND_MUSIC')
+                if default_music and os.path.exists(default_music):
+                    background_music = default_music
+                    logger.info(f"Using default background music: {default_music}")
 
         # Convert local paths to URLs that Remotion can access
         video_url = f"file://{scene['background_video']}"

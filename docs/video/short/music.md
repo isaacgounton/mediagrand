@@ -5,7 +5,7 @@ Endpoints for managing background music in short videos. Supports mood-based mus
 
 ## Base URL
 ```
-https://api.example.com/v1/video/short/music
+/v1/video/short/music
 ```
 
 ## Endpoints
@@ -54,7 +54,7 @@ Upload a new music track with mood categorization.
 
 **Curl Example**
 ```bash
-curl -X POST https://api.example.com/v1/video/short/music/upload \
+curl -X POST https://api.dahopevi.com/v1/video/short/music/upload \
   -F "file=@track.mp3" \
   -F "mood=upbeat" \
   -F "name=my_happy_tune"
@@ -67,7 +67,7 @@ curl -X POST https://api.example.com/v1/video/short/music/upload \
   "name": "my_happy_tune.mp3",
   "mood": "upbeat",
   "duration": 180.5,
-  "url": "https://api.example.com/music/my_happy_tune.mp3"
+  "url": "https://api.dahopevi.com/music/my_happy_tune.mp3"
 }
 ```
 
@@ -96,14 +96,14 @@ Retrieves a list of music tracks for a specific mood.
       "name": "happy_tune_1.mp3",
       "mood": "upbeat",
       "duration": 180.5,
-      "url": "https://api.example.com/music/happy_tune_1.mp3"
+      "url": "https://api.dahopevi.com/music/happy_tune_1.mp3"
     },
     {
       "id": "music_12346",
       "name": "happy_tune_2.mp3",
       "mood": "upbeat",
       "duration": 150.0,
-      "url": "https://api.example.com/music/happy_tune_2.mp3"
+      "url": "https://api.dahopevi.com/music/happy_tune_2.mp3"
     }
   ]
 }
