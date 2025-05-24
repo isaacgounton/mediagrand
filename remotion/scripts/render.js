@@ -7,23 +7,36 @@ async function bundleVideo() {
   const bundled = await bundle(path.join(__dirname, '../src/index.ts'), {
     port: 3000,
     publicPath: '/',
+    enableCaching: false,
+    logLevel: 'error',
     webpackOverride: (config) => {
-      // Remove all progress plugins that might cause issues
+      // Completely remove all plugins and add only essential ones
+      const essentialPlugins = [];
+      
       if (config.plugins) {
-        config.plugins = config.plugins.filter(
-          (plugin) => {
-            const name = plugin.constructor.name;
-            return name !== 'ProgressPlugin' && name !== 'webpack.ProgressPlugin';
+        config.plugins.forEach(plugin => {
+          const name = plugin.constructor.name;
+          // Keep only essential plugins, exclude all progress-related ones
+          if (name !== 'ProgressPlugin' && 
+              name !== 'webpack.ProgressPlugin' &&
+              !name.includes('Progress')) {
+            essentialPlugins.push(plugin);
           }
-        );
+        });
       }
       
-      // Disable progress reporting completely
-      config.stats = 'errors-only';
-      config.infrastructureLogging = { level: 'error' };
+      config.plugins = essentialPlugins;
+      
+      // Disable all progress and logging
+      config.stats = false;
+      config.infrastructureLogging = { level: 'silent' };
       
       return config;
-    }
+    },
+    // Disable progress callback entirely
+    onProgress: undefined,
+    onBrowserLog: () => {},
+    onDownload: () => {}
   });
   return bundled;
 }

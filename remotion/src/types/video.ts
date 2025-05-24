@@ -9,6 +9,9 @@ export interface VideoConfig {
   captionBackgroundColor: string;
   musicVolume: 'low' | 'medium' | 'high' | 'muted';
   musicUrl?: string;
+  orientation?: 'portrait' | 'landscape';
+  duration?: number;
+  paddingBack?: number;
 }
 
 export interface VideoProps {
