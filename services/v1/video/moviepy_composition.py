@@ -104,7 +104,7 @@ class MoviePyRenderer:
             method='caption',
             size=(width - 40, None),  # Leave 20px margin on each side
             align='center'
-        ).set_position(pos).set_start(caption["start"]).set_end(caption["end"])
+        ).with_position(pos).with_start(caption["start"]).with_end(caption["end"])
         
         return txt_clip
     
@@ -123,20 +123,16 @@ class MoviePyRenderer:
             if video_ratio > target_ratio:
                 # Video is wider, crop width
                 new_width = int(video_clip.h * target_ratio)
-                video_clip = video_clip.crop(
-                    x1=(video_clip.w - new_width) // 2,
-                    width=new_width
-                )
+                x1 = (video_clip.w - new_width) // 2
+                video_clip = video_clip.cropped(x1=x1, x2=x1+new_width)
             else:
                 # Video is taller, crop height
                 new_height = int(video_clip.w / target_ratio)
-                video_clip = video_clip.crop(
-                    y1=(video_clip.h - new_height) // 2,
-                    height=new_height
-                )
+                y1 = (video_clip.h - new_height) // 2
+                video_clip = video_clip.cropped(y1=y1, y2=y1+new_height)
             
             # Resize to exact target size
-            video_clip = video_clip.resize(target_size)
+            video_clip = video_clip.resized(target_size)
             
             # Loop or trim video to match desired duration
             if video_clip.duration < duration:
@@ -145,7 +141,7 @@ class MoviePyRenderer:
                 video_clip = concatenate_videoclips([video_clip] * loops_needed)
             
             # Trim to exact duration
-            video_clip = video_clip.subclip(0, duration)
+            video_clip = video_clip.subclipped(0, duration)
             
             return video_clip
             
@@ -172,7 +168,7 @@ class MoviePyRenderer:
                     music_audio = concatenate_audioclips([music_audio] * loops_needed)
                 
                 # Trim music to duration and set volume
-                music_audio = music_audio.subclip(0, duration).volumex(music_volume)
+                music_audio = music_audio.subclipped(0, duration).with_volume_scaled(music_volume)
                 audio_clips.append(music_audio)
             
             # Create composite audio
@@ -252,7 +248,7 @@ class MoviePyRenderer:
             final_video = CompositeVideoClip(video_clips, size=target_size)
             
             # Set audio
-            final_video = final_video.set_audio(composite_audio)
+            final_video = final_video.with_audio(composite_audio)
             
             # Render final video
             logger.info("Rendering final video...")
