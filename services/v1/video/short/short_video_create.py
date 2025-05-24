@@ -284,10 +284,17 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                     background_music = default_music
                     logger.info(f"Using default background music: {default_music}")
 
-        # Convert local paths to URLs that Remotion can access
-        video_url = f"file://{scene['background_video']}"
-        audio_url = f"file://{scene['audio_path']}"
-        music_url = f"file://{background_music}" if background_music else None
+        # Convert local paths to HTTP URLs using the file serving endpoint
+        def path_to_http_url(file_path):
+            if file_path and os.path.exists(file_path):
+                # Get relative path from LOCAL_STORAGE_PATH
+                rel_path = os.path.relpath(file_path, LOCAL_STORAGE_PATH)
+                return f"http://localhost:8080/v1/media/files/{rel_path}"
+            return None
+        
+        video_url = path_to_http_url(scene['background_video'])
+        audio_url = path_to_http_url(scene['audio_path'])
+        music_url = path_to_http_url(background_music) if background_music else None
         
         remotion_config = {
             "caption_position": caption_position,

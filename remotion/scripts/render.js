@@ -64,7 +64,11 @@ async function renderVideo(props, output) {
           '--disable-renderer-backgrounding',
           '--allow-file-access-from-files',
           '--disable-web-security',
-          '--allow-running-insecure-content'
+          '--allow-running-insecure-content',
+          '--disable-features=VizDisplayCompositor',
+          '--allow-file-access',
+          '--disable-extensions-file-access-check',
+          '--disable-security-features'
         ]
       },
     });

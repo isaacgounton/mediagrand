@@ -33,6 +33,7 @@
 * [Feedback Handling](media/feedback.md)
 * [Media Transcription](media/media_transcribe.md)
 * [Metadata Management](media/metadata.md)
+* [Serve Local Files](media/serve_files.md)
 * [Silence Detection](media/silence.md)
 
 ### Media Conversion
