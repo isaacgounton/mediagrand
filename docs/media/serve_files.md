@@ -1,6 +1,6 @@
 # Serve Local Files
 
-This endpoint provides HTTP access to files stored in the local storage directory for use by services like Remotion video rendering.
+This endpoint provides HTTP access to files stored in the local storage directory for use by services like MoviePy video rendering.
 
 ## Endpoint
 
@@ -79,8 +79,8 @@ Invalid file path
 
 ## Use Cases
 
-### Remotion Video Rendering
-This endpoint is primarily used by the Remotion video rendering system to serve media files to the headless browser:
+### MoviePy Video Rendering
+This endpoint is primarily used by the MoviePy video rendering system to serve media files:
 
 ```python
 # Convert local path to HTTP URL

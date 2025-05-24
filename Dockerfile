@@ -6,11 +6,8 @@ ARG DOCKER_BUILDKIT=1
 ARG BUILDKIT_INLINE_CACHE=1
 ARG MAKEFLAGS="-j$(nproc)"
 
-# Install Node.js and build dependencies
+# Install build dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -202,24 +199,7 @@ EXPOSE 8080
 
 # Create directories for assets (no chown needed since we're already appuser)
 RUN mkdir -p /tmp/assets && \
-    mkdir -p /app/public/assets && \
-    mkdir -p /app/remotion
-
-# Setup Remotion environment (switch back to root temporarily)
-USER root
-WORKDIR /app/remotion
-
-# Install dependencies and build Remotion with proper permissions
-ENV NODE_ENV=production
-RUN chmod +x init.sh && \
-    ./init.sh && \
-    chown -R appuser:appuser /app/remotion
-
-# Switch back to appuser
-USER appuser
-
-# Back to app directory
-WORKDIR /app
+    mkdir -p /app/public/assets
 
 # Create placeholder video file
 RUN ffmpeg -f lavfi -i color=c=black:s=1280x720:d=10 -c:v libx264 /tmp/assets/placeholder.mp4
@@ -265,11 +245,8 @@ RUN echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-fr
     echo "deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
     echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list
 
-# Install Node.js and runtime dependencies
+# Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -291,39 +268,6 @@ RUN apt-get update && \
     libfribidi0 \
     libharfbuzz0b \
     imagemagick \
-    # Chrome/Chromium dependencies for Remotion browser rendering
-    libnss3 \
-    libnspr4 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libxss1 \
-    libasound2 \
-    libatspi2.0-0 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
-    libxcursor1 \
-    libxi6 \
-    libxrender1 \
-    libxtst6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxext6 \
-    libxfixes3 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libgcc1 \
-    libgconf-2-4 \
-    libglib2.0-0 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
     fonts-liberation \
     xdg-utils \
     wget && \

@@ -8,7 +8,7 @@ v1_media_serve_files_bp = Blueprint('v1_media_serve_files', __name__, url_prefix
 @v1_media_serve_files_bp.route('/<path:filename>', methods=['GET'])
 def serve_local_file(filename):
     """
-    Serve files from LOCAL_STORAGE_PATH for Remotion video rendering
+    Serve files from LOCAL_STORAGE_PATH for video rendering and media access
     """
     try:
         # Security check - prevent directory traversal
