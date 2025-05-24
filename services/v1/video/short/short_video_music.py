@@ -88,3 +88,75 @@ class MusicManager:
         
         shutil.copy2(file_path, new_path)
         return new_path
+
+
+# Global music manager instance
+_music_manager = MusicManager()
+
+# Function exports that the routes expect
+def get_available_music_tags() -> List[Dict[str, str]]:
+    """Get available music tags/moods for short videos."""
+    moods = _music_manager.list_available_moods()
+    return [{"tag": mood, "description": f"{mood.capitalize()} music"} for mood in moods]
+
+def get_music_by_mood(mood: str) -> List[Dict[str, str]]:
+    """Get music tags filtered by mood."""
+    music_path = _music_manager.get_music_by_mood(mood)
+    if music_path:
+        return [{"tag": mood, "path": music_path, "description": f"{mood.capitalize()} music"}]
+    return []
+
+def get_music_by_tempo(tempo: str) -> List[Dict[str, str]]:
+    """Get music tags filtered by tempo."""
+    # Map tempo to moods
+    tempo_to_mood = {
+        "slow": ["calm", "sad"],
+        "medium": ["happy", "chill"],
+        "fast": ["energetic", "upbeat", "dramatic"]
+    }
+    
+    moods = tempo_to_mood.get(tempo.lower(), ["happy"])
+    results = []
+    
+    for mood in moods:
+        music_path = _music_manager.get_music_by_mood(mood)
+        if music_path:
+            results.append({
+                "tag": mood,
+                "tempo": tempo,
+                "path": music_path,
+                "description": f"{mood.capitalize()} {tempo} tempo music"
+            })
+    
+    return results
+
+def get_music_recommendations(content_type: str) -> List[Dict[str, str]]:
+    """Get music recommendations based on content type."""
+    # Map content types to recommended moods
+    content_to_moods = {
+        "tutorial": ["calm", "upbeat"],
+        "gaming": ["energetic", "epic"],
+        "vlog": ["happy", "chill"],
+        "product": ["upbeat", "happy"],
+        "story": ["dramatic", "epic"],
+        "comedy": ["happy", "upbeat"],
+        "educational": ["calm", "happy"],
+        "travel": ["upbeat", "epic"],
+        "food": ["happy", "calm"],
+        "fitness": ["energetic", "upbeat"]
+    }
+    
+    moods = content_to_moods.get(content_type.lower(), ["happy", "upbeat"])
+    recommendations = []
+    
+    for mood in moods:
+        music_path = _music_manager.get_music_by_mood(mood)
+        if music_path:
+            recommendations.append({
+                "tag": mood,
+                "content_type": content_type,
+                "path": music_path,
+                "description": f"{mood.capitalize()} music recommended for {content_type} content"
+            })
+    
+    return recommendations
