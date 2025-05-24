@@ -10,7 +10,7 @@ This service creates short-form videos suitable for platforms like TikTok, Insta
   - Streamlabs Polly for professional voices
 
 - **Professional Video Composition**
-  - Remotion-powered dynamic compositions
+  - MoviePy-powered dynamic compositions
   - Portrait (9:16) and Landscape (16:9) formats
   - Customizable caption styles and positions
   - Synchronized audio and captions
@@ -181,7 +181,6 @@ Response:
 1. Install dependencies:
 ```bash
 pip install -r requirements.txt
-cd remotion && bash init.sh
 ```
 
 2. Install background music:
@@ -216,7 +215,7 @@ docker run -p 8080:8080 -e PEXELS_API_KEY="your-key" short-video-maker
    - Cache management for frequently used assets
 
 3. **Professional Video Composition**
-   - Dynamic React-based compositions (Remotion)
+   - Python-based video compositions (MoviePy)
    - Professional motion graphics
    - Synchronized audio/video/captions
    - Mood-matched background music

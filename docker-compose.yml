@@ -48,7 +48,8 @@ services:
       - logs:/app/logs
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
-      - node_modules:/app/remotion/node_modules
+      # Remove this line - not needed for MoviePy
+      # - node_modules:/app/remotion/node_modules
     networks:
       - app-network
     restart: unless-stopped

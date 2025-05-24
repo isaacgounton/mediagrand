@@ -5,7 +5,7 @@ from services.v1.video.short.short_video_status import (
     update_processing_stage,
     update_video_status
 )
-from services.v1.video.video_composition import RemotionRenderer
+from services.v1.video.moviepy_composition import MoviePyRenderer
 from services.v1.video.short.short_video_music import MusicManager
 from services.v1.audio.speech import generate_tts
 from config import LOCAL_STORAGE_PATH
@@ -122,7 +122,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
     try:
         # Initialize services
         pexels = PexelsAPI()
-        remotion = RemotionRenderer()
+        moviepy_renderer = MoviePyRenderer()
         music_manager = MusicManager()
         
         # Set default config values
@@ -264,7 +264,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         update_processing_stage(job_id, "video_rendering", "processing")
         update_video_status(job_id, {"progress": 60})
         
-        # Step 3: Render final video with Remotion
+        # Step 3: Render final video with MoviePy
         output_filename = f"short_video_{job_id}.mp4"
         output_path = os.path.join(LOCAL_STORAGE_PATH, output_filename)
         
@@ -303,31 +303,30 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                     background_music = default_music
                     logger.info(f"Using default background music: {default_music}")
 
-        # Convert local paths to HTTP URLs using the file serving endpoint
-        def path_to_http_url(file_path):
+        # Convert local paths to file paths (MoviePy works with local files)
+        def get_local_file_path(file_path):
             if file_path and os.path.exists(file_path):
-                # Get relative path from LOCAL_STORAGE_PATH
-                rel_path = os.path.relpath(file_path, LOCAL_STORAGE_PATH)
-                return f"http://localhost:8080/v1/media/files/{rel_path}"
+                return file_path
             return None
         
-        video_url = path_to_http_url(scene['background_video'])
-        audio_url = path_to_http_url(scene['audio_path'])
-        music_url = path_to_http_url(background_music) if background_music else None
+        video_path = get_local_file_path(scene['background_video'])
+        audio_path = get_local_file_path(scene['audio_path'])
+        music_path = get_local_file_path(background_music) if background_music else None
         
-        remotion_config = {
+        moviepy_config = {
             "caption_position": caption_position,
             "caption_background_color": caption_bg_color,
             "music_volume": music_volume,
-            "music_url": music_url
+            "music_url": music_path,
+            "duration": max(caption["end"] for caption in scene["captions"]) + padding_back if scene["captions"] else 30
         }
         
-        # Render with Remotion
-        remotion.render_video(
-            video_url=video_url,
-            audio_url=audio_url,
+        # Render with MoviePy
+        moviepy_renderer.render_video(
+            video_url=video_path,
+            audio_url=audio_path,
             captions=scene["captions"],
-            config=remotion_config,
+            config=moviepy_config,
             output_path=output_path,
             orientation=orientation
         )
