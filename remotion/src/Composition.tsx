@@ -1,5 +1,5 @@
 import React from 'react';
-import {Composition, registerRoot} from 'remotion';
+import {Composition} from 'remotion';
 import {PortraitVideo} from './components/PortraitVideo';
 import {LandscapeVideo} from './components/LandscapeVideo';
 import {VideoProps} from './types/video';
@@ -46,6 +46,3 @@ export const RemotionRoot: React.FC = () => {
     </>
   );
 };
-
-// Register the root component
-registerRoot(RemotionRoot);

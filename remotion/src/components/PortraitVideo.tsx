@@ -37,7 +37,7 @@ export const PortraitVideo: React.FC<VideoProps> = ({
       {captions.map((caption, index) => (
         <Sequence
           key={index}
-          from={caption.start * 1000}
+          from={Math.floor(caption.start * 30)}
           durationInFrames={Math.floor((caption.end - caption.start) * 30)}
         >
           <div
