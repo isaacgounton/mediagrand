@@ -61,7 +61,10 @@ async function renderVideo(props, output) {
           '--disable-gpu',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
+          '--disable-renderer-backgrounding',
+          '--allow-file-access-from-files',
+          '--disable-web-security',
+          '--allow-running-insecure-content'
         ]
       },
     });
