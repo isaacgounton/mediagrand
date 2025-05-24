@@ -268,10 +268,6 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         output_filename = f"short_video_{job_id}.mp4"
         output_path = os.path.join(LOCAL_STORAGE_PATH, output_filename)
         
-        # For multi-scene videos, we need to concatenate the scenes first
-        # For now, we'll just use the first scene
-        scene = processed_scenes[0]
-        
         # Get background music - prioritize music_url over mood-based selection
         background_music = None
         music_url_param = config.get("music_url")
@@ -309,27 +305,93 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                 return file_path
             return None
         
-        video_path = get_local_file_path(scene['background_video'])
-        audio_path = get_local_file_path(scene['audio_path'])
-        music_path = get_local_file_path(background_music) if background_music else None
-        
-        moviepy_config = {
-            "caption_position": caption_position,
-            "caption_background_color": caption_bg_color,
-            "music_volume": music_volume,
-            "music_url": music_path,
-            "duration": max(caption["end"] for caption in scene["captions"]) + padding_back if scene["captions"] else 30
-        }
-        
-        # Render with MoviePy
-        moviepy_renderer.render_video(
-            video_url=video_path,
-            audio_url=audio_path,
-            captions=scene["captions"],
-            config=moviepy_config,
-            output_path=output_path,
-            orientation=orientation
-        )
+        # Handle multi-scene videos by rendering each scene and concatenating
+        if len(processed_scenes) == 1:
+            # Single scene - render directly
+            scene = processed_scenes[0]
+            video_path = get_local_file_path(scene['background_video'])
+            audio_path = get_local_file_path(scene['audio_path'])
+            music_path = get_local_file_path(background_music) if background_music else None
+            
+            moviepy_config = {
+                "caption_position": caption_position,
+                "caption_background_color": caption_bg_color,
+                "music_volume": music_volume,
+                "music_url": music_path,
+                "duration": max(caption["end"] for caption in scene["captions"]) + padding_back if scene["captions"] else 30
+            }
+            
+            # Render with MoviePy
+            moviepy_renderer.render_video(
+                video_url=video_path,
+                audio_url=audio_path,
+                captions=scene["captions"],
+                config=moviepy_config,
+                output_path=output_path,
+                orientation=orientation
+            )
+        else:
+            # Multi-scene - render each scene and concatenate
+            logger.info(f"Job {job_id}: Rendering {len(processed_scenes)} scenes for concatenation")
+            scene_videos = []
+            
+            for i, scene in enumerate(processed_scenes):
+                scene_output = os.path.join(LOCAL_STORAGE_PATH, f"scene_{job_id}_{i}.mp4")
+                video_path = get_local_file_path(scene['background_video'])
+                audio_path = get_local_file_path(scene['audio_path'])
+                
+                # For multi-scene videos, apply music only to the first scene to avoid overlapping
+                music_path = get_local_file_path(background_music) if background_music and i == 0 else None
+                
+                moviepy_config = {
+                    "caption_position": caption_position,
+                    "caption_background_color": caption_bg_color,
+                    "music_volume": music_volume if i == 0 else "muted",  # Music only on first scene
+                    "music_url": music_path,
+                    "duration": max(caption["end"] for caption in scene["captions"]) + padding_back if scene["captions"] else 30
+                }
+                
+                logger.info(f"Job {job_id}: Rendering scene {i+1}/{len(processed_scenes)}")
+                
+                # Render individual scene
+                moviepy_renderer.render_video(
+                    video_url=video_path,
+                    audio_url=audio_path,
+                    captions=scene["captions"],
+                    config=moviepy_config,
+                    output_path=scene_output,
+                    orientation=orientation
+                )
+                
+                scene_videos.append(scene_output)
+                
+                # Update progress (60-90%)
+                progress = 60 + int(((i + 1) / len(processed_scenes)) * 30)
+                update_video_status(job_id, {"progress": progress})
+            
+            # Concatenate all scene videos using FFmpeg
+            logger.info(f"Job {job_id}: Concatenating {len(scene_videos)} scene videos")
+            from services.v1.video.concatenate import process_video_concatenate
+            
+            # Prepare video URLs for concatenation utility
+            video_urls = [{"video_url": scene_video} for scene_video in scene_videos]
+            
+            # Use the existing concatenation function
+            concatenated_output = process_video_concatenate(video_urls, f"concat_{job_id}")
+            
+            # Move the concatenated file to the final output path
+            import shutil
+            shutil.move(concatenated_output, output_path)
+            
+            # Clean up individual scene videos
+            for scene_video in scene_videos:
+                try:
+                    os.remove(scene_video)
+                    logger.info(f"Job {job_id}: Cleaned up scene video: {scene_video}")
+                except Exception as e:
+                    logger.warning(f"Job {job_id}: Could not clean up scene video {scene_video}: {str(e)}")
+            
+            logger.info(f"Job {job_id}: Multi-scene video concatenation completed")
         
         update_processing_stage(job_id, "video_rendering", "completed")
         update_video_status(job_id, {
