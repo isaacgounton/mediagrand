@@ -3,6 +3,12 @@
 * [Welcome to DahoPevi](README.md)
 
 ## 🎥 Video Operations
+
+### Short Videos
+* [Music Management](video/short/music.md)
+* [Video Creation](video/short/short_video.md)
+
+### Basic Operations
 * [Advanced Features](video/advanced_features.md)
 * [Caption Video](video/caption_video.md)
 * [Concatenate Videos](video/concatenate.md)

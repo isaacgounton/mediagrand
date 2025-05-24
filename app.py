@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Stephen G. Pope
+# Copyright (c) 2025 Isaac Gounton
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -244,6 +244,10 @@ def create_app():
     from routes.v1.toolkit.jobs_status import v1_toolkit_jobs_status_bp
     from routes.v1.audio.speech import v1_audio_speech_bp
     from routes.v1.media.media_duration import v1_media_duration_bp
+    from routes.v1.video.short.short_video_create import v1_video_short_create_bp
+    from routes.v1.video.short.short_video_music import v1_video_short_music_bp
+    from routes.v1.video.short.short_video_status import v1_video_short_status_bp
+    from routes.v1.video.short.music import music_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -274,6 +278,10 @@ def create_app():
     app.register_blueprint(v1_toolkit_jobs_status_bp)
     app.register_blueprint(v1_audio_speech_bp)
     app.register_blueprint(v1_media_duration_bp)
+    app.register_blueprint(v1_video_short_create_bp)
+    app.register_blueprint(v1_video_short_music_bp)
+    app.register_blueprint(v1_video_short_status_bp)
+    app.register_blueprint(music_bp, url_prefix='/v1/video/music')
 
     return app
 

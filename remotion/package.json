@@ -1,0 +1,41 @@
+{
+  "name": "dahopevi-video-composition",
+  "version": "1.0.0",
+  "description": "Video composition for Dahopevi using Remotion",
+  "private": true,
+  "scripts": {
+    "build": "tsc && vite build",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test:render": "node scripts/test-render.js",
+    "preview": "remotion preview src/index.ts",
+    "render": "remotion render src/index.ts",
+    "upgrade": "remotion upgrade",
+    "clean": "rm -rf node_modules dist .remotion test-output.mp4"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.286",
+    "@remotion/cli": "^4.0.286",
+    "@remotion/renderer": "^4.0.286",
+    "@remotion/google-fonts": "^4.0.286",
+    "remotion": "^4.0.286",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@remotion/eslint-config": "^4.0.286",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "eslint": "^8.38.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.3.4",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.9"
+  }
+}

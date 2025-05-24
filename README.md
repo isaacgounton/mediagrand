@@ -1,154 +1,229 @@
-# DahoPevi API
+# Short Video Creation Service
 
-A powerful media processing API built with Python and Flask, designed for seamless audio, video, and image manipulation.
+This service creates short-form videos suitable for platforms like TikTok, Instagram Reels, and YouTube Shorts.
 
-## Core Features
+## Features
 
-🎬 **Media Processing**
-- Convert between audio/video formats
-- Add captions to videos
-- Extract audio from video
-- Generate video from images
-- Trim and concatenate media files
+- **Text-to-Speech with Multiple Engines**
+  - Kokoro-ONNX for natural voices
+  - Edge TTS for real-time synthesis
+  - Streamlabs Polly for professional voices
 
-🗣️ **AI Features**
-- Transcribe audio/video content
-- Translate content between languages
-- Process media with customizable parameters
+- **Professional Video Composition**
+  - Remotion-powered dynamic compositions
+  - Portrait (9:16) and Landscape (16:9) formats
+  - Customizable caption styles and positions
+  - Synchronized audio and captions
+  - Background music with mood selection
+  - High-quality video rendering with FFmpeg
 
-☁️ **Cloud Integration**
-- Google Drive
-- Amazon S3
-- Google Cloud Storage
-- Dropbox
+- **Content Sources**
+  - Pexels API integration for background videos
+  - Built-in mood-based music library
+  - Support for custom video and audio assets
+- Mood-based background music selection
+- Portrait and landscape video support
+- Customizable captions with timing
+- Progress tracking and status updates
+- Webhook notifications for completion
 
-## Quick Start Guide
+## API Endpoints
 
-### 1. Build the Docker Image
-```bash
-docker build -t isaacgounton/dahopevi .
-```
-
-### 2. Run the Container
-```bash
-docker run -d -p 8080:8080 \
-  -e API_KEY=your_api_key \
-  -e GCP_SA_CREDENTIALS='{"your":"service_account_json"}' \
-  -e GCP_BUCKET_NAME=your_bucket_name \
-  isaacgounton/dahopevi
-```
-
-### 3. Test the API
-Install the [Postman Template](https://bit.ly/49Gkhl) and configure:
-- `base_url`: Your API endpoint
-- `x-api-key`: Your API key
-
-## API Reference
-
-### Video Operations
-
+### Create Short Video
 ```http
-POST /v1/video/caption
-POST /v1/video/cut
-POST /v1/video/trim
-POST /v1/video/concatenate
-POST /v1/video/split
-GET  /v1/video/thumbnail
+POST /v1/video/short/create
 ```
 
-### Audio Operations
+Request body:
+```json
+{
+  "scenes": [
+    {
+      "text": "This is the first scene",
+      "search_terms": ["nature", "mountains"]
+    },
+    {
+      "text": "Here's the second scene",
+      "search_terms": ["ocean", "sunset"]
+    }
+  ],
+  "config": {
+    "voice": "kokoro:af_sarah",
+    "orientation": "portrait",
+    "caption_position": "bottom",
+    "caption_background_color": "#000000",
+    "music": "upbeat",
+    "music_volume": "medium",
+    "padding_back": 0.5
+  },
+  "webhook_url": "https://your-webhook.com/callback",
+  "id": "optional-custom-id"
+}
+```
 
+### Check Video Status
 ```http
-POST /v1/audio/concatenate
-POST /v1/audio/speech
-POST /v1/media/silence
-POST /v1/media/convert/mp3
+GET /v1/video/short/status/{job_id}
 ```
 
-### Image Operations
+Response:
+```json
+{
+  "status": "processing|completed|failed",
+  "progress": 75,
+  "current_stage": "video_rendering",
+  "total_scenes": 2,
+  "current_scene": 2,
+  "output_url": "https://your-cdn.com/videos/output.mp4"
+}
+```
 
+### List Available Music Moods
 ```http
-POST /v1/image/convert/video
+GET /v1/video/music/moods
 ```
 
-### Cloud Storage
+Response:
+```json
+{
+  "moods": [
+    "upbeat",
+    "happy",
+    "calm",
+    "chill",
+    "epic",
+    "dramatic",
+    "dark",
+    "sad"
+  ]
+}
+```
 
+### Upload Music Track
 ```http
-POST /v1/s3/upload
+POST /v1/video/music/upload
+Content-Type: multipart/form-data
 ```
 
-## Deployment Options
+Request parameters:
+- `file`: Music file (MP3/WAV)
+- `mood`: Music mood category
+- `name`: Optional custom name
 
-### 🌟 Google Cloud Run (Recommended)
-Best for:
-- Scalable deployments
-- Pay-per-use pricing
-- Automatic scaling
-- Built-in monitoring
+Response:
+```json
+{
+  "id": "music_12345",
+  "name": "uploaded_track.mp3",
+  "mood": "upbeat",
+  "duration": 180.5,
+  "url": "https://your-cdn.com/music/uploaded_track.mp3"
+}
+```
 
-[View GCP Setup Guide](docs/cloud-installation/gcp.md)
+### Get Music by Mood
+```http
+GET /v1/video/music/{mood}
+```
 
-### 🌊 Digital Ocean
-Best for:
-- Predictable workloads
-- Simplified deployment
-- Consistent pricing
+Response:
+```json
+{
+  "tracks": [
+    {
+      "id": "music_12345",
+      "name": "happy_tune_1.mp3",
+      "mood": "upbeat",
+      "duration": 180.5,
+      "url": "https://your-cdn.com/music/happy_tune_1.mp3"
+    },
+    {
+      "id": "music_12346",
+      "name": "happy_tune_2.mp3",
+      "mood": "upbeat",
+      "duration": 150.0,
+      "url": "https://your-cdn.com/music/happy_tune_2.mp3"
+    }
+  ]
+}
+```
 
-[View DO Setup Guide](docs/cloud-installation/do.md)
+## Configuration Options
 
-### 🐳 Docker (Self-hosted)
-Best for:
-- Full control
-- Custom infrastructure
-- Local development
+### Voice Options
+- `kokoro:af_sarah` - Natural English voice (Kokoro)
+- `edge-tts:en-US-AriaNeural` - Microsoft Edge TTS
+- `streamlabs-polly:Brian` - Amazon Polly voice
 
-[View Docker Guide](docker-compose.md)
+### Caption Positions
+- `top`
+- `center`
+- `bottom`
 
-## Configuration
+### Music Moods
+- `upbeat`
+- `happy`
+- `calm`
+- `chill`
+- `epic`
+- `dramatic`
+- `dark`
+- `sad`
 
-### Essential Environment Variables
+### Music Volumes
+- `high` (30% volume)
+- `medium` (20% volume)
+- `low` (10% volume)
+- `muted` (0% volume)
 
+## Installation
+
+1. Install dependencies:
 ```bash
-# Required
-API_KEY=your_api_key
-
-# Cloud Storage (Choose one)
-GCP_SA_CREDENTIALS='{credentials_json}'
-GCP_BUCKET_NAME=bucket_name
-
-# OR
-
-S3_ENDPOINT_URL=https://your-endpoint
-S3_ACCESS_KEY=access_key
-S3_SECRET_KEY=secret_key
-S3_BUCKET_NAME=bucket_name
-S3_REGION=region
+pip install -r requirements.txt
+cd remotion && bash init.sh
 ```
 
-### Performance Tuning
-
+2. Install background music:
 ```bash
-MAX_QUEUE_LENGTH=10        # Concurrent tasks (default: unlimited)
-GUNICORN_WORKERS=4         # Worker processes (default: CPU cores + 1)
-GUNICORN_TIMEOUT=300      # Process timeout in seconds (default: 30)
+bash scripts/install_music.sh
 ```
 
-## Support and Community
+3. Set environment variables:
+```bash
+export PEXELS_API_KEY="your-pexels-api-key"
+```
 
-Get dedicated support and connect with other developers:
+## Docker Deployment
 
-- [DahoPevi Community](https://www.skool.com/no-code-architects)
-- [Documentation](docs/README.md)
-- [API GPT Assistant](https://bit.ly/4feDDk4)
+Build and run with Docker:
+```bash
+docker build -t short-video-maker .
+docker run -p 8080:8080 -e PEXELS_API_KEY="your-key" short-video-maker
+```
+
+## Processing Stages
+
+1. **TTS Generation**
+   - AI-powered voice synthesis
+   - Automatic caption timing
+   - Multi-engine support (Kokoro/Edge/Polly)
+
+2. **Video Search & Processing**
+   - Intelligent background video search (Pexels)
+   - Smart video cropping and resizing
+   - Format optimization for target platforms
+   - Cache management for frequently used assets
+
+3. **Professional Video Composition**
+   - Dynamic React-based compositions (Remotion)
+   - Professional motion graphics
+   - Synchronized audio/video/captions
+   - Mood-matched background music
+   - High-quality FFmpeg encoding
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## License
-
-Licensed under [GNU General Public License v2.0 (GPL-2.0)](LICENSE)
+1. Choose royalty-free music files
+2. Add them to `storage/music/` with appropriate mood prefixes
+3. Test with different voice and music combinations

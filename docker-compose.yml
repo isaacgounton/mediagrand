@@ -8,6 +8,7 @@ services:
         - BUILDKIT_INLINE_CACHE=1
         - DOCKER_BUILDKIT=1
         - MAKEFLAGS=-j4
+        - NODE_VERSION=18
     shm_size: '2gb'
     deploy:
       resources:
@@ -47,6 +48,7 @@ services:
       - logs:/app/logs
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
+      - node_modules:/app/remotion/node_modules
     networks:
       - app-network
     restart: unless-stopped
@@ -59,6 +61,8 @@ volumes:
   gcp-sa-credentials:
     driver: local
   tmp-assets:
+    driver: local
+  node_modules:
     driver: local
 
 networks:

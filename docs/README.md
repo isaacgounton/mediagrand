@@ -1,67 +1,127 @@
-# 🚀 DahoPevi
+# API Documentation
 
-Welcome to the DahoPevi documentation! This comprehensive API platform helps you build powerful media processing and automation solutions.
+Welcome to the Video Creation API documentation. This guide provides comprehensive information about using our APIs to create professional short-form videos and manage background music.
 
-## 💫 What is DahoPevi?
+## Table of Contents
 
-DahoPevi is a powerful API that processes different types of media, built in Python using Flask. It's your all-in-one solution for:
+1. [Short Video Creation](#short-video-creation)
+2. [Music Management](#music-management)
+3. [Common Topics](#common-topics)
 
-* 🎥 **Video Processing** - Caption, cut, trim, split, and combine videos
-* 🔊 **Audio Handling** - Convert, concatenate, and process audio files
-* 🖼️ **Image Operations** - Convert images to videos with effects
-* 📝 **Transcription** - Convert speech to text
-* 🌐 **Cloud Integration** - Work with S3, Google Cloud, and more
+## Short Video Creation
 
-## 🎯 Key Features
+The [Short Video Creation API](short_video_endpoints.md) allows you to create professional short-form videos suitable for social media platforms.
 
-* **Media Processing**
-  * Video editing and manipulation
-  * Audio file conversion and processing
-  * Image transformation
-  * Speech-to-text transcription
-  * Multilingual support
+Key features:
+- Text-to-speech with multiple voice options
+- Background video search and selection
+- Customizable captions
+- Background music integration
+- Multiple output formats
 
-* **Cloud Storage**
-  * Amazon S3 integration
-  * Google Cloud Platform support
-  * Digital Ocean compatibility
-  * Flexible storage options
+[View Short Video API Documentation →](short_video_endpoints.md)
 
-* **Development Tools**
-  * Python code execution
-  * FFmpeg integration
-  * Webhook support
-  * Comprehensive API documentation
+## Music Management
 
-## 🌟 Why Choose DahoPevi?
+The [Music Management API](music_endpoints.md) provides endpoints for managing the background music library.
 
-* 💰 **Professional Solution**: Enterprise-grade media processing capabilities
-* 🛠️ **Flexible Deployment**: Works with Docker, GCP, Digital Ocean, and more
-* 🔄 **Easy Integration**: Well-documented API endpoints with example payloads
-* 🤝 **Community Support**: Active community and dedicated tech support
+Key features:
+- Mood-based music selection
+- Custom music uploads
+- Music library management
+- Volume control options
 
-## 🔐 Authentication
+[View Music Management API Documentation →](music_endpoints.md)
 
-All API endpoints require authentication using an API key. You'll need to include your API key in the `x-api-key` header for all requests.
+## Common Topics
 
-## 🚦 Getting Started
+### Authentication
 
-1. Check out the installation guides for your preferred platform:
-   * [Digital Ocean Installation](cloud-installation/do.md)
-   * [Google Cloud Platform Setup](cloud-installation/gcp.md)
+All API requests require an API key passed in the header:
+```http
+Authorization: Bearer your-api-key-here
+```
 
-2. Test your installation using our [authentication endpoint](toolkit/authenticate.md)
+### Rate Limiting
 
-3. Explore our comprehensive documentation for each feature area
+- API requests are limited per endpoint
+- Usage tracked by API key
+- Headers indicate remaining limits:
+  ```http
+  X-RateLimit-Limit: 100
+  X-RateLimit-Remaining: 95
+  X-RateLimit-Reset: 1621436800
+  ```
 
-## 👥 Community Support
+### Response Formats
 
-Join our thriving community of:
-* Coaches and consultants
-* AI Automation agencies
-* SMMA & Content agencies
-* SaaS Startup Founders
+Standard response format:
+```json
+{
+  "status": "success|error",
+  "data": {},
+  "error": null
+}
+```
 
-Get access to courses, daily calls, and dedicated support by joining our community!
+Error response format:
+```json
+{
+  "status": "error",
+  "data": null,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable message",
+    "details": {}
+  }
+}
+```
 
-Ready to get started? Dive into our documentation using the navigation menu on the left!
+### HTTP Status Codes
+
+- `200` - Success
+- `201` - Created
+- `202` - Accepted (async job started)
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `429` - Too Many Requests
+- `500` - Server Error
+
+### Webhooks
+
+Endpoints supporting webhooks will:
+- Accept a `webhook_url` parameter
+- POST updates to the provided URL
+- Include job status and results
+- Sign requests with `X-Webhook-Signature`
+
+### API Versioning
+
+Current version: `v1`
+
+Version is specified in the URL path:
+```
+https://api.example.com/v1/...
+```
+
+Major versions may include breaking changes.
+
+## Support
+
+- [API Status Page](https://status.example.com)
+- [Developer Discord](https://discord.gg/example)
+- Email: api-support@example.com
+
+## SDK Libraries
+
+- [Python SDK](https://github.com/example/python-sdk)
+- [Node.js SDK](https://github.com/example/node-sdk)
+- [PHP SDK](https://github.com/example/php-sdk)
+
+## Legal
+
+- [Terms of Service](https://example.com/terms)
+- [API License](https://example.com/api-license)
+- [Privacy Policy](https://example.com/privacy)

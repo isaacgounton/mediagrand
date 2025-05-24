@@ -6,8 +6,13 @@ ARG DOCKER_BUILDKIT=1
 ARG BUILDKIT_INLINE_CACHE=1
 ARG MAKEFLAGS="-j$(nproc)"
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install Node.js and build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest && \
+    apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
     wget \
@@ -199,7 +204,17 @@ EXPOSE 8080
 # Create directories for assets
 RUN mkdir -p /tmp/assets && \
     mkdir -p /app/public/assets && \
-    chown -R appuser:appuser /app/public
+    mkdir -p /app/remotion && \
+    chown -R appuser:appuser /app/public && \
+    chown -R appuser:appuser /app/remotion
+
+# Setup Remotion environment
+COPY remotion/ /app/remotion/
+WORKDIR /app/remotion
+RUN bash init.sh
+
+# Back to app directory
+WORKDIR /app
 
 # Create placeholder video file
 RUN ffmpeg -f lavfi -i color=c=black:s=1280x720:d=10 -c:v libx264 /tmp/assets/placeholder.mp4
@@ -235,8 +250,12 @@ RUN echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-fr
     echo "deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
     echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list
 
-# Install runtime dependencies only
+# Install Node.js and runtime dependencies
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -286,7 +305,8 @@ EXPOSE 8080
 ENV PYTHONUNBUFFERED=1 \
     DEFAULT_PLACEHOLDER_VIDEO="/tmp/assets/placeholder.mp4" \
     PEXELS_API_KEY="" \
-    PATH="/usr/local/bin:${PATH}"
+    PATH="/usr/local/bin:${PATH}" \
+    NODE_ENV="production"
 
 # Run the application
 CMD ["/app/run_gunicorn.sh"]
