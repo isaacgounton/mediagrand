@@ -11,7 +11,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g npm@latest && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -52,7 +51,6 @@ RUN apt-get update && \
     libtool \
     libfribidi-dev \
     libharfbuzz-dev \
-    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SRT from source (latest version using cmake)
@@ -255,7 +253,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g npm@latest && \
     apt-get install -y --no-install-recommends \
     libgomp1 \
     ca-certificates \
@@ -275,8 +272,7 @@ RUN apt-get update && \
     libzimg2 \
     libwebpmux3 \
     libfribidi0 \
-    libharfbuzz0b \
-    imagemagick && \
+    libharfbuzz0b && \
     # Try to install optional multimedia packages
     (apt-get install -y --no-install-recommends libx264-164 libx265-199 libaom3 libdav1d6 librav1e0 || true) && \
     rm -rf /var/lib/apt/lists/*
