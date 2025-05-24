@@ -1,13 +1,15 @@
-import {Composition} from 'remotion';
+import React from 'react';
+import {Composition, registerRoot} from 'remotion';
 import {PortraitVideo} from './components/PortraitVideo';
 import {LandscapeVideo} from './components/LandscapeVideo';
+import {VideoProps} from './types/video';
 
-export const RemotionVideo: React.FC = () => {
+export const RemotionRoot: React.FC = () => {
   return (
     <>
-      <Composition
+      <Composition<VideoProps>
         id="PortraitVideo"
-        component={PortraitVideo}
+        component={PortraitVideo as React.ComponentType<VideoProps>}
         durationInFrames={900} // 30s @ 30fps
         fps={30}
         width={1080}
@@ -23,9 +25,9 @@ export const RemotionVideo: React.FC = () => {
           }
         }}
       />
-      <Composition
+      <Composition<VideoProps>
         id="LandscapeVideo"
-        component={LandscapeVideo}
+        component={LandscapeVideo as React.ComponentType<VideoProps>}
         durationInFrames={900}
         fps={30}
         width={1920}
@@ -44,3 +46,6 @@ export const RemotionVideo: React.FC = () => {
     </>
   );
 };
+
+// Register the root component
+registerRoot(RemotionRoot);

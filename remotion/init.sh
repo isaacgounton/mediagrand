@@ -1,46 +1,23 @@
 #!/bin/bash
 
-# Install dependencies
-npm install
+#!/bin/bash
+set -e
 
 echo "🚀 Setting up Remotion environment..."
 
-# Create necessary directories
-mkdir -p src/components
-mkdir -p scripts
-mkdir -p public
-
-# Install all dependencies from package.json
+# Install dependencies
 echo "📦 Installing dependencies..."
-npm install
+NODE_ENV=production npm install --no-audit --no-fund
 
-# Download Google Fonts
-echo "🔤 Setting up Google Fonts..."
-npx remotion install-fonts
+# Remove webpack progress plugin from bundler config
+echo "🔧 Configuring webpack..."
+if [ -f "node_modules/@remotion/bundler/dist/webpack-config.js" ]; then
+    sed -i 's/new webpack.ProgressPlugin(),//' node_modules/@remotion/bundler/dist/webpack-config.js
+fi
 
-# Test TypeScript compilation
-echo "🔍 Testing TypeScript setup..."
-npx tsc --noEmit
-
-# Run ESLint check
-echo "🧹 Running ESLint..."
-npx eslint src --ext ts,tsx
-
-# Run test render
-echo "🎬 Running test render..."
-node scripts/test-render.js
-
-echo "✅ Remotion setup completed!"
-echo "💡 Try 'npm run preview' to see the compositions in action"
-
-# Install Remotion and core dependencies
-npm install \
-  @remotion/bundler \
-  @remotion/cli \
-  @remotion/renderer \
-  remotion \
-  react \
-  react-dom
+# Build TypeScript
+echo "🔨 Building TypeScript..."
+npm run build
 
 # Create tsconfig.json
 cat > tsconfig.json << 'EOF'

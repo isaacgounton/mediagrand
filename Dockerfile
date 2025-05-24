@@ -208,11 +208,12 @@ RUN mkdir -p /tmp/assets && \
 # Setup Remotion environment (switch back to root temporarily)
 USER root
 WORKDIR /app/remotion
-RUN npm install && \
-    npm run build && \
-    chown -R appuser:appuser /app/remotion && \
-    # Fix webpack progress issue
-    sed -i 's/new webpack.ProgressPlugin(),//' node_modules/@remotion/bundler/dist/webpack-config.js
+
+# Install dependencies and build Remotion with proper permissions
+ENV NODE_ENV=production
+RUN chmod +x init.sh && \
+    ./init.sh && \
+    chown -R appuser:appuser /app/remotion
 
 # Switch back to appuser
 USER appuser
