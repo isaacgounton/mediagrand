@@ -55,15 +55,24 @@ def process_conversion(media_url, job_id, bitrate='128k', webhook_url=None):
 def process_video_combination(media_urls, job_id, webhook_url=None):
     """Combine multiple videos into one."""
     input_files = []
+    downloaded_files = []  # Track which files we downloaded to clean up later
     output_filename = f"{job_id}.mp4"
     output_path = os.path.join(STORAGE_PATH, output_filename)
 
     try:
-        # Download all media files
+        # Process all media files (download URLs or use local files)
         for i, media_item in enumerate(media_urls):
             url = media_item['video_url']
-            input_filename = download_file(url, os.path.join(STORAGE_PATH, f"{job_id}_input_{i}"))
-            input_files.append(input_filename)
+            
+            # Check if it's a local file path or a URL
+            if os.path.isfile(url):
+                # It's a local file, use it directly
+                input_files.append(url)
+            else:
+                # It's a URL, download it
+                input_filename = download_file(url, os.path.join(STORAGE_PATH, f"{job_id}_input_{i}"))
+                input_files.append(input_filename)
+                downloaded_files.append(input_filename)  # Track downloaded files
 
         # Generate an absolute path concat list file for FFmpeg
         concat_file_path = os.path.join(STORAGE_PATH, f"{job_id}_concat_list.txt")
@@ -79,8 +88,8 @@ def process_video_combination(media_urls, job_id, webhook_url=None):
                 run(overwrite_output=True)
         )
 
-        # Clean up input files
-        for f in input_files:
+        # Clean up only downloaded files (not original local files)
+        for f in downloaded_files:
             os.remove(f)
             
         os.remove(concat_file_path)  # Remove the concat list file after the operation
