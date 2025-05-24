@@ -87,13 +87,14 @@ class RemotionRenderer:
                 output_path
             ]
             
-            # Execute render command
+            # Execute render command with timeout
             logger.info(f"Starting Remotion render with props from {temp_data_path}")
             result = subprocess.run(
                 cmd,
                 cwd=self.remotion_path,
                 capture_output=True,
                 text=True,
+                timeout=240,  # 4 minute timeout for rendering
                 env={
                     **os.environ,
                     "NODE_ENV": "production",
@@ -112,6 +113,9 @@ class RemotionRenderer:
             logger.info(f"Video rendered successfully to {output_path}")
             return output_path
             
+        except subprocess.TimeoutExpired:
+            logger.error("Remotion rendering timed out after 4 minutes")
+            raise RuntimeError("Video rendering timed out - process took too long")
         except Exception as e:
             logger.error(f"Error in Remotion rendering: {str(e)}")
             raise RuntimeError(f"Video rendering failed: {str(e)}")

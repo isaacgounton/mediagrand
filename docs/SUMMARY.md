@@ -9,14 +9,12 @@
 * [Video Creation](video/short/short_video.md)
 
 ### Basic Operations
-* [Advanced Features](video/advanced_features.md)
 * [Caption Video](video/caption_video.md)
 * [Concatenate Videos](video/concatenate.md)
 * [Cut Video](video/cut.md)
 * [Split Video](video/split.md)
 * [Thumbnail Generation](video/thumbnail.md)
 * [Trim Video](video/trim.md)
-* [Prompt Guidelines](video/prompt_guidelines.md)
 * [Roadmap](video/roadmap.md)
 
 ## 🔊 Audio Operations
