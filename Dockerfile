@@ -51,6 +51,7 @@ RUN apt-get update && \
     libtool \
     libfribidi-dev \
     libharfbuzz-dev \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SRT from source (latest version using cmake)
@@ -272,7 +273,8 @@ RUN apt-get update && \
     libzimg2 \
     libwebpmux3 \
     libfribidi0 \
-    libharfbuzz0b && \
+    libharfbuzz0b \
+    imagemagick && \
     # Try to install optional multimedia packages
     (apt-get install -y --no-install-recommends libx264-164 libx265-199 libaom3 libdav1d6 librav1e0 || true) && \
     rm -rf /var/lib/apt/lists/*
