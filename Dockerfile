@@ -180,7 +180,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 RUN useradd -m appuser 
 
 # Give appuser ownership of the /app directory (including whisper_cache)
-RUN chown appuser:appuser /app
+RUN chown -R appuser:appuser /app
 
 # Create NLTK data directory
 RUN mkdir -p /usr/local/share/nltk_data && \
@@ -200,15 +200,12 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Create directories for assets
+# Create directories for assets (no chown needed since we're already appuser)
 RUN mkdir -p /tmp/assets && \
     mkdir -p /app/public/assets && \
-    mkdir -p /app/remotion && \
-    chown -R appuser:appuser /app/public && \
-    chown -R appuser:appuser /app/remotion
+    mkdir -p /app/remotion
 
 # Setup Remotion environment
-COPY remotion/ /app/remotion/
 WORKDIR /app/remotion
 RUN bash init.sh
 
