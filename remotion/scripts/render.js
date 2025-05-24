@@ -2,55 +2,32 @@ const { bundle } = require('@remotion/bundler');
 const { renderMedia, selectComposition } = require('@remotion/renderer');
 const path = require('path');
 
-// Bundle the video before rendering
-async function bundleVideo() {
-  const bundled = await bundle(path.join(__dirname, '../src/index.ts'), {
-    port: 3000,
-    publicPath: '/',
-    enableCaching: false,
-    logLevel: 'error',
-    webpackOverride: (config) => {
-      // Completely remove all plugins and add only essential ones
-      const essentialPlugins = [];
-      
-      if (config.plugins) {
-        config.plugins.forEach(plugin => {
-          const name = plugin.constructor.name;
-          // Keep only essential plugins, exclude all progress-related ones
-          if (name !== 'ProgressPlugin' && 
-              name !== 'webpack.ProgressPlugin' &&
-              !name.includes('Progress')) {
-            essentialPlugins.push(plugin);
-          }
-        });
-      }
-      
-      config.plugins = essentialPlugins;
-      
-      // Disable all progress and logging
-      config.stats = false;
-      config.infrastructureLogging = { level: 'silent' };
-      
-      return config;
-    },
-    // Disable progress callback entirely
-    onProgress: undefined,
-    onBrowserLog: () => {},
-    onDownload: () => {}
-  });
-  return bundled;
+// Global bundled URL cache
+let bundledUrl = null;
+
+// Bundle the video once and reuse
+async function getBundledUrl() {
+  if (!bundledUrl) {
+    console.log('Bundling Remotion code...');
+    const bundled = await bundle({
+      entryPoint: path.join(__dirname, '../src/index.ts')
+    });
+    bundledUrl = bundled;
+    console.log('Bundling completed successfully');
+  }
+  return bundledUrl;
 }
 
 // Render the video with the provided props
 async function renderVideo(props, output) {
   try {
-    // Bundle the video first
-    const bundled = await bundleVideo();
+    // Get the bundled URL (will bundle on first call, reuse afterwards)
+    const bundledUrl = await getBundledUrl();
 
     // Get composition based on orientation
     const compositionId = props.config.orientation === 'portrait' ? 'PortraitVideo' : 'LandscapeVideo';
     const composition = await selectComposition({
-      serveUrl: bundled.url,
+      serveUrl: bundledUrl,
       id: compositionId || 'PortraitVideo',
       inputProps: props
     });
@@ -59,15 +36,18 @@ async function renderVideo(props, output) {
     const duration = props.config?.duration || 30;
     const durationInFrames = Math.ceil(duration * composition.fps);
 
-    // Start the rendering
+    // Start the rendering with proper progress callback
     await renderMedia({
       codec: 'h264',
       composition,
-      serveUrl: bundled.url,
+      serveUrl: bundledUrl,
       outputLocation: output,
       inputProps: props,
       durationInFrames,
       fps: composition.fps,
+      onProgress: ({ progress }) => {
+        console.log(`Rendering progress: ${Math.floor(progress * 100)}%`);
+      },
       chromiumOptions: {
         enableWebSecurity: false,
         disableHTTPCache: true,
