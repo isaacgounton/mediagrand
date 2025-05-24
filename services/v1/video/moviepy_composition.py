@@ -95,15 +95,15 @@ class MoviePyRenderer:
         
         # Create text clip with background
         txt_clip = TextClip(
-            caption["text"],
-            fontsize=font_size,
+            text=caption["text"],
+            font_size=font_size,
             font=self.default_font,
             color='white',
             stroke_color='black',
             stroke_width=2,
             method='caption',
             size=(width - 40, None),  # Leave 20px margin on each side
-            align='center'
+            text_align='center'
         ).with_position(pos).with_start(caption["start"]).with_end(caption["end"])
         
         return txt_clip
