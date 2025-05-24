@@ -26,7 +26,11 @@ class RemotionRenderer:
             "config": {
                 "captionPosition": config.get("caption_position", "bottom"),
                 "captionBackgroundColor": config.get("caption_background_color", "#000000"),
-                "musicVolume": config.get("music_volume", "medium")
+                "musicVolume": config.get("music_volume", "medium"),
+                "orientation": config.get("orientation", "portrait"),
+                "duration": config.get("duration", 30),
+                "musicUrl": config.get("music_url"),
+                "paddingBack": config.get("padding_back", 0.5)
             }
         }
 

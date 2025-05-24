@@ -19,17 +19,32 @@ class MusicManager:
         if not os.path.exists(self.music_dir):
             os.makedirs(self.music_dir, exist_ok=True)
     
-    def get_music_by_mood(self, mood: str) -> Optional[str]:
+    def get_music_by_mood(self, mood_or_filename: str) -> Optional[str]:
         """
-        Get a music track path by mood.
+        Get a music track path by mood or specific filename.
         
         Args:
-            mood: The desired mood/genre for the music (e.g., 'happy', 'sad', 'epic')
+            mood_or_filename: The desired mood/genre for the music (e.g., 'happy', 'sad', 'epic') 
+                             or a specific filename (e.g., 'music_Aurora_on_the_Boulevard_-_National_Sweetheart')
             
         Returns:
             Path to the selected music file or None if not found
         """
-        # Map of moods to music file patterns
+        # First, try to find exact filename match
+        if mood_or_filename.startswith("music_"):
+            # Try with various extensions
+            for ext in [".mp3", ".wav", ".m4a", ".ogg"]:
+                filename = mood_or_filename + ext
+                full_path = os.path.join(self.music_dir, filename)
+                if os.path.exists(full_path):
+                    return full_path
+            
+            # Try without extension (in case it's already included)
+            full_path = os.path.join(self.music_dir, mood_or_filename)
+            if os.path.exists(full_path):
+                return full_path
+        
+        # If no direct filename match, try mood-based search
         mood_patterns = {
             "happy": ["happy_", "upbeat_"],
             "sad": ["sad_", "melancholic_"],
@@ -42,13 +57,13 @@ class MusicManager:
             "dramatic": ["dramatic_", "epic_"]
         }
         
-        patterns = mood_patterns.get(mood.lower(), ["*"])
+        patterns = mood_patterns.get(mood_or_filename.lower(), ["*"])
         
         # Find all matching music files
         matching_files = []
         for pattern in patterns:
             for file in os.listdir(self.music_dir):
-                if file.lower().startswith(pattern) and file.endswith((".mp3", ".wav")):
+                if file.lower().startswith(pattern) and file.endswith((".mp3", ".wav", ".m4a", ".ogg")):
                     matching_files.append(os.path.join(self.music_dir, file))
         
         # Return random matching file or None if none found

@@ -77,7 +77,11 @@ def create_short_video_endpoint(job_id, data):
     scenes = data['scenes']
     config = data.get('config', {})
     webhook_url = data.get('webhook_url')
-    id = data.get('id')
+    custom_id = data.get('id')
+    
+    # Use custom ID if provided, otherwise use generated job_id
+    if custom_id:
+        job_id = custom_id
 
     logger.info(f"Job {job_id}: Received short video creation request with {len(scenes)} scenes")
 

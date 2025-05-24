@@ -8,10 +8,20 @@ async function bundleVideo() {
     port: 3000,
     publicPath: '/',
     webpackOverride: (config) => {
-      // Remove the progress plugin that's causing the error
-      config.plugins = config.plugins.filter(
-        (plugin) => plugin.constructor.name !== 'ProgressPlugin'
-      );
+      // Remove all progress plugins that might cause issues
+      if (config.plugins) {
+        config.plugins = config.plugins.filter(
+          (plugin) => {
+            const name = plugin.constructor.name;
+            return name !== 'ProgressPlugin' && name !== 'webpack.ProgressPlugin';
+          }
+        );
+      }
+      
+      // Disable progress reporting completely
+      config.stats = 'errors-only';
+      config.infrastructureLogging = { level: 'error' };
+      
       return config;
     }
   });
