@@ -25,9 +25,12 @@ class MoviePyRenderer:
     def _get_default_font(self) -> str:
         """Get the default font path for text rendering."""
         font_paths = [
-            "/workspaces/dahopevi/fonts/Roboto-Regular.ttf",
-            "/workspaces/dahopevi/fonts/Arial.ttf",
-            "/workspaces/dahopevi/fonts/DejaVuSans.ttf",
+            "/app/fonts/Roboto-Regular.ttf",  # Docker container path
+            "/app/fonts/Arial.ttf",  # Docker container path
+            "/app/fonts/DejaVuSans.ttf",  # Docker container path
+            "/workspaces/dahopevi/fonts/Roboto-Regular.ttf",  # Workspace path
+            "/workspaces/dahopevi/fonts/Arial.ttf",  # Workspace path
+            "/workspaces/dahopevi/fonts/DejaVuSans.ttf",  # Workspace path
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Common Linux path
             "/System/Library/Fonts/Arial.ttf",  # macOS
             "arial.ttf"  # Windows
@@ -259,7 +262,6 @@ class MoviePyRenderer:
                 audio_codec='aac',
                 temp_audiofile=f"{output_path}_temp_audio.m4a",
                 remove_temp=True,
-                verbose=False,
                 logger=None  # Disable MoviePy's verbose logging
             )
             
