@@ -205,9 +205,14 @@ RUN mkdir -p /tmp/assets && \
     mkdir -p /app/public/assets && \
     mkdir -p /app/remotion
 
-# Setup Remotion environment
+# Setup Remotion environment (switch back to root temporarily)
+USER root
 WORKDIR /app/remotion
-RUN bash init.sh
+RUN bash init.sh && \
+    chown -R appuser:appuser /app/remotion
+
+# Switch back to appuser
+USER appuser
 
 # Back to app directory
 WORKDIR /app
