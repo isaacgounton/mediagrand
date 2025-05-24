@@ -13,8 +13,5 @@ if [ -f "node_modules/@remotion/bundler/dist/webpack-config.js" ]; then
     sed -i 's/new webpack.ProgressPlugin(),//' node_modules/@remotion/bundler/dist/webpack-config.js
 fi
 
-# Build TypeScript
-echo "🔨 Building TypeScript..."
-npm run build
-
+# Skip TypeScript build for now - just ensure dependencies are installed
 echo "✅ Remotion setup completed!"
