@@ -14,7 +14,23 @@ from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-class PexelsAPI:
+class VideoAPI:
+    """Base class for video API implementations."""
+    def download_video(self, video_url: str, output_path: str) -> str:
+        try:
+            response = requests.get(video_url, stream=True)
+            response.raise_for_status()
+            
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            return output_path
+        except Exception as e:
+            logger.error(f"Error downloading video: {str(e)}")
+            raise
+
+class PexelsAPI(VideoAPI):
     """Wrapper for Pexels API to search and download background videos."""
     
     def __init__(self):
@@ -36,24 +52,58 @@ class PexelsAPI:
             response = requests.get(f"{self.base_url}/search", headers=headers, params=params)
             response.raise_for_status()
             data = response.json()
-            return data.get("videos", [])
+            videos = data.get("videos", [])
+            if videos:
+                video = videos[0]
+                video_files = video.get("video_files", [])
+                suitable_video = next(
+                    (v for v in video_files if v.get("quality") in ["hd", "sd"]),
+                    None
+                )
+                if suitable_video:
+                    return [{"url": suitable_video["link"]}]
+            return []
         except Exception as e:
             logger.error(f"Error searching Pexels videos: {str(e)}")
             return []
+
+class PixabayAPI(VideoAPI):
+    """Wrapper for Pixabay API to search and download background videos."""
     
-    def download_video(self, video_url: str, output_path: str) -> str:
+    def __init__(self):
+        self.api_key = os.environ.get('PIXABAY_API_KEY')
+        if not self.api_key:
+            raise ValueError("PIXABAY_API_KEY environment variable is required")
+        self.base_url = "https://pixabay.com/api/videos"
+        
+    def search_videos(self, query: str, orientation: str = "portrait", per_page: int = 10) -> List[Dict]:
+        params = {
+            "key": self.api_key,
+            "q": query,
+            "per_page": per_page
+        }
+        
         try:
-            response = requests.get(video_url, stream=True)
+            response = requests.get(self.base_url, params=params)
             response.raise_for_status()
-            
-            with open(output_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            return output_path
+            data = response.json()
+            hits = data.get("hits", [])
+            if hits:
+                video_url = None
+                video = hits[0]
+                videos = video.get("videos", {})
+                # Try to match orientation
+                if orientation == "portrait":
+                    video_url = videos.get("small", {}).get("url")  # Usually vertical
+                else:
+                    video_url = videos.get("medium", {}).get("url")  # Usually horizontal
+                
+                if video_url:
+                    return [{"url": video_url}]
+            return []
         except Exception as e:
-            logger.error(f"Error downloading video: {str(e)}")
-            raise
+            logger.error(f"Error searching Pixabay videos: {str(e)}")
+            return []
 
 def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
     """
@@ -147,23 +197,57 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             progress = 30 + int((i / len(processed_scenes)) * 30)
             update_video_status(job_id, {"progress": progress})
             
-            # Search for background video
-            videos = pexels.search_videos(" ".join(scenes[i]["search_terms"]), orientation=orientation)
+            # Initialize video APIs
+            pexels = PexelsAPI()
+            pixabay = PixabayAPI()
             
+            # Check if direct video URL is provided
             background_video_path = None
-            if videos:
-                video = videos[0]
-                video_files = video.get("video_files", [])
-                suitable_video = next(
-                    (v for v in video_files if v.get("quality") in ["hd", "sd"]),
-                    None
-                )
+            if "bg_video_url" in scenes[i]:
+                video_filename = f"background_{job_id}_scene_{i}.mp4"
+                video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
+                try:
+                    response = requests.get(scenes[i]["bg_video_url"], stream=True)
+                    response.raise_for_status()
+                    with open(video_path, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    background_video_path = video_path
+                    logger.info(f"Job {job_id}: Downloaded video from provided URL for scene {i+1}")
+                except Exception as e:
+                    logger.error(f"Job {job_id}: Error downloading provided video URL: {str(e)}")
+                    background_video_path = None
+            
+            # If no direct URL or download failed, try stock video APIs
+            if not background_video_path and "search_terms" in scenes[i]:
+                # Try Pexels first
+                search_query = " ".join(scenes[i]["search_terms"])
+                videos = pexels.search_videos(search_query, orientation=orientation)
                 
-                if suitable_video:
+                if videos:
                     video_filename = f"background_{job_id}_scene_{i}.mp4"
                     video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
-                    pexels.download_video(suitable_video["link"], video_path)
-                    background_video_path = video_path
+                    try:
+                        pexels.download_video(videos[0]["url"], video_path)
+                        background_video_path = video_path
+                        logger.info(f"Job {job_id}: Found and downloaded Pexels video for scene {i+1}")
+                    except Exception as e:
+                        logger.error(f"Job {job_id}: Error downloading Pexels video: {str(e)}")
+                        background_video_path = None
+                
+                # If Pexels failed, try Pixabay
+                if not background_video_path:
+                    videos = pixabay.search_videos(search_query, orientation=orientation)
+                    if videos:
+                        video_filename = f"background_{job_id}_scene_{i}.mp4"
+                        video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
+                        try:
+                            pixabay.download_video(videos[0]["url"], video_path)
+                            background_video_path = video_path
+                            logger.info(f"Job {job_id}: Found and downloaded Pixabay video for scene {i+1}")
+                        except Exception as e:
+                            logger.error(f"Job {job_id}: Error downloading Pixabay video: {str(e)}")
+                            background_video_path = None
             
             # Use default background video if no background video found
             if not background_video_path:

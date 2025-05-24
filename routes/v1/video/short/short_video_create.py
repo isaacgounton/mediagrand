@@ -44,9 +44,10 @@ logger = logging.getLogger(__name__)
                         "type": "array",
                         "items": {"type": "string"},
                         "minItems": 1
-                    }
+                    },
+                    "bg_video_url": {"type": "string", "format": "uri"}
                 },
-                "required": ["text", "search_terms"],
+                "required": ["text"],
                 "additionalProperties": False
             },
             "minItems": 1
