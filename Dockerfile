@@ -290,7 +290,43 @@ RUN apt-get update && \
     libwebpmux3 \
     libfribidi0 \
     libharfbuzz0b \
-    imagemagick && \
+    imagemagick \
+    # Chrome/Chromium dependencies for Remotion browser rendering
+    libnss3 \
+    libnspr4 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
+    libatspi2.0-0 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0 \
+    libxcursor1 \
+    libxi6 \
+    libxrender1 \
+    libxtst6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxext6 \
+    libxfixes3 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libgcc1 \
+    libgconf-2-4 \
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    fonts-liberation \
+    xdg-utils \
+    wget && \
     # Try to install optional multimedia packages
     (apt-get install -y --no-install-recommends libx264-164 libx265-199 libaom3 libdav1d6 librav1e0 || true) && \
     rm -rf /var/lib/apt/lists/*
