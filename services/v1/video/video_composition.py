@@ -87,18 +87,21 @@ class RemotionRenderer:
                 output_path
             ]
             
-            # Execute render command with timeout
+            # Execute render command with extended timeout
             logger.info(f"Starting Remotion render with props from {temp_data_path}")
             result = subprocess.run(
                 cmd,
                 cwd=self.remotion_path,
                 capture_output=True,
                 text=True,
-                timeout=240,  # 4 minute timeout for rendering
+                timeout=600,  # 10 minute timeout for rendering (increased from 4 minutes)
                 env={
                     **os.environ,
                     "NODE_ENV": "production",
-                    "REMOTION_SAFE_MODE": "1"
+                    "REMOTION_SAFE_MODE": "1",
+                    "REMOTION_CONCURRENCY": "1",  # Reduce concurrency to avoid resource issues
+                    "REMOTION_BROWSER_EXECUTABLE": "",  # Use system Chrome if available
+                    "REMOTION_DISABLE_KEYBOARD_SHORTCUTS": "true"
                 }
             )
             
@@ -114,7 +117,7 @@ class RemotionRenderer:
             return output_path
             
         except subprocess.TimeoutExpired:
-            logger.error("Remotion rendering timed out after 4 minutes")
+            logger.error("Remotion rendering timed out after 10 minutes")
             raise RuntimeError("Video rendering timed out - process took too long")
         except Exception as e:
             logger.error(f"Error in Remotion rendering: {str(e)}")

@@ -37,6 +37,7 @@ Creates a new short video with specified scenes and configuration.
     "caption_position": "bottom",
     "caption_background_color": "#000000",
     "music": "upbeat",
+    "music_url": "https://example.com/background-music.mp3",
     "music_volume": "medium",
     "padding_back": 0.5
   },
@@ -56,7 +57,8 @@ Configuration:
 - `orientation` (optional) - "portrait" (9:16) or "landscape" (16:9), default "portrait"
 - `caption_position` (optional) - "top", "center", or "bottom", default "bottom"
 - `caption_background_color` (optional) - Caption background color in hex, default "#000000"
-- `music` (optional) - Music mood category
+- `music` (optional) - Music mood category (ignored if music_url is provided)
+- `music_url` (optional) - Direct URL to background music file (MP3, WAV, etc.). Takes priority over music mood selection
 - `music_volume` (optional) - "high", "medium", "low", or "muted", default "medium"
 - `padding_back` (optional) - Padding between scenes in seconds, default 0.5
 

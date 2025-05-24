@@ -68,9 +68,27 @@ async function renderVideo(props, output) {
           '--disable-features=VizDisplayCompositor',
           '--allow-file-access',
           '--disable-extensions-file-access-check',
-          '--disable-security-features'
+          '--disable-security-features',
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--no-pings',
+          '--password-store=basic',
+          '--use-mock-keychain',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-ipc-flooding-protection'
         ]
       },
+      concurrency: 1,  // Force single-threaded rendering to avoid resource conflicts
+      verbose: true,   // Enable verbose logging for debugging
     });
 
     console.log('Rendering completed successfully');

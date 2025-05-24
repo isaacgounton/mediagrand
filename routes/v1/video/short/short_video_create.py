@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
                 "caption_position": {"type": "string", "enum": ["top", "center", "bottom"]},
                 "caption_background_color": {"type": "string"},
                 "music": {"type": "string"},
+                "music_url": {"type": "string", "format": "uri"},
                 "music_volume": {"type": "string", "enum": ["low", "medium", "high", "muted"]},
                 "padding_back": {"type": "number", "minimum": 0}
             },

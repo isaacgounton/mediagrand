@@ -272,9 +272,28 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         # For now, we'll just use the first scene
         scene = processed_scenes[0]
         
-        # Get background music based on mood
+        # Get background music - prioritize music_url over mood-based selection
         background_music = None
-        if music_tag and music_tag != "none":
+        music_url_param = config.get("music_url")
+        
+        if music_url_param:
+            # Download music from provided URL
+            music_filename = f"music_{job_id}.mp3"
+            music_path = os.path.join(LOCAL_STORAGE_PATH, music_filename)
+            try:
+                response = requests.get(music_url_param, stream=True)
+                response.raise_for_status()
+                with open(music_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                background_music = music_path
+                logger.info(f"Job {job_id}: Downloaded music from provided URL")
+            except Exception as e:
+                logger.error(f"Job {job_id}: Error downloading music from URL: {str(e)}")
+                background_music = None
+        
+        # Fallback to mood-based music if no music_url provided or download failed
+        if not background_music and music_tag and music_tag != "none":
             background_music = music_manager.get_music_by_mood(music_tag)
             if not background_music:
                 logger.warning(f"No music found for mood: {music_tag}")
