@@ -1,7 +1,22 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   api:
+    depends_on:
+      redis:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile
@@ -39,6 +54,8 @@ services:
       - LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH}
       - PEXELS_API_KEY=${PEXELS_API_KEY}
       - PIXABAY_API_KEY=${PIXABAY_API_KEY}
+      - RQ_WORKERS=${RQ_WORKERS:-2}
+      - REDIS_URL=redis://redis:6379
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}

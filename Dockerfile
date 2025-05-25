@@ -110,17 +110,23 @@ USER appuser
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
 
-# Create startup script
+# Create startup script for RQ workers and Gunicorn
 RUN echo '#!/bin/bash\n\
 \n\
+# Start RQ workers\n\
+for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
+    rq worker tasks --url redis://redis:6379 &\n\
+done\n\
+\n\
+# Start Gunicorn\n\
 gunicorn --bind 0.0.0.0:8080 \
     --workers ${GUNICORN_WORKERS:-2} \
     --timeout ${GUNICORN_TIMEOUT:-300} \
     --worker-class sync \
     --keep-alive 80 \
     --preload \
-    app:app' > /app/run_gunicorn.sh && \
-    chmod +x /app/run_gunicorn.sh
+    app:app' > /app/run_services.sh && \
+    chmod +x /app/run_services.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -138,4 +144,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the application
-CMD ["/app/run_gunicorn.sh"]
+CMD ["/app/run_services.sh"]
