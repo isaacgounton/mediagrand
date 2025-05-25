@@ -16,7 +16,7 @@
 
 
 
-from flask import request, jsonify, current_app, has_request_context
+from flask import request, jsonify, current_app, has_request_context, has_app_context
 from functools import wraps
 import jsonschema
 import os
@@ -94,6 +94,13 @@ def queue_task_wrapper(bypass_queue=False):
     def decorator(f):
         @wraps(f)  # Add functools.wraps to preserve the original function name
         def wrapper(*args, **kwargs):
-            return current_app.queue_task(bypass_queue=bypass_queue)(f)(*args, **kwargs)
+            # Check if we're in a Flask application context and request context
+            if has_request_context() and has_app_context():
+                # We're in an HTTP request context, use the normal queue mechanism
+                return current_app.queue_task(bypass_queue=bypass_queue)(f)(*args, **kwargs)
+            else:
+                # We're in a worker context, just call the function directly
+                # The queueing has already been handled
+                return f(*args, **kwargs)
         return wrapper
     return decorator
