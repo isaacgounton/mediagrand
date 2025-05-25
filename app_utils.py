@@ -58,31 +58,24 @@ def validate_payload(schema):
 
 def log_job_status(job_id, data):
     """
-    Log job status to a file in the original /tmp/jobs directory with proper permissions
+    Log job status to a file in the LOCAL_STORAGE_PATH/jobs folder
     
     Args:
         job_id (str): The unique job ID
         data (dict): Data to write to the log file
     """
-    # Keep using the original jobs directory that all endpoints expect
-    jobs_dir = os.path.join('/tmp', 'jobs')
-    
-    # As a single fallback, use system temp dir if /tmp isn't available
-    if not os.path.exists('/tmp') or not os.access('/tmp', os.W_OK):
-        jobs_dir = os.path.join(tempfile.gettempdir(), 'jobs')
-        logging.info(f"Using system temp directory for job status: {jobs_dir}")
+    jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
     
     try:
-        # Create the jobs directory if it doesn't exist
-        # This should happen once at application startup
+        # Create jobs directory if it doesn't exist
         if not os.path.exists(jobs_dir):
-            os.makedirs(jobs_dir, mode=0o777, exist_ok=True)
+            os.makedirs(jobs_dir, exist_ok=True)
             logging.info(f"Created jobs directory: {jobs_dir}")
         
-        # Define the job file path
+        # Create or update the job log file
         job_file = os.path.join(jobs_dir, f"{job_id}.json")
         
-        # Write the data to the file
+        # Write data directly to file
         with open(job_file, 'w') as f:
             json.dump(data, f, indent=2)
             
