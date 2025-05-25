@@ -17,15 +17,24 @@
 
 
 from functools import wraps
-from flask import request, jsonify
+from flask import request, jsonify, has_request_context
 from config import API_KEY
 
 def authenticate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        api_key = request.headers.get('X-API-Key')
-        
-        if api_key != API_KEY:
-            return jsonify({"message": "Unauthorized"}), 401
+        # Check if we're in a Flask request context
+        if has_request_context():
+            # We're in an HTTP request context, perform normal authentication
+            api_key = request.headers.get('X-API-Key')
+            
+            if api_key != API_KEY:
+                return jsonify({"message": "Unauthorized"}), 401
+        else:
+            # We're in a worker context (no request context)
+            # Authentication was already performed when the task was queued
+            # So we can proceed without checking again
+            pass
+            
         return func(*args, **kwargs)
     return wrapper
