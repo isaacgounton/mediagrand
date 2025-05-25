@@ -13,7 +13,8 @@ from moviepy import (
     VideoFileClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip,
     TextClip, ImageClip, ColorClip, concatenate_videoclips, concatenate_audioclips
 )
-from moviepy.config import get_setting
+# Import moviepy.config instead of direct importing get_setting
+import moviepy.config as mp_config
 from config import LOCAL_STORAGE_PATH
 import requests
 
@@ -30,13 +31,45 @@ class MoviePyComposer:
         self.portrait_size = (1080, 1920)  # 9:16
         self.landscape_size = (1920, 1080)  # 16:9
         self.square_size = (1080, 1080)     # 1:1
-        
         # Default font path - fallback to system fonts
         self.default_font = self._get_default_font()
     
+    def _get_moviepy_setting(self, setting_name, default_value=None):
+        """
+        Get a setting from moviepy.config in a way that's compatible with different versions.
+        
+        Args:
+            setting_name: The name of the setting to retrieve
+            default_value: Value to return if setting doesn't exist
+            
+        Returns:
+            The setting value or default value
+        """
+        # Try direct attribute access first (newer versions)
+        if hasattr(mp_config, setting_name):
+            return getattr(mp_config, setting_name)
+        
+        # Try get_setting if it exists (older versions)
+        if hasattr(mp_config, 'get_setting'):
+            try:
+                return mp_config.get_setting(setting_name)
+            except:
+                pass
+                
+        # Finally, look in __dict__ 
+        if setting_name in mp_config.__dict__:
+            return mp_config.__dict__[setting_name]
+            
+        return default_value
+    
     def _get_default_font(self) -> str:
         """Get the default font path for text rendering."""
+        # Try to get font from MoviePy config first
+        moviepy_font = self._get_moviepy_setting("FONT", None)
+        
         font_paths = [
+            # MoviePy configured font if available
+            moviepy_font,
             # Coolify container paths
             "/var/lib/app/fonts/Roboto-Regular.ttf",
             "/var/lib/app/fonts/Arial.ttf",
