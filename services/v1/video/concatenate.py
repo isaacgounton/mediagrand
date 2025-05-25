@@ -51,10 +51,16 @@ def process_video_concatenate(media_urls, job_id, webhook_url=None):
                 # Write absolute paths to the concat list
                 concat_file.write(f"file '{os.path.abspath(input_file)}'\n")
 
-        # Use the concat demuxer to concatenate the videos
+        # Use the concat demuxer with re-encoding for smooth transitions
         (
             ffmpeg.input(concat_file_path, format='concat', safe=0).
-                output(output_path, c='copy').
+                output(output_path, 
+                       vcodec='libx264',     # Re-encode video for smooth transitions
+                       acodec='aac',         # Re-encode audio for compatibility
+                       r=30,                 # Ensure consistent frame rate
+                       pix_fmt='yuv420p',    # Ensure consistent pixel format
+                       movflags='faststart'  # Optimize for streaming
+                ).
                 run(overwrite_output=True)
         )
 

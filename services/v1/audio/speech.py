@@ -1019,7 +1019,7 @@ def generate_tts(tts: str, text: str, voice: str, job_id: str,
                             f.write(f"{start_str} --> {end_str}\n")
                             f.write(f"{phrase['text']}\n\n")
                 else:
-                    # SRT format (default)
+                    # SRT format
                     subtitle_file = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.srt")
                     with open(subtitle_file, 'w', encoding='utf-8') as f:
                         for i, phrase in enumerate(phrases, 1):
@@ -1062,14 +1062,92 @@ def generate_tts(tts: str, text: str, voice: str, job_id: str,
                             f.write("00:00:00,000 --> 00:00:10,000\n")
                             f.write(text + "\n\n")
         else:
-            # Basic subtitle generation without timestamps
-            with open(subtitle_file, 'w', encoding='utf-8') as f:
-                f.write("1\n")
-                f.write("00:00:00,000 --> 00:00:10,000\n")
-                f.write(text + "\n\n")
+            # Generate segmented subtitles without timestamps
+            _generate_segmented_subtitles(text, subtitle_file, subtitle_format)
         
         return final_audio_file_path, subtitle_file
     
     else:
         # For long texts, use the optimized approach
         return generate_tts_optimized(tts, text, voice, job_id, output_format, rate, volume, pitch, subtitle_format)
+
+def _generate_segmented_subtitles(text: str, subtitle_file: str, subtitle_format: str = "srt"):
+    """
+    Generate segmented subtitles by breaking text into logical chunks.
+    This creates a better subtitle experience when precise timestamps aren't available.
+    """
+    import re
+    
+    # Split text into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    
+    # Group sentences into subtitle chunks (3-4 sentences or ~100-150 chars per subtitle)
+    subtitle_chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # If adding this sentence would make chunk too long, start new chunk
+        if (len(current_chunk) >= 3 or 
+            current_length + len(sentence) > 150) and current_chunk:
+            subtitle_chunks.append(' '.join(current_chunk))
+            current_chunk = [sentence]
+            current_length = len(sentence)
+        else:
+            current_chunk.append(sentence)
+            current_length += len(sentence) + 1  # +1 for space
+    
+    # Add remaining chunk
+    if current_chunk:
+        subtitle_chunks.append(' '.join(current_chunk))
+    
+    # If no sentences were found, split by words as fallback
+    if not subtitle_chunks:
+        words = text.split()
+        words_per_chunk = max(5, min(15, len(words) // 10))  # 5-15 words per subtitle
+        for i in range(0, len(words), words_per_chunk):
+            chunk = ' '.join(words[i:i + words_per_chunk])
+            subtitle_chunks.append(chunk)
+    
+    # Generate subtitle file with estimated timing (5 seconds per chunk)
+    with open(subtitle_file, 'w', encoding='utf-8') as f:
+        if subtitle_format.lower() == "vtt":
+            f.write("WEBVTT\n\n")
+            for i, chunk in enumerate(subtitle_chunks, 1):
+                start_time = (i - 1) * 5
+                end_time = i * 5
+                
+                start_hrs = start_time // 3600
+                start_mins = (start_time % 3600) // 60
+                start_secs = start_time % 60
+                
+                end_hrs = end_time // 3600
+                end_mins = (end_time % 3600) // 60
+                end_secs = end_time % 60
+                
+                start_str = f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d}.000"
+                end_str = f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d}.000"
+                
+                f.write(f"{i}\n{start_str} --> {end_str}\n{chunk}\n\n")
+        else:
+            # SRT format
+            for i, chunk in enumerate(subtitle_chunks, 1):
+                start_time = (i - 1) * 5
+                end_time = i * 5
+                
+                start_hrs = start_time // 3600
+                start_mins = (start_time % 3600) // 60
+                start_secs = start_time % 60
+                
+                end_hrs = end_time // 3600
+                end_mins = (end_time % 3600) // 60
+                end_secs = end_time % 60
+                
+                start_str = f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d},000"
+                end_str = f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d},000"
+                
+                f.write(f"{i}\n{start_str} --> {end_str}\n{chunk}\n\n")

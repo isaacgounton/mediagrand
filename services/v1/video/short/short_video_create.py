@@ -258,19 +258,47 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             # Parse SRT format to get timing
             captions = []
             current_caption = {}
-            for line in captions_raw.split('\n'):
-                if line.strip() and '-->' in line:
-                    times = line.split('-->')
-                    current_caption['start'] = _srt_time_to_seconds(times[0].strip())
-                    current_caption['end'] = _srt_time_to_seconds(times[1].strip())
-                elif line.strip() and not line[0].isdigit():
-                    current_caption['text'] = line.strip()
-                    captions.append(current_caption.copy())
-                    current_caption = {}
+            lines = captions_raw.strip().split('\n')
+            i = 0
+            
+            while i < len(lines):
+                line = lines[i].strip()
+                
+                # Skip empty lines
+                if not line:
+                    i += 1
+                    continue
+                
+                # Check if this is a subtitle number (digits only)
+                if line.isdigit():
+                    # Next line should be timing
+                    if i + 1 < len(lines) and '-->' in lines[i + 1]:
+                        timing_line = lines[i + 1].strip()
+                        times = timing_line.split('-->')
+                        current_caption['start'] = _srt_time_to_seconds(times[0].strip())
+                        current_caption['end'] = _srt_time_to_seconds(times[1].strip())
+                        
+                        # Collect subtitle text (may span multiple lines)
+                        text_lines = []
+                        j = i + 2
+                        while j < len(lines) and lines[j].strip() and not lines[j].strip().isdigit():
+                            text_lines.append(lines[j].strip())
+                            j += 1
+                        
+                        if text_lines:
+                            current_caption['text'] = ' '.join(text_lines)
+                            captions.append(current_caption.copy())
+                        
+                        current_caption = {}
+                        i = j
+                    else:
+                        i += 1
+                else:
+                    i += 1
             
             scene_data = {
                 "audio_path": audio_path,
-                "captions": captions,
+                "captions": captions if captions else [{"text": scene.get("text", "")[:100] + "...", "start": 0, "end": 5}],
                 "analysis": scene_analysis,
                 "person_image_url": scene.get("person_image_url"),
                 "person_name": scene.get("person_name")

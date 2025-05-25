@@ -75,27 +75,32 @@ class MoviePyRenderer:
         }
         return volume_map.get(volume_setting, 0.2)
     
-    def _get_caption_position(self, position: str, video_size: Tuple[int, int]) -> Tuple[str, str]:
-        """Get caption position for MoviePy."""
+    def _get_caption_position(self, position: str, video_size: Tuple[int, int], 
+                            has_person_overlay: bool = False) -> Tuple[str, str]:
+        """Get caption position for MoviePy, adjusting for person overlays."""
         width, height = video_size
         
         if position == "top":
-            return ("center", 50)
+            # Move captions lower if person overlay present
+            y_pos = 80 if has_person_overlay else 50
+            return ("center", y_pos)
         elif position == "center":
             return ("center", "center")
         else:  # bottom
-            return ("center", height - 120)
+            # Default bottom position with more margin
+            return ("center", height - 140)
     
     def _create_caption_clip(self, caption: Dict, video_size: Tuple[int, int], 
-                           caption_position: str, bg_color: str) -> TextClip:
+                           caption_position: str, bg_color: str, 
+                           has_person_overlay: bool = False) -> TextClip:
         """Create a single caption clip."""
         width, height = video_size
         
         # Determine font size based on orientation
         font_size = 60 if video_size[1] > video_size[0] else 80  # Smaller for portrait
         
-        # Get position
-        pos = self._get_caption_position(caption_position, video_size)
+        # Get position with person overlay consideration
+        pos = self._get_caption_position(caption_position, video_size, has_person_overlay)
         
         # Create text clip with background
         txt_clip = TextClip(
@@ -122,11 +127,11 @@ class MoviePyRenderer:
             # Determine size based on video orientation
             width, height = video_size
             if width < height:  # Portrait
-                overlay_size = (200, 200)  # Smaller for portrait
-                position = (width - 220, 20)  # Top right with margin
+                overlay_size = (150, 150)  # Smaller to avoid subtitle conflicts
+                position = (width - 170, 20)  # Top right with more margin
             else:  # Landscape
-                overlay_size = (250, 250)  # Larger for landscape
-                position = (width - 270, 20)  # Top right with margin
+                overlay_size = (200, 200)  # Slightly smaller for landscape
+                position = (width - 220, 20)  # Top right with more margin
             
             # Create image clip
             image_clip = ImageClip(image_path, duration=duration)
@@ -155,12 +160,13 @@ class MoviePyRenderer:
             width, height = video_size
             
             # Determine font size and position based on orientation
+            # Position below person image but avoid subtitle area
             if width < height:  # Portrait
-                font_size = 32
-                position = (width - 220, 240)  # Below person image
+                font_size = 28  # Smaller font
+                position = (width - 170, 180)  # Below person image, adjusted margin
             else:  # Landscape
-                font_size = 40
-                position = (width - 270, 290)  # Below person image
+                font_size = 32  # Slightly smaller font
+                position = (width - 220, 230)  # Below person image, adjusted margin
             
             # Create name overlay with background
             name_clip = TextClip(
@@ -171,7 +177,7 @@ class MoviePyRenderer:
                 stroke_color='black',
                 stroke_width=1,
                 method='caption',
-                size=(200, None),  # Max width for name
+                size=(150, None),  # Narrower width to avoid conflicts
                 text_align='center'
             ).with_position(position).with_duration(duration)
             
@@ -330,12 +336,15 @@ class MoviePyRenderer:
             # Create caption clips
             logger.info("Creating caption clips...")
             caption_clips = []
+            has_person_overlay = bool(person_image_url or person_name)
+            
             for caption in captions:
                 caption_clip = self._create_caption_clip(
                     caption, 
                     target_size, 
                     config.get("caption_position", "bottom"),
-                    config.get("caption_background_color", "#000000")
+                    config.get("caption_background_color", "#000000"),
+                    has_person_overlay
                 )
                 caption_clips.append(caption_clip)
             
@@ -362,8 +371,9 @@ class MoviePyRenderer:
                 except Exception as e:
                     logger.warning(f"Failed to create person name overlay: {str(e)}")
             
-            # Composite all video elements
+            # Composite all video elements with proper z-ordering
             logger.info("Compositing final video...")
+            # Layer order: background video (bottom) -> captions -> person overlays (top)
             video_clips = [background_video] + caption_clips + overlay_clips
             final_video = CompositeVideoClip(video_clips, size=target_size)
             
