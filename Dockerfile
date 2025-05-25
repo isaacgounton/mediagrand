@@ -116,7 +116,7 @@ RUN echo '#!/bin/bash\n\
 # Handle SIGTERM for graceful shutdown\n\
 cleanup() {\n\
     echo "Received SIGTERM, shutting down..."\n\
-    kill \${pids[@]}\n\
+    kill ${pids[@]}\n\
     wait\n\
     exit 0\n\
 }\n\
@@ -126,27 +126,21 @@ trap cleanup SIGTERM\n\
 # Array to store background process PIDs\n\
 declare -a pids\n\
 \n\
-# Start RQ workers with custom settings\n\
+# Start RQ workers with correct settings\n\
 for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
-    rq worker tasks \
-        --url redis://redis:6379 \
-        --serializer json \
-        --worker-class "rq.Worker" \
-        --job-class "rq.Job" \
-        --queue-class "rq.Queue" \
-        --connection-class "redis.Redis" \
-        --burst false \
-        --logging-level warning &\n\
+    rq worker tasks \\\n\
+        --url redis://redis:6379 \\\n\
+        --logging_level warning &\n\
     pids+=($!)\n\
 done\n\
 \n\
 # Start Gunicorn\n\
-gunicorn --bind 0.0.0.0:8080 \
-    --workers ${GUNICORN_WORKERS:-2} \
-    --timeout ${GUNICORN_TIMEOUT:-300} \
-    --worker-class sync \
-    --keep-alive 80 \
-    --preload \
+gunicorn --bind 0.0.0.0:8080 \\\n\
+    --workers ${GUNICORN_WORKERS:-2} \\\n\
+    --timeout ${GUNICORN_TIMEOUT:-300} \\\n\
+    --worker-class sync \\\n\
+    --keep-alive 80 \\\n\
+    --preload \\\n\
     app:app &\n\
 pids+=($!)\n\
 \n\
