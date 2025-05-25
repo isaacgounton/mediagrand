@@ -416,7 +416,8 @@ class MoviePyComposer:
             voice_config = composition.get("voice")
             if voice_config and voice_config.get("type") == "tts":
                 try:
-                    from services.v1.audio.speech import generate_speech_file
+                    from services.v1.audio.speech import generate_tts
+                    import uuid
                     
                     tts_text = voice_config.get("text", "")
                     tts_engine = voice_config.get("engine", "edge-tts:en-US-AriaNeural")
@@ -424,12 +425,14 @@ class MoviePyComposer:
                     if tts_text:
                         logger.info("Generating TTS audio...")
                         # Generate TTS audio file
-                        tts_audio_path = generate_speech_file(
-                            text=tts_text,
+                        job_id = str(uuid.uuid4())
+                        tts_audio_path, _ = generate_tts(
                             tts=tts_engine.split(":")[0] if ":" in tts_engine else tts_engine,
+                            text=tts_text,
                             voice=tts_engine.split(":")[1] if ":" in tts_engine else None,
-                            speed=voice_config.get("speed", 1.0),
-                            output_format="mp3"
+                            job_id=job_id,
+                            output_format="mp3",
+                            rate=str(voice_config.get("speed", 1.0))
                         )
                         
                         # Add TTS audio to composition
