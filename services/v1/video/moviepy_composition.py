@@ -78,8 +78,9 @@ class MoviePyRenderer:
             "Roboto-Regular"
         ]
         
+        # Filter out None values to prevent os.path.exists() errors
         for font_path in font_paths:
-            if os.path.exists(font_path):
+            if font_path is not None and os.path.exists(font_path):
                 return font_path
         
         logger.warning("No suitable font found, using default system font")
