@@ -1,4 +1,5 @@
 # Copyright (c) 2025 Isaac Gounton
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -13,10 +14,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from flask import Blueprint, jsonify
-from app_utils import validate_payload, queue_task_wrapper
 import logging
-from services.authentication import authenticate
 from services.cloud_storage import upload_file
 from services.v1.video.short.short_video_create import create_short_video as process_short_video
 from services.v1.video.short.short_video_status import (
@@ -25,57 +23,13 @@ from services.v1.video.short.short_video_status import (
     mark_video_failed
 )
 
-v1_video_short_create_bp = Blueprint('v1_video_short_create', __name__)
 logger = logging.getLogger(__name__)
 
-@v1_video_short_create_bp.route('/v1/video/short/create', methods=['POST'])
-@authenticate
-@validate_payload({
-    "type": "object",
-    "properties": {
-        "scenes": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string", "minLength": 1},
-                    "search_terms": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 1
-                    },
-                    "bg_video_url": {"type": "string", "format": "uri"},
-                    "person_image_url": {"type": "string", "format": "uri"},
-                    "person_name": {"type": "string"}
-                },
-                "required": ["text"],
-                "additionalProperties": False
-            },
-            "minItems": 1
-        },
-        "config": {
-            "type": "object",
-            "properties": {
-                "voice": {"type": "string"},
-                "orientation": {"type": "string", "enum": ["portrait", "landscape"]},
-                "caption_position": {"type": "string", "enum": ["top", "center", "bottom"]},
-                "caption_background_color": {"type": "string"},
-                "music": {"type": "string"},
-                "music_url": {"type": "string", "format": "uri"},
-                "music_volume": {"type": "string", "enum": ["low", "medium", "high", "muted"]},
-                "padding_back": {"type": "number", "minimum": 0}
-            },
-            "additionalProperties": False
-        },
-        "webhook_url": {"type": "string", "format": "uri"},
-        "id": {"type": "string"}
-    },
-    "required": ["scenes"],
-    "additionalProperties": False
-})
-@queue_task_wrapper(bypass_queue=False)
-def create_short_video_endpoint(job_id, data):
-    """Create a short video from text scenes with background videos, music, and captions."""
+def create_short_video_worker(job_id, data):
+    """
+    Worker function to create short video - runs in background without authentication context.
+    This function is called by RQ workers and should not have authentication decorators.
+    """
     scenes = data['scenes']
     config = data.get('config', {})
     webhook_url = data.get('webhook_url')
@@ -84,6 +38,11 @@ def create_short_video_endpoint(job_id, data):
     # Use custom ID if provided, otherwise use generated job_id
     if custom_id:
         job_id = custom_id
+    
+    # If still no job_id, generate one
+    if not job_id:
+        import uuid
+        job_id = str(uuid.uuid4())
 
     logger.info(f"Job {job_id}: Received short video creation request with {len(scenes)} scenes")
 
