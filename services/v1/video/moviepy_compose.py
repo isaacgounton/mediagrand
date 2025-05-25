@@ -67,9 +67,15 @@ class MoviePyComposer:
         # Try to get font from MoviePy config first
         moviepy_font = self._get_moviepy_setting("FONT", None)
         
-        font_paths = [
-            # MoviePy configured font if available
-            moviepy_font,
+        # Create a list of font paths, excluding None values
+        font_paths = []
+        
+        # Add MoviePy configured font if available
+        if moviepy_font is not None:
+            font_paths.append(moviepy_font)
+            
+        # Add standard system font paths
+        font_paths.extend([
             # Coolify container paths
             "/var/lib/app/fonts/Roboto-Regular.ttf",
             "/var/lib/app/fonts/Arial.ttf",
@@ -85,8 +91,9 @@ class MoviePyComposer:
             "DejaVuSans",
             "Arial",
             "Roboto-Regular"
-        ]
+        ])
         
+        # Check each path for existence
         for font_path in font_paths:
             if os.path.exists(font_path):
                 return font_path
