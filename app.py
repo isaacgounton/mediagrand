@@ -272,6 +272,7 @@ def create_app():
     from routes.v1.video.short.short_video_create import v1_video_short_create_bp
     from routes.v1.video.short.short_video_status import v1_video_short_status_bp
     from routes.v1.video.short.music import music_bp
+    from routes.v1.video.moviepy_compose import moviepy_compose_bp
     from routes.v1.media.serve_files import v1_media_serve_files_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
@@ -306,6 +307,7 @@ def create_app():
     app.register_blueprint(v1_video_short_create_bp)
     app.register_blueprint(v1_video_short_status_bp)
     app.register_blueprint(music_bp, url_prefix='/v1/video/short/music')
+    app.register_blueprint(moviepy_compose_bp)
     app.register_blueprint(v1_media_serve_files_bp)
 
     return app

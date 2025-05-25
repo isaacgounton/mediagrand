@@ -1,0 +1,367 @@
+"""
+Flexible MoviePy composition service that allows creating custom video compositions.
+This service provides a more flexible way to create videos using MoviePy, allowing
+for custom layouts, effects, and compositions beyond the standard renderer.
+"""
+
+import os
+import json
+import logging
+import tempfile
+from typing import Dict, List, Any, Optional, Tuple, Union
+from moviepy import (
+    VideoFileClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip,
+    TextClip, ImageClip, ColorClip, concatenate_videoclips, concatenate_audioclips
+)
+from moviepy.config import get_setting
+from config import LOCAL_STORAGE_PATH
+import requests
+
+logger = logging.getLogger(__name__)
+
+class MoviePyComposer:
+    """
+    Flexible service for composing videos using MoviePy with custom layouts and effects.
+    Allows for creating complex video compositions beyond standard templates.
+    """
+    
+    def __init__(self):
+        # Default video dimensions
+        self.portrait_size = (1080, 1920)  # 9:16
+        self.landscape_size = (1920, 1080)  # 16:9
+        self.square_size = (1080, 1080)     # 1:1
+        
+        # Default font path - fallback to system fonts
+        self.default_font = self._get_default_font()
+    
+    def _get_default_font(self) -> str:
+        """Get the default font path for text rendering."""
+        font_paths = [
+            # Coolify container paths
+            "/var/lib/app/fonts/Roboto-Regular.ttf",
+            "/var/lib/app/fonts/Arial.ttf",
+            "/var/lib/app/fonts/DejaVuSans.ttf",
+            # Fallback to common container paths
+            "/app/fonts/Roboto-Regular.ttf",
+            "/app/fonts/Arial.ttf",
+            "/app/fonts/DejaVuSans.ttf",
+            # Common Linux paths
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            # System font names as fallbacks
+            "DejaVuSans",
+            "Arial",
+            "Roboto-Regular"
+        ]
+        
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                return font_path
+        
+        logger.warning("No suitable font found, using default system font")
+        return "Arial"  # Fallback to system font name
+    
+    def _url_to_local_path(self, url_or_path: str) -> str:
+        """Convert URL to local path or return path if already local."""
+        if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+            # Extract filename from URL
+            filename = url_or_path.split("/")[-1]
+            
+            # Add extension if missing
+            if not any(filename.endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.mp3', '.wav', '.png', '.jpg', '.jpeg']):
+                # Guess extension based on content type or default
+                if 'image' in url_or_path.lower() or any(img_ext in url_or_path.lower() for img_ext in ['png', 'jpg', 'jpeg']):
+                    filename += '.jpg'
+                elif 'audio' in url_or_path.lower() or any(aud_ext in url_or_path.lower() for aud_ext in ['mp3', 'wav']):
+                    filename += '.mp3'
+                else:
+                    filename += '.mp4'
+            
+            # Check if file exists in LOCAL_STORAGE_PATH
+            local_path = os.path.join(LOCAL_STORAGE_PATH, filename)
+            if os.path.exists(local_path):
+                return local_path
+            else:
+                # Download the file
+                response = requests.get(url_or_path, timeout=30)
+                response.raise_for_status()
+                with open(local_path, 'wb') as f:
+                    f.write(response.content)
+                logger.info(f"Downloaded {url_or_path} to {local_path}")
+                return local_path
+        else:
+            return url_or_path
+    
+    def _create_clip(self, clip_config: Dict) -> Any:
+        """
+        Create a clip based on configuration.
+        
+        Args:
+            clip_config: Dictionary with clip configuration
+            
+        Returns:
+            MoviePy clip object
+        """
+        clip_type = clip_config.get("type", "").lower()
+        
+        if clip_type == "video":
+            return self._create_video_clip(clip_config)
+        elif clip_type == "audio":
+            return self._create_audio_clip(clip_config)
+        elif clip_type == "text":
+            return self._create_text_clip(clip_config)
+        elif clip_type == "image":
+            return self._create_image_clip(clip_config)
+        elif clip_type == "color":
+            return self._create_color_clip(clip_config)
+        elif clip_type == "composite":
+            return self._create_composite_clip(clip_config)
+        else:
+            raise ValueError(f"Unsupported clip type: {clip_type}")
+    
+    def _create_video_clip(self, config: Dict) -> VideoFileClip:
+        """Create a video clip from configuration."""
+        # Get video path (from URL if needed)
+        video_path = self._url_to_local_path(config.get("path", ""))
+        
+        # Create video clip
+        video_clip = VideoFileClip(video_path)
+        
+        # Apply transformations
+        video_clip = self._apply_clip_transformations(video_clip, config)
+        
+        return video_clip
+    
+    def _create_audio_clip(self, config: Dict) -> AudioFileClip:
+        """Create an audio clip from configuration."""
+        # Get audio path (from URL if needed)
+        audio_path = self._url_to_local_path(config.get("path", ""))
+        
+        # Create audio clip
+        audio_clip = AudioFileClip(audio_path)
+        
+        # Apply volume adjustment
+        volume = config.get("volume", 1.0)
+        if volume != 1.0:
+            audio_clip = audio_clip.with_volume_scaled(volume)
+        
+        # Apply subclip if specified
+        start_time = config.get("start_time")
+        end_time = config.get("end_time")
+        if start_time is not None or end_time is not None:
+            audio_clip = audio_clip.subclip(start_time or 0, end_time)
+        
+        return audio_clip
+    
+    def _create_text_clip(self, config: Dict) -> TextClip:
+        """Create a text clip from configuration."""
+        # Get text properties
+        text = config.get("text", "")
+        font_size = config.get("font_size", 36)
+        font = config.get("font", self.default_font)
+        color = config.get("color", "white")
+        bg_color = config.get("bg_color")
+        stroke_color = config.get("stroke_color")
+        stroke_width = config.get("stroke_width", 1)
+        method = config.get("method", "caption")
+        align = config.get("align", "center")
+        
+        # Size constraints
+        width = config.get("width")
+        height = config.get("height")
+        size = None
+        if width is not None:
+            size = (width, height)
+        
+        # Create text clip
+        text_clip = TextClip(
+            text=text,
+            font_size=font_size,
+            font=font,
+            color=color,
+            stroke_color=stroke_color,
+            stroke_width=stroke_width,
+            method=method,
+            size=size,
+            text_align=align
+        )
+        
+        # Add background if specified
+        if bg_color:
+            bg_clip = ColorClip(text_clip.size, color=bg_color, duration=text_clip.duration)
+            text_clip = CompositeVideoClip([bg_clip, text_clip])
+        
+        # Apply transformations
+        text_clip = self._apply_clip_transformations(text_clip, config)
+        
+        return text_clip
+    
+    def _create_image_clip(self, config: Dict) -> ImageClip:
+        """Create an image clip from configuration."""
+        # Get image path (from URL if needed)
+        image_path = self._url_to_local_path(config.get("path", ""))
+        
+        # Create image clip
+        image_clip = ImageClip(image_path)
+        
+        # Apply transformations
+        image_clip = self._apply_clip_transformations(image_clip, config)
+        
+        return image_clip
+    
+    def _create_color_clip(self, config: Dict) -> ColorClip:
+        """Create a color clip from configuration."""
+        # Get color properties
+        color = config.get("color", "black")
+        width = config.get("width", 100)
+        height = config.get("height", 100)
+        
+        # Create color clip
+        color_clip = ColorClip((width, height), color=color)
+        
+        # Apply transformations
+        color_clip = self._apply_clip_transformations(color_clip, config)
+        
+        return color_clip
+    
+    def _create_composite_clip(self, config: Dict) -> CompositeVideoClip:
+        """Create a composite clip from configuration."""
+        # Get clip configurations
+        clips_config = config.get("clips", [])
+        size = config.get("size")
+        
+        if not size:
+            orientation = config.get("orientation", "landscape")
+            if orientation == "portrait":
+                size = self.portrait_size
+            elif orientation == "square":
+                size = self.square_size
+            else:
+                size = self.landscape_size
+        
+        # Create clips
+        clips = []
+        for clip_config in clips_config:
+            try:
+                clip = self._create_clip(clip_config)
+                clips.append(clip)
+            except Exception as e:
+                logger.warning(f"Error creating clip: {str(e)}")
+        
+        # Create composite clip
+        composite_clip = CompositeVideoClip(clips, size=size)
+        
+        # Apply transformations
+        composite_clip = self._apply_clip_transformations(composite_clip, config)
+        
+        return composite_clip
+    
+    def _apply_clip_transformations(self, clip, config: Dict) -> Any:
+        """Apply transformations to a clip."""
+        # Apply position
+        position = config.get("position")
+        if position:
+            clip = clip.with_position(position)
+        
+        # Apply duration
+        duration = config.get("duration")
+        if duration is not None:
+            clip = clip.with_duration(duration)
+        
+        # Apply timing
+        start_time = config.get("start_time")
+        end_time = config.get("end_time")
+        if start_time is not None or end_time is not None:
+            clip = clip.subclip(start_time or 0, end_time)
+        
+        # Apply resizing
+        width = config.get("width")
+        height = config.get("height")
+        if width is not None and height is not None:
+            clip = clip.resized(width=width, height=height)
+        
+        # Apply opacity
+        opacity = config.get("opacity")
+        if opacity is not None and opacity < 1.0:
+            clip = clip.with_opacity(opacity)
+        
+        # Apply rotation
+        rotation = config.get("rotation")
+        if rotation:
+            clip = clip.rotate(rotation)
+        
+        # Apply cross-fade
+        crossfade_duration = config.get("crossfade_duration")
+        if crossfade_duration:
+            clip = clip.crossfadein(crossfade_duration)
+        
+        return clip
+    
+    def compose_video(self, composition: Dict, output_path: str) -> str:
+        """
+        Compose a video based on a flexible composition specification.
+        
+        Args:
+            composition: Dictionary with composition specification
+            output_path: Path where the rendered video should be saved
+            
+        Returns:
+            Path to the rendered video file
+        """
+        try:
+            logger.info(f"Starting MoviePy composition to {output_path}")
+            
+            # Create main composite clip
+            main_clip = self._create_clip(composition)
+            
+            # Add audio if specified
+            audio_config = composition.get("audio")
+            if audio_config:
+                audio_clips = []
+                
+                # Handle multiple audio tracks
+                if isinstance(audio_config, list):
+                    for audio_track in audio_config:
+                        audio_clip = self._create_audio_clip(audio_track)
+                        audio_clips.append(audio_clip)
+                else:
+                    audio_clip = self._create_audio_clip(audio_config)
+                    audio_clips.append(audio_clip)
+                
+                # Create composite audio
+                if len(audio_clips) > 1:
+                    composite_audio = CompositeAudioClip(audio_clips)
+                    main_clip = main_clip.with_audio(composite_audio)
+                elif len(audio_clips) == 1:
+                    main_clip = main_clip.with_audio(audio_clips[0])
+            
+            # Get rendering parameters
+            fps = composition.get("fps", 30)
+            codec = composition.get("codec", "libx264")
+            audio_codec = composition.get("audio_codec", "aac")
+            bitrate = composition.get("bitrate")
+            threads = composition.get("threads")
+            
+            # Write video file
+            logger.info(f"Rendering composition to {output_path}")
+            main_clip.write_videofile(
+                output_path,
+                fps=fps,
+                codec=codec,
+                audio_codec=audio_codec,
+                bitrate=bitrate,
+                threads=threads,
+                temp_audiofile=f"{output_path}_temp_audio.m4a",
+                remove_temp=True,
+                logger=None  # Disable MoviePy's verbose logging
+            )
+            
+            # Clean up
+            main_clip.close()
+            
+            logger.info(f"Video composition rendered successfully to {output_path}")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Error in MoviePy composition: {str(e)}")
+            raise RuntimeError(f"Video composition failed: {str(e)}")

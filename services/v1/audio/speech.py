@@ -233,7 +233,7 @@ def handle_streamlabs_polly_tts(text, voice, job_id, rate=None, volume=None, pit
                 concat_file.write(f"file '{os.path.abspath(path)}'\n")
 
         # Concatenate the audio files using ffmpeg
-        ffmpeg.input(concat_file_path, format='concat', safe=0).output(output_path, c='copy').run(overwrite_output=True)
+        ffmpeg.input(concat_file_path, format='concat', safe=0).output(output_path, acodec='aac').run(overwrite_output=True)
 
         # Clean up chunk files and concat file
         for path in audio_chunk_paths:
@@ -647,7 +647,7 @@ class OptimizedTTSProcessor:
             
         return combined_timestamps
         
-    def generate_subtitles(self, timestamps: List[Dict], output_path: str, format: str = "srt") -> str:
+    def generate_subtitles(self, timestamps: List[Dict], output_path: str, format: str = "srt", text: str = None, duration: float = None) -> str:
         """
         Generate subtitle file from timestamps.
         
@@ -655,12 +655,18 @@ class OptimizedTTSProcessor:
             timestamps: List of timestamp dictionaries
             output_path: Output subtitle file path
             format: Subtitle format ('srt' or 'vtt')
+            text: Optional full text content (used when timestamps not available)
+            duration: Optional total audio duration in seconds (used when timestamps not available)
             
         Returns:
             Path to subtitle file
         """
         if not timestamps:
-            # Create basic subtitle without timestamps
+            # If we have text and duration, use smart segmentation
+            if text and duration:
+                return self._generate_segmented_subtitles(text, duration, output_path, format)
+                
+            # Otherwise create basic subtitle without timestamps
             with open(output_path, 'w', encoding='utf-8') as f:
                 if format.lower() == "vtt":
                     f.write("WEBVTT\n\n1\n00:00:00.000 --> 00:00:10.000\n[Generated Audio]\n\n")
@@ -745,6 +751,130 @@ class OptimizedTTSProcessor:
                     f.write(f"{i}\n{start_str} --> {end_str}\n{phrase['text']}\n\n")
                     
         return output_path
+
+    def _generate_segmented_subtitles(self, text: str, duration: float, output_path: str, format: str = "srt") -> str:
+        """
+        Generate segmented subtitles from text without accurate timestamps.
+        Intelligently breaks text into logical chunks with estimated timing.
+        
+        Args:
+            text: Full text content
+            duration: Total audio duration in seconds
+            output_path: Output subtitle file path
+            format: Subtitle format ('srt' or 'vtt')
+            
+        Returns:
+            Path to subtitle file
+        """
+        # Normalize text and remove extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        # Try to split text by sentences
+        try:
+            sentences = nltk.sent_tokenize(text)
+        except:
+            # Fallback to simple period-based splitting if NLTK fails
+            sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        # Group sentences into logical chunks
+        chunks = []
+        current_chunk = []
+        current_chunk_length = 0
+        target_chunk_length = 150  # Characters per chunk
+        
+        for sentence in sentences:
+            sentence_length = len(sentence)
+            
+            # If adding this sentence would make chunk too long, 
+            # finish current chunk (unless it's empty)
+            if current_chunk and (current_chunk_length + sentence_length > target_chunk_length):
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [sentence]
+                current_chunk_length = sentence_length
+            else:
+                current_chunk.append(sentence)
+                current_chunk_length += sentence_length
+            
+            # If sentence itself is reasonably long, start a new chunk
+            if sentence_length > target_chunk_length * 0.8:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = []
+                current_chunk_length = 0
+        
+        # Add remaining text
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        # If no chunks were created, fallback to word-based chunking
+        if not chunks:
+            words = text.split()
+            for i in range(0, len(words), 15):  # ~15 words per chunk
+                chunks.append(' '.join(words[i:i+15]))
+        
+        # Estimate timing (distribute duration evenly among chunks)
+        chunk_duration = duration / max(len(chunks), 1)
+        
+        # Write subtitle file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            if format.lower() == "vtt":
+                f.write("WEBVTT\n\n")
+                
+                for i, chunk in enumerate(chunks, 1):
+                    start_time = i * chunk_duration - chunk_duration
+                    end_time = i * chunk_duration
+                    
+                    start_hrs = int(start_time // 3600)
+                    start_mins = int((start_time % 3600) // 60)
+                    start_secs = int(start_time % 60)
+                    start_ms = int((start_time % 1) * 1000)
+                    
+                    end_hrs = int(end_time // 3600)
+                    end_mins = int((end_time % 3600) // 60)
+                    end_secs = int(end_time % 60)
+                    end_ms = int((end_time % 1) * 1000)
+                    
+                    f.write(f"{i}\n")
+                    f.write(f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d}.{start_ms:03d} --> ")
+                    f.write(f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d}.{end_ms:03d}\n")
+                    f.write(f"{chunk}\n\n")
+            else:
+                # SRT format
+                for i, chunk in enumerate(chunks, 1):
+                    start_time = i * chunk_duration - chunk_duration
+                    end_time = i * chunk_duration
+                    
+                    start_hrs = int(start_time // 3600)
+                    start_mins = int((start_time % 3600) // 60)
+                    start_secs = int(start_time % 60)
+                    start_ms = int((start_time % 1) * 1000)
+                    
+                    end_hrs = int(end_time // 3600)
+                    end_mins = int((end_time % 3600) // 60)
+                    end_secs = int(end_time % 60)
+                    end_ms = int((end_time % 1) * 1000)
+                    
+                    f.write(f"{i}\n")
+                    f.write(f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d},{start_ms:03d} --> ")
+                    f.write(f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d},{end_ms:03d}\n")
+                    f.write(f"{chunk}\n\n")
+        
+        return output_path
+
+    def get_audio_duration(self, audio_path: str) -> float:
+        """Get the duration of an audio file in seconds."""
+        try:
+            probe = ffmpeg.probe(audio_path)
+            return float(probe['format']['duration'])
+        except Exception as e:
+            logger.warning(f"Error getting audio duration: {str(e)}")
+            # Estimate duration based on file size
+            try:
+                file_size = os.path.getsize(audio_path)
+                # Rough estimate: ~128kbps MP3 = ~16KB per second
+                return file_size / 16000  
+            except:
+                # Default fallback
+                return 30.0
 
 def generate_tts_optimized(tts: str, text: str, voice: str, job_id: str,
                           output_format: str = "mp3",
@@ -867,7 +997,9 @@ def generate_tts_optimized(tts: str, text: str, voice: str, job_id: str,
             
             # Generate basic subtitle
             subtitle_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.{subtitle_format}")
-            processor.generate_subtitles([], subtitle_path, subtitle_format)
+            # Use smart segmentation with text and audio duration
+            audio_duration = processor.get_audio_duration(final_audio_path)
+            processor.generate_subtitles([], subtitle_path, subtitle_format, text=text, duration=audio_duration)
             
             return final_audio_path, subtitle_path
 
@@ -1015,8 +1147,7 @@ def generate_tts(tts: str, text: str, voice: str, job_id: str,
                             start_str = f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d}.{start_ms:03d}"
                             end_str = f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d}.{end_ms:03d}"
                             
-                            f.write(f"{i}\n")
-                            f.write(f"{start_str} --> {end_str}\n")
+                            f.write(f"{i}\n{start_str} --> {end_str}\n")
                             f.write(f"{phrase['text']}\n\n")
                 else:
                     # SRT format
@@ -1037,8 +1168,7 @@ def generate_tts(tts: str, text: str, voice: str, job_id: str,
                             start_str = f"{start_hrs:02d}:{start_mins:02d}:{start_secs:02d},{start_ms:03d}"
                             end_str = f"{end_hrs:02d}:{end_mins:02d}:{end_secs:02d},{end_ms:03d}"
                             
-                            f.write(f"{i}\n")
-                            f.write(f"{start_str} --> {end_str}\n")
+                            f.write(f"{i}\n{start_str} --> {end_str}\n")
                             f.write(f"{phrase['text']}\n\n")
                 
                 # Clean up timestamps file

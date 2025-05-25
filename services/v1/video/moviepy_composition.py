@@ -26,15 +26,21 @@ class MoviePyRenderer:
     def _get_default_font(self) -> str:
         """Get the default font path for text rendering."""
         font_paths = [
-            "/app/fonts/Roboto-Regular.ttf",  # Docker container path
-            "/app/fonts/Arial.ttf",  # Docker container path
-            "/app/fonts/DejaVuSans.ttf",  # Docker container path
-            "/workspaces/dahopevi/fonts/Roboto-Regular.ttf",  # Workspace path
-            "/workspaces/dahopevi/fonts/Arial.ttf",  # Workspace path
-            "/workspaces/dahopevi/fonts/DejaVuSans.ttf",  # Workspace path
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Common Linux path
-            "/System/Library/Fonts/Arial.ttf",  # macOS
-            "arial.ttf"  # Windows
+            # Coolify container paths
+            "/var/lib/app/fonts/Roboto-Regular.ttf",
+            "/var/lib/app/fonts/Arial.ttf",
+            "/var/lib/app/fonts/DejaVuSans.ttf",
+            # Fallback to common container paths
+            "/app/fonts/Roboto-Regular.ttf",
+            "/app/fonts/Arial.ttf",
+            "/app/fonts/DejaVuSans.ttf",
+            # Common Linux paths
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            # System font names as fallbacks
+            "DejaVuSans",
+            "Arial",
+            "Roboto-Regular"
         ]
         
         for font_path in font_paths:
@@ -75,31 +81,26 @@ class MoviePyRenderer:
         }
         return volume_map.get(volume_setting, 0.2)
     
-    def _get_caption_position(self, position: str, video_size: Tuple[int, int], 
-                            has_person_overlay: bool = False) -> Tuple[str, str]:
-        """Get caption position for MoviePy, adjusting for person overlays."""
+    def _get_caption_position(self, position: str, video_size: Tuple[int, int], has_person_overlay: bool = False) -> Tuple[str, str]:
+        """Get caption position for MoviePy."""
         width, height = video_size
         
         if position == "top":
-            # Move captions lower if person overlay present
-            y_pos = 80 if has_person_overlay else 50
-            return ("center", y_pos)
+            return ("center", 80 if has_person_overlay else 50)
         elif position == "center":
             return ("center", "center")
         else:  # bottom
-            # Default bottom position with more margin
-            return ("center", height - 140)
+            return ("center", height - 150)  # Increased bottom margin to prevent captions being cut off
     
     def _create_caption_clip(self, caption: Dict, video_size: Tuple[int, int], 
-                           caption_position: str, bg_color: str, 
-                           has_person_overlay: bool = False) -> TextClip:
+                           caption_position: str, bg_color: str, has_person_overlay: bool = False) -> TextClip:
         """Create a single caption clip."""
         width, height = video_size
         
         # Determine font size based on orientation
         font_size = 60 if video_size[1] > video_size[0] else 80  # Smaller for portrait
         
-        # Get position with person overlay consideration
+        # Get position
         pos = self._get_caption_position(caption_position, video_size, has_person_overlay)
         
         # Create text clip with background
@@ -116,96 +117,6 @@ class MoviePyRenderer:
         ).with_position(pos).with_start(caption["start"]).with_end(caption["end"])
         
         return txt_clip
-    
-    def _create_person_image_overlay(self, image_url: str, video_size: Tuple[int, int], 
-                                   duration: float) -> ImageClip:
-        """Create a person image overlay clip."""
-        try:
-            # Download and prepare image
-            image_path = self._url_to_local_path(image_url)
-            
-            # Determine size based on video orientation
-            width, height = video_size
-            if width < height:  # Portrait
-                overlay_size = (150, 150)  # Smaller to avoid subtitle conflicts
-                position = (width - 170, 20)  # Top right with more margin
-            else:  # Landscape
-                overlay_size = (200, 200)  # Slightly smaller for landscape
-                position = (width - 220, 20)  # Top right with more margin
-            
-            # Create image clip
-            image_clip = ImageClip(image_path, duration=duration)
-            
-            # Resize image to fit overlay size while maintaining aspect ratio
-            image_clip = image_clip.resized(height=overlay_size[1])
-            
-            # If image is too wide after height resize, resize by width instead
-            if image_clip.w > overlay_size[0]:
-                image_clip = image_clip.resized(width=overlay_size[0])
-            
-            # Position the image
-            image_clip = image_clip.with_position(position)
-            
-            return image_clip
-            
-        except Exception as e:
-            logger.error(f"Error creating person image overlay: {str(e)}")
-            # Return a transparent clip as fallback
-            return ImageClip(self._create_placeholder_image(), duration=duration).with_opacity(0)
-    
-    def _create_person_name_overlay(self, person_name: str, video_size: Tuple[int, int], 
-                                  duration: float) -> TextClip:
-        """Create a person name overlay clip."""
-        try:
-            width, height = video_size
-            
-            # Determine font size and position based on orientation
-            # Position below person image but avoid subtitle area
-            if width < height:  # Portrait
-                font_size = 28  # Smaller font
-                position = (width - 170, 180)  # Below person image, adjusted margin
-            else:  # Landscape
-                font_size = 32  # Slightly smaller font
-                position = (width - 220, 230)  # Below person image, adjusted margin
-            
-            # Create name overlay with background
-            name_clip = TextClip(
-                text=person_name,
-                font_size=font_size,
-                font=self.default_font,
-                color='white',
-                stroke_color='black',
-                stroke_width=1,
-                method='caption',
-                size=(150, None),  # Narrower width to avoid conflicts
-                text_align='center'
-            ).with_position(position).with_duration(duration)
-            
-            return name_clip
-            
-        except Exception as e:
-            logger.error(f"Error creating person name overlay: {str(e)}")
-            # Return empty text clip as fallback
-            return TextClip("", font_size=1, color='transparent').with_duration(duration)
-    
-    def _create_placeholder_image(self) -> str:
-        """Create a simple placeholder image when person image fails to load."""
-        try:
-            import numpy as np
-            from PIL import Image
-            
-            # Create a simple gray placeholder
-            placeholder = np.full((200, 200, 3), 128, dtype=np.uint8)
-            img = Image.fromarray(placeholder)
-            
-            placeholder_path = os.path.join(LOCAL_STORAGE_PATH, "placeholder.png")
-            img.save(placeholder_path)
-            
-            return placeholder_path
-            
-        except Exception:
-            # If PIL is not available, return None and let MoviePy handle the error
-            return None
     
     def _prepare_background_video(self, video_path: str, target_size: Tuple[int, int], 
                                 duration: float) -> VideoFileClip:
@@ -333,22 +244,26 @@ class MoviePyRenderer:
             music_volume = self._get_music_volume_factor(config.get("music_volume", "medium"))
             composite_audio = self._prepare_audio(audio_path, music_path, music_volume, duration)
             
-            # Create caption clips
-            logger.info("Creating caption clips...")
+            # Create caption clips only if captions are provided and not disabled
             caption_clips = []
             has_person_overlay = bool(person_image_url or person_name)
+            show_captions = config.get("show_captions", True) and captions
             
-            for caption in captions:
-                caption_clip = self._create_caption_clip(
-                    caption, 
-                    target_size, 
-                    config.get("caption_position", "bottom"),
-                    config.get("caption_background_color", "#000000"),
-                    has_person_overlay
-                )
-                caption_clips.append(caption_clip)
+            if show_captions:
+                logger.info("Creating caption clips...")
+                for caption in captions:
+                    caption_clip = self._create_caption_clip(
+                        caption, 
+                        target_size, 
+                        config.get("caption_position", "bottom"),
+                        config.get("caption_background_color", "#000000"),
+                        has_person_overlay
+                    )
+                    caption_clips.append(caption_clip)
+            else:
+                logger.info("Skipping captions as they are disabled or not provided")
             
-            # Create person overlays if provided
+            # Create person overlays if provided (simplified approach)
             overlay_clips = []
             
             if person_image_url:
@@ -371,9 +286,9 @@ class MoviePyRenderer:
                 except Exception as e:
                     logger.warning(f"Failed to create person name overlay: {str(e)}")
             
-            # Composite all video elements with proper z-ordering
+            # Composite all video elements
             logger.info("Compositing final video...")
-            # Layer order: background video (bottom) -> captions -> person overlays (top)
+            # Layer ordering: background video (bottom) → captions → person overlays (top)
             video_clips = [background_video] + caption_clips + overlay_clips
             final_video = CompositeVideoClip(video_clips, size=target_size)
             
@@ -407,6 +322,92 @@ class MoviePyRenderer:
         except Exception as e:
             logger.error(f"Error in MoviePy rendering: {str(e)}")
             raise RuntimeError(f"Video rendering failed: {str(e)}")
+    
+    def _create_person_image_overlay(self, image_url: str, video_size: Tuple[int, int], 
+                                   duration: float) -> ImageClip:
+        """Create a person image overlay clip (simplified version)."""
+        try:
+            # Download and prepare image
+            image_path = self._url_to_local_path(image_url)
+            
+            # Determine size based on video orientation
+            width, height = video_size
+            if width < height:  # Portrait
+                overlay_size = (120, 120)  # Smaller to avoid conflicts
+                position = (width - 140, 20)  # Top right with margin
+            else:  # Landscape
+                overlay_size = (150, 150)
+                position = (width - 170, 20)
+            
+            # Create image clip
+            image_clip = ImageClip(image_path, duration=duration)
+            
+            # Resize image to fit overlay size while maintaining aspect ratio
+            image_clip = image_clip.resized(height=overlay_size[1])
+            
+            # If image is too wide after height resize, resize by width instead
+            if image_clip.w > overlay_size[0]:
+                image_clip = image_clip.resized(width=overlay_size[0])
+            
+            # Position the image
+            image_clip = image_clip.with_position(position)
+            
+            return image_clip
+            
+        except Exception as e:
+            logger.error(f"Error creating person image overlay: {str(e)}")
+            # Return a transparent clip as fallback
+            return ImageClip(self._create_placeholder_image(), duration=duration).with_opacity(0)
+    
+    def _create_person_name_overlay(self, person_name: str, video_size: Tuple[int, int], 
+                                  duration: float) -> TextClip:
+        """Create a person name overlay clip (simplified version)."""
+        try:
+            width, height = video_size
+            
+            # Determine font size and position based on orientation
+            if width < height:  # Portrait
+                font_size = 24
+                position = (width - 140, 150)  # Below person image
+            else:  # Landscape
+                font_size = 28
+                position = (width - 170, 180)
+            
+            # Create name overlay
+            name_clip = TextClip(
+                text=person_name,
+                font_size=font_size,
+                font=self.default_font,
+                color='white',
+                stroke_color='black',
+                stroke_width=1
+            ).with_position(position).with_duration(duration)
+            
+            return name_clip
+            
+        except Exception as e:
+            logger.error(f"Error creating person name overlay: {str(e)}")
+            # Return empty text clip as fallback
+            return TextClip("", font_size=1, color='transparent').with_duration(duration)
+    
+    def _create_placeholder_image(self) -> str:
+        """Create a simple placeholder image when person image fails to load."""
+        try:
+            import numpy as np
+            from PIL import Image
+            
+            # Create a simple gray placeholder
+            placeholder = np.full((120, 120, 3), 128, dtype=np.uint8)
+            img = Image.fromarray(placeholder)
+            
+            placeholder_path = os.path.join(LOCAL_STORAGE_PATH, "placeholder.png")
+            img.save(placeholder_path)
+            
+            return placeholder_path
+            
+        except Exception:
+            # If PIL is not available, return None and let MoviePy handle the error
+            return None
     
     def _url_to_local_path(self, url_or_path: str) -> str:
         """Convert URL to local path or return path if already local."""
