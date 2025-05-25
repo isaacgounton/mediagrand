@@ -38,7 +38,6 @@ def create_app():
     task_queue = Queue(
         'tasks',
         connection=redis_conn,
-        serializer='json',
         default_timeout='1h'
     )
     
