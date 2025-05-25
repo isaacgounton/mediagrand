@@ -14,7 +14,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from flask import Blueprint
+from flask import Blueprint, request, jsonify
 from app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.authentication import authenticate
@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
         "scenes": {
             "type": "array",
             "items": {
-                "type": "object",                "properties": {
+                "type": "object",
+                "properties": {
                     "text": {"type": "string", "minLength": 1},
                     "search_terms": {
                         "type": "array",
@@ -73,8 +74,21 @@ logger = logging.getLogger(__name__)
     "required": ["scenes"],
     "additionalProperties": False
 })
-@queue_task_wrapper(bypass_queue=False)
-def create_short_video_endpoint(job_id, data):
+def create_short_video_endpoint():
+    """HTTP endpoint that handles authentication and queues the task."""
+    data = request.get_json()
+    
+    # Queue the task for background processing (without authentication decorators)
+    from app_utils import queue_task
+    job_id = queue_task(create_short_video_worker, data)
+    
+    return jsonify({
+        "job_id": job_id,
+        "status": "queued",
+        "message": "Short video creation task has been queued"
+    }), 202
+
+def create_short_video_worker(data, job_id=None):
     """Create a short video from text scenes with background videos, music, and captions."""
     scenes = data['scenes']
     config = data.get('config', {})
@@ -84,6 +98,11 @@ def create_short_video_endpoint(job_id, data):
     # Use custom ID if provided, otherwise use generated job_id
     if custom_id:
         job_id = custom_id
+    
+    # If still no job_id, generate one
+    if not job_id:
+        import uuid
+        job_id = str(uuid.uuid4())
 
     logger.info(f"Job {job_id}: Received short video creation request with {len(scenes)} scenes")
 
