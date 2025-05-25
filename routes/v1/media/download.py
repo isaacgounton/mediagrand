@@ -260,7 +260,7 @@ def download_media(job_id, data):
                         if cookies_url and not cookies_path:
                             try:
                                 logger.info(f"Job {job_id}: Downloading cookies from URL {cookies_url}")
-                                cookies_path = download_file(cookies_url, temp_dir)
+                                cookies_path = download_file(cookies_url, temp_dir, is_cookie=True)
                             except Exception as e:
                                 logger.error(f"Job {job_id}: Failed to download cookies from URL: {str(e)}")
                                 raise Exception(f"Failed to download cookies from URL: {str(e)}")
