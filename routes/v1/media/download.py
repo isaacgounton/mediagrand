@@ -237,6 +237,10 @@ def download_media(job_id, data):
                 'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
                 'quiet': True,
                 'no_warnings': True,
+                'nocheckcertificate': True,  # Skip HTTPS certificate validation
+                'geo_bypass': True,  # Bypass geographic restrictions
+                'extractor_retries': 3,  # Retry extraction 3 times
+                'socket_timeout': 30  # Increase timeout
             }
 
             # For YouTube videos, try without cookies first
@@ -281,7 +285,7 @@ def download_media(job_id, data):
                 if cookies_url and not cookies_path:
                     try:
                         logger.info(f"Job {job_id}: Downloading cookies from URL {cookies_url}")
-                        cookies_path = download_file(cookies_url, temp_dir)
+                        cookies_path = download_file(cookies_url, temp_dir, is_cookie=True)
                     except Exception as e:
                         logger.error(f"Job {job_id}: Failed to download cookies from URL: {str(e)}")
                         raise Exception(f"Failed to download cookies from URL: {str(e)}")
@@ -414,12 +418,12 @@ def download_media(job_id, data):
         if "Sign in to confirm your age" in error_str or "Sign in to continue" in error_str:
             return {
                 "error": "Age-restricted or private video requires authentication",
-                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. You can export cookies from your browser using browser extensions or yt-dlp's --cookies-from-browser option. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp for detailed instructions."
+                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. To get proper cookies:\n\n1. Login to YouTube in your browser\n2. Complete any age verification if prompted\n3. Export cookies using yt-dlp: `yt-dlp --cookies-from-browser chrome` or use a browser extension\n4. Make sure the cookies file contains essential cookies like __Secure-1PSID and __Secure-3PSID\n\nMore details at: https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
             }, "/v1/media/download", 401
         elif "Sign in to confirm you're not a bot" in error_str:
             return {
                 "error": "YouTube is requesting verification",
-                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. Export them from your browser using yt-dlp's --cookies-from-browser option or a browser extension. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
+                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. These must contain YouTube authentication cookies (e.g., __Secure-1PSID, __Secure-3PSID). Export them from your browser AFTER logging in to YouTube and passing any verification checks. You can use yt-dlp's --cookies-from-browser option or a browser extension."
             }, "/v1/media/download", 401
         elif "Failed to download cookies from URL" in error_str:
             return {

@@ -26,11 +26,7 @@ import tempfile
 import logging
 from config import LOCAL_STORAGE_PATH
 
-# Module-level variable to track status of job directory
-_JOB_DIR_STATUS = {
-    'primary_failed': False,
-    'fallback_path': None
-}
+# No module-level variables needed for the simplified approach
 
 def validate_payload(schema):
     def decorator(f):
@@ -62,85 +58,38 @@ def validate_payload(schema):
 
 def log_job_status(job_id, data):
     """
-    Log job status to a file in the STORAGE_PATH/jobs folder
+    Log job status to a file in the original /tmp/jobs directory with proper permissions
     
     Args:
         job_id (str): The unique job ID
         data (dict): Data to write to the log file
     """
-    global _JOB_DIR_STATUS
+    # Keep using the original jobs directory that all endpoints expect
+    jobs_dir = os.path.join('/tmp', 'jobs')
     
-    # Define primary and fallback directories
-    primary_jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
+    # As a single fallback, use system temp dir if /tmp isn't available
+    if not os.path.exists('/tmp') or not os.access('/tmp', os.W_OK):
+        jobs_dir = os.path.join(tempfile.gettempdir(), 'jobs')
+        logging.info(f"Using system temp directory for job status: {jobs_dir}")
     
-    # If we already know the primary location fails, use the cached fallback path
-    if _JOB_DIR_STATUS['primary_failed'] and _JOB_DIR_STATUS['fallback_path']:
-        jobs_dir = _JOB_DIR_STATUS['fallback_path']
-        job_file = os.path.join(jobs_dir, f"{job_id}.json")
-        
-        try:
-            # Write data directly to file (fallback location)
-            with open(job_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            return
-        except (PermissionError, OSError) as e:
-            # Last resort - log the error but don't crash
-            logging.error(f"Failed to write job status to fallback location: {e}")
-            return
-    
-    # First attempt - try with primary directory if we haven't marked it as failed
-    if not _JOB_DIR_STATUS['primary_failed']:
-        jobs_dir = primary_jobs_dir
-        job_file = os.path.join(jobs_dir, f"{job_id}.json")
-        
-        try:
-            # Create jobs directory if it doesn't exist
-            if not os.path.exists(jobs_dir):
-                try:
-                    os.makedirs(jobs_dir, mode=0o777, exist_ok=True)
-                except (PermissionError, OSError):
-                    # If we can't set 777, try creating with default permissions
-                    os.makedirs(jobs_dir, exist_ok=True)
-                    
-            # Try to make the directory writable if it exists
-            try:
-                if os.path.exists(jobs_dir):
-                    os.chmod(jobs_dir, 0o777)
-            except (PermissionError, OSError):
-                # Continue even if chmod fails
-                pass
-                
-            # Write data directly to file
-            with open(job_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            return  # If successful, return early
-                
-        except (PermissionError, OSError) as e:
-            # Mark primary location as failed for future calls
-            _JOB_DIR_STATUS['primary_failed'] = True
-            logging.warning(f"Failed to write job status to primary location: {e}")
-            # Only log this warning once, subsequent calls will use fallback directly
-            
-    # Fallback - try with temporary directory
     try:
-        fallback_jobs_dir = os.path.join(tempfile.gettempdir(), 'dahopevi_jobs')
-        jobs_dir = fallback_jobs_dir
+        # Create the jobs directory if it doesn't exist
+        # This should happen once at application startup
+        if not os.path.exists(jobs_dir):
+            os.makedirs(jobs_dir, mode=0o777, exist_ok=True)
+            logging.info(f"Created jobs directory: {jobs_dir}")
+        
+        # Define the job file path
         job_file = os.path.join(jobs_dir, f"{job_id}.json")
         
-        if not os.path.exists(jobs_dir):
-            os.makedirs(jobs_dir, exist_ok=True)
-            
-        # Write data directly to file
+        # Write the data to the file
         with open(job_file, 'w') as f:
             json.dump(data, f, indent=2)
             
-        # Cache the successful fallback path
-        _JOB_DIR_STATUS['fallback_path'] = fallback_jobs_dir
-            
-    except (PermissionError, OSError) as e:
-        # Last resort - log the error but don't crash
-        logging.error(f"Failed to write job status to fallback location: {e}")
-        # In production, you might want to log this to a monitoring system
+        logging.debug(f"Job {job_id}: Successfully wrote status to {job_file}")
+    except Exception as e:
+        # Log the error but don't crash the application
+        logging.error(f"Job {job_id}: Failed to write job status: {str(e)}")
 
 def queue_task_wrapper(bypass_queue=False):
     def decorator(f):

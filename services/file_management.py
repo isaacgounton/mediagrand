@@ -19,8 +19,11 @@
 import os
 import uuid
 import requests
+import time
+import logging
 from urllib.parse import urlparse, parse_qs
 import mimetypes
+from config import LOCAL_STORAGE_PATH
 
 def get_extension_from_url(url, is_cookie=False):
     """Extract file extension from URL or content type.
@@ -66,22 +69,39 @@ def validate_cookie_file(file_path):
         bool: True if valid, False otherwise
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
             
-            # Check for cookie file header
-            if not lines or not any(line.startswith('# Netscape HTTP Cookie File') for line in lines):
+            # First check for the header - this is the most important part
+            # All Netscape/Mozilla format cookie files should have this header
+            if not lines:
                 return False
                 
-            # Check for valid cookie entries (domain<tab>flag<tab>path<tab>secure<tab>expiry<tab>name<tab>value)
+            has_header = any(line.startswith('# Netscape HTTP Cookie File') or 
+                            line.startswith('# HTTP Cookie File') for line in lines)
+            if not has_header:
+                return False
+            
+            # More lenient check - just make sure there are valid cookie lines
+            # rather than enforcing exactly 7 fields per line
+            valid_cookie_lines = 0
             for line in lines:
-                if line.strip() and not line.startswith('#'):
-                    fields = line.strip().split('\t')
-                    if len(fields) != 7:
-                        return False
-                        
-            return True
-    except:
+                # Skip empty lines and comments
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+                    
+                # Check if line has at least 6 tabs (7 fields)
+                # But also allow for slight variations in format
+                fields = line.strip().split('\t')
+                if len(fields) >= 4:  # At minimum, we need domain, path, secure, and name+value
+                    valid_cookie_lines += 1
+            
+            # Require at least one valid-looking cookie line
+            return valid_cookie_lines > 0
+    except Exception as e:
+        # Log the specific error for debugging
+        import logging
+        logging.warning(f"Cookie validation error: {str(e)}")
         return False
 
 def download_file(url, storage_path="/tmp/", is_cookie=False):
@@ -103,9 +123,25 @@ def download_file(url, storage_path="/tmp/", is_cookie=False):
                     f.write(chunk)
 
         # Validate cookie file format if it's supposed to be a cookie file
-        if is_cookie and not validate_cookie_file(local_filename):
-            os.remove(local_filename)
-            raise ValueError("Invalid cookie file format. Must be Netscape/Mozilla format.")
+        if is_cookie:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            if not validate_cookie_file(local_filename):
+                logger.warning(f"Invalid cookie file format detected. File: {local_filename}")
+                
+                # Try to log a sample of the file content for debugging
+                try:
+                    with open(local_filename, 'r', encoding='utf-8', errors='ignore') as f:
+                        sample = f.read(500)  # Read first 500 chars for diagnosis
+                        logger.debug(f"Cookie file content sample: {sample}")
+                except Exception as e:
+                    logger.debug(f"Could not read cookie file for diagnosis: {str(e)}")
+                
+                os.remove(local_filename)
+                raise ValueError("Invalid cookie file format. Must be Netscape/Mozilla format with appropriate YouTube auth cookies.")
+            else:
+                logger.info(f"Valid cookie file format confirmed: {local_filename}")
 
         return local_filename
     except Exception as e:
@@ -116,7 +152,8 @@ def download_file(url, storage_path="/tmp/", is_cookie=False):
 
 def delete_old_files():
     now = time.time()
-    for filename in os.listdir(STORAGE_PATH):
-        file_path = os.path.join(STORAGE_PATH, filename)
+    storage_path = LOCAL_STORAGE_PATH
+    for filename in os.listdir(storage_path):
+        file_path = os.path.join(storage_path, filename)
         if os.path.isfile(file_path) and os.stat(file_path).st_mtime < now - 3600:
             os.remove(file_path)

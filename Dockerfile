@@ -101,7 +101,8 @@ RUN fc-cache -f -v
 
 # Create required directories and set permissions
 RUN mkdir -p /tmp/assets /tmp/music /tmp/jobs /app/public/assets ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app /tmp/assets /tmp/music /tmp/jobs ${WHISPER_CACHE_DIR}
+    chown -R appuser:appuser /app /tmp/assets /tmp/music /tmp/jobs ${WHISPER_CACHE_DIR} && \
+    chmod 777 /tmp/jobs
 
 # Generate placeholder assets as appuser (faster than FFmpeg)
 USER appuser
@@ -111,6 +112,14 @@ RUN python3 scripts/create_placeholders.py
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
+# Ensure job directory exists and has proper permissions\n\
+mkdir -p /tmp/jobs\n\
+chmod 777 /tmp/jobs\n\
+echo "Verifying permissions on /tmp/jobs..."\n\
+if [ ! -w "/tmp/jobs" ]; then\n\
+  echo "WARNING: /tmp/jobs is not writable!"\n\
+fi\n\
+\n\
 gunicorn --bind 0.0.0.0:8080 \
     --workers ${GUNICORN_WORKERS:-2} \
     --timeout ${GUNICORN_TIMEOUT:-300} \
@@ -133,7 +142,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:8080/health && test -w /tmp/jobs || exit 1
 
 # Run the application
 CMD ["/app/run_gunicorn.sh"]
