@@ -1,6 +1,3 @@
-# Optimized multi-stage Dockerfile for faster builds
-# Build time reduced from ~1 hour to ~10-15 minutes
-
 # ====================================================================
 # Stage 1: Base image with pre-built FFmpeg
 # ====================================================================
@@ -122,42 +119,34 @@ RUN mkdir -p /tmp/assets /tmp/music /app/public/assets ${WHISPER_CACHE_DIR} && \
 USER appuser
 
 # Create lightweight placeholder files using Python instead of FFmpeg
-RUN python3 -c "
-import os
-from PIL import Image
-import numpy as np
-
-# Create placeholder video directory
-os.makedirs('/tmp/assets', exist_ok=True)
-
-# Create a simple black image that moviepy can use
-img = Image.new('RGB', (1280, 720), color='black')
-img.save('/tmp/assets/placeholder.jpg')
-
-# Create music directory
-os.makedirs('/tmp/music', exist_ok=True)
-
-# Create placeholder audio files using numpy (much faster than FFmpeg)
-import wave
-import struct
-
-def create_tone(filename, frequency, duration, sample_rate=22050):
-    frames = []
-    for i in range(int(duration * sample_rate)):
-        value = int(16383 * np.sin(2 * np.pi * frequency * i / sample_rate))
-        frames.append(struct.pack('<h', value))
-    
-    with wave.open(filename, 'wb') as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(sample_rate)
-        wav_file.writeframes(b''.join(frames))
-
-# Create default audio files
-create_tone('/tmp/music/default.wav', 440, 5)
-create_tone('/tmp/music/upbeat_default.wav', 523, 5)
-create_tone('/tmp/music/calm_default.wav', 349, 5)
-create_tone('/tmp/music/sad_default.wav', 294, 5)
+RUN python3 -c "\
+import os; \
+from PIL import Image; \
+import numpy as np; \
+import wave; \
+import struct; \
+\
+os.makedirs('/tmp/assets', exist_ok=True); \
+img = Image.new('RGB', (1280, 720), color='black'); \
+img.save('/tmp/assets/placeholder.jpg'); \
+\
+os.makedirs('/tmp/music', exist_ok=True); \
+\
+def create_tone(filename, frequency, duration, sample_rate=22050): \
+    frames = []; \
+    for i in range(int(duration * sample_rate)): \
+        value = int(16383 * np.sin(2 * np.pi * frequency * i / sample_rate)); \
+        frames.append(struct.pack('<h', value)); \
+    with wave.open(filename, 'wb') as wav_file: \
+        wav_file.setnchannels(1); \
+        wav_file.setsampwidth(2); \
+        wav_file.setframerate(sample_rate); \
+        wav_file.writeframes(b''.join(frames)); \
+\
+create_tone('/tmp/music/default.wav', 440, 5); \
+create_tone('/tmp/music/upbeat_default.wav', 523, 5); \
+create_tone('/tmp/music/calm_default.wav', 349, 5); \
+create_tone('/tmp/music/sad_default.wav', 294, 5); \
 "
 
 # Create startup script
