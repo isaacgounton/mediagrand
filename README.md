@@ -40,11 +40,15 @@ Request body:
   "scenes": [
     {
       "text": "This is the first scene",
-      "search_terms": ["nature", "mountains"]
+      "search_terms": ["nature", "mountains"],
+      "person_image_url": "https://example.com/speaker.jpg",
+      "person_name": "John Speaker"
     },
     {
       "text": "Here's the second scene",
-      "search_terms": ["ocean", "sunset"]
+      "search_terms": ["ocean", "sunset"],
+      "person_image_url": "https://example.com/presenter.png",
+      "person_name": "Jane Presenter"
     }
   ],
   "config": {

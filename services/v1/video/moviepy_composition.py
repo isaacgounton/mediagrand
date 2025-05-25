@@ -4,10 +4,11 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from moviepy import (
     VideoFileClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip,
-    TextClip, concatenate_videoclips, concatenate_audioclips
+    TextClip, concatenate_videoclips, concatenate_audioclips, ImageClip
 )
 from config import LOCAL_STORAGE_PATH
 import tempfile
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,95 @@ class MoviePyRenderer:
         
         return txt_clip
     
+    def _create_person_image_overlay(self, image_url: str, video_size: Tuple[int, int], 
+                                   duration: float) -> ImageClip:
+        """Create a person image overlay clip."""
+        try:
+            # Download and prepare image
+            image_path = self._url_to_local_path(image_url)
+            
+            # Determine size based on video orientation
+            width, height = video_size
+            if width < height:  # Portrait
+                overlay_size = (200, 200)  # Smaller for portrait
+                position = (width - 220, 20)  # Top right with margin
+            else:  # Landscape
+                overlay_size = (250, 250)  # Larger for landscape
+                position = (width - 270, 20)  # Top right with margin
+            
+            # Create image clip
+            image_clip = ImageClip(image_path, duration=duration)
+            
+            # Resize image to fit overlay size while maintaining aspect ratio
+            image_clip = image_clip.resized(height=overlay_size[1])
+            
+            # If image is too wide after height resize, resize by width instead
+            if image_clip.w > overlay_size[0]:
+                image_clip = image_clip.resized(width=overlay_size[0])
+            
+            # Position the image
+            image_clip = image_clip.with_position(position)
+            
+            return image_clip
+            
+        except Exception as e:
+            logger.error(f"Error creating person image overlay: {str(e)}")
+            # Return a transparent clip as fallback
+            return ImageClip(self._create_placeholder_image(), duration=duration).with_opacity(0)
+    
+    def _create_person_name_overlay(self, person_name: str, video_size: Tuple[int, int], 
+                                  duration: float) -> TextClip:
+        """Create a person name overlay clip."""
+        try:
+            width, height = video_size
+            
+            # Determine font size and position based on orientation
+            if width < height:  # Portrait
+                font_size = 32
+                position = (width - 220, 240)  # Below person image
+            else:  # Landscape
+                font_size = 40
+                position = (width - 270, 290)  # Below person image
+            
+            # Create name overlay with background
+            name_clip = TextClip(
+                text=person_name,
+                font_size=font_size,
+                font=self.default_font,
+                color='white',
+                stroke_color='black',
+                stroke_width=1,
+                method='caption',
+                size=(200, None),  # Max width for name
+                text_align='center'
+            ).with_position(position).with_duration(duration)
+            
+            return name_clip
+            
+        except Exception as e:
+            logger.error(f"Error creating person name overlay: {str(e)}")
+            # Return empty text clip as fallback
+            return TextClip("", font_size=1, color='transparent').with_duration(duration)
+    
+    def _create_placeholder_image(self) -> str:
+        """Create a simple placeholder image when person image fails to load."""
+        try:
+            import numpy as np
+            from PIL import Image
+            
+            # Create a simple gray placeholder
+            placeholder = np.full((200, 200, 3), 128, dtype=np.uint8)
+            img = Image.fromarray(placeholder)
+            
+            placeholder_path = os.path.join(LOCAL_STORAGE_PATH, "placeholder.png")
+            img.save(placeholder_path)
+            
+            return placeholder_path
+            
+        except Exception:
+            # If PIL is not available, return None and let MoviePy handle the error
+            return None
+    
     def _prepare_background_video(self, video_path: str, target_size: Tuple[int, int], 
                                 duration: float) -> VideoFileClip:
         """Prepare background video with proper sizing and duration."""
@@ -189,7 +279,9 @@ class MoviePyRenderer:
                     captions: List[Dict],
                     config: Dict,
                     output_path: str,
-                    orientation: str = "portrait") -> str:
+                    orientation: str = "portrait",
+                    person_image_url: Optional[str] = None,
+                    person_name: Optional[str] = None) -> str:
         """
         Render a video using MoviePy.
         
@@ -200,6 +292,8 @@ class MoviePyRenderer:
             config: Configuration for video rendering
             output_path: Path where the rendered video should be saved
             orientation: 'portrait' or 'landscape'
+            person_image_url: Optional URL to person image for overlay
+            person_name: Optional person name for text overlay
             
         Returns:
             Path to the rendered video file
@@ -245,9 +339,32 @@ class MoviePyRenderer:
                 )
                 caption_clips.append(caption_clip)
             
+            # Create person overlays if provided
+            overlay_clips = []
+            
+            if person_image_url:
+                logger.info("Creating person image overlay...")
+                try:
+                    person_image_clip = self._create_person_image_overlay(
+                        person_image_url, target_size, duration
+                    )
+                    overlay_clips.append(person_image_clip)
+                except Exception as e:
+                    logger.warning(f"Failed to create person image overlay: {str(e)}")
+            
+            if person_name:
+                logger.info("Creating person name overlay...")
+                try:
+                    person_name_clip = self._create_person_name_overlay(
+                        person_name, target_size, duration
+                    )
+                    overlay_clips.append(person_name_clip)
+                except Exception as e:
+                    logger.warning(f"Failed to create person name overlay: {str(e)}")
+            
             # Composite all video elements
             logger.info("Compositing final video...")
-            video_clips = [background_video] + caption_clips
+            video_clips = [background_video] + caption_clips + overlay_clips
             final_video = CompositeVideoClip(video_clips, size=target_size)
             
             # Set audio
@@ -270,6 +387,8 @@ class MoviePyRenderer:
             composite_audio.close()
             for clip in caption_clips:
                 clip.close()
+            for clip in overlay_clips:
+                clip.close()
             final_video.close()
             
             logger.info(f"Video rendered successfully to {output_path}")
@@ -284,17 +403,27 @@ class MoviePyRenderer:
         if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
             # Extract filename from URL
             filename = url_or_path.split("/")[-1]
+            # Add extension if missing
+            if not any(filename.endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.mp3', '.wav', '.png', '.jpg', '.jpeg']):
+                # Guess extension based on content type or default
+                if 'image' in url_or_path.lower() or any(img_ext in url_or_path.lower() for img_ext in ['png', 'jpg', 'jpeg']):
+                    filename += '.jpg'
+                elif 'audio' in url_or_path.lower() or any(aud_ext in url_or_path.lower() for aud_ext in ['mp3', 'wav']):
+                    filename += '.mp3'
+                else:
+                    filename += '.mp4'
+            
             # Check if file exists in LOCAL_STORAGE_PATH
             local_path = os.path.join(LOCAL_STORAGE_PATH, filename)
             if os.path.exists(local_path):
                 return local_path
             else:
                 # Download the file
-                import requests
-                response = requests.get(url_or_path)
+                response = requests.get(url_or_path, timeout=30)
                 response.raise_for_status()
                 with open(local_path, 'wb') as f:
                     f.write(response.content)
+                logger.info(f"Downloaded {url_or_path} to {local_path}")
                 return local_path
         else:
             return url_or_path

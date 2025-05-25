@@ -37,15 +37,16 @@ logger = logging.getLogger(__name__)
         "scenes": {
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
+                "type": "object",                "properties": {
                     "text": {"type": "string", "minLength": 1},
                     "search_terms": {
                         "type": "array",
                         "items": {"type": "string"},
                         "minItems": 1
                     },
-                    "bg_video_url": {"type": "string", "format": "uri"}
+                    "bg_video_url": {"type": "string", "format": "uri"},
+                    "person_image_url": {"type": "string", "format": "uri"},
+                    "person_name": {"type": "string"}
                 },
                 "required": ["text"],
                 "additionalProperties": False

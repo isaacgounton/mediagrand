@@ -328,7 +328,9 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                 captions=scene["captions"],
                 config=moviepy_config,
                 output_path=output_path,
-                orientation=orientation
+                orientation=orientation,
+                person_image_url=scene.get("person_image_url"),
+                person_name=scene.get("person_name")
             )
         else:
             # Multi-scene - render each scene and concatenate
@@ -360,7 +362,9 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                     captions=scene["captions"],
                     config=moviepy_config,
                     output_path=scene_output,
-                    orientation=orientation
+                    orientation=orientation,
+                    person_image_url=scene.get("person_image_url"),
+                    person_name=scene.get("person_name")
                 )
                 
                 scene_videos.append(scene_output)
