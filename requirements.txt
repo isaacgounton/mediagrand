@@ -30,4 +30,5 @@ moviepy>=2.0.0,<3.0.0
 backoff>=2.2.1
 youtube-transcript-api>=1.0.3
 redis>=4.5.0
-rq>=1.15.0
+rq>=1.16.1
+click>=8.1.7

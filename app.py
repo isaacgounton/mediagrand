@@ -29,6 +29,16 @@ from app_utils import log_job_status
 
 MAX_QUEUE_LENGTH = int(os.environ.get('MAX_QUEUE_LENGTH', 0))
 
+class TaskWrapper:
+    """Wrapper class to make task functions pickleable"""
+    def __init__(self, func, job_id, data):
+        self.func = func
+        self.job_id = job_id
+        self.data = data
+
+    def __call__(self):
+        return self.func(job_id=self.job_id, data=self.data)
+
 def create_app():
     app = Flask(__name__)
     
@@ -43,16 +53,6 @@ def create_app():
     
     # Log at startup
     logging.info(f"Worker {os.getpid()} starting with Redis queue")
-
-    class TaskWrapper:
-        """Wrapper class to make task functions pickleable"""
-        def __init__(self, func, job_id, data):
-            self.func = func
-            self.job_id = job_id
-            self.data = data
-
-        def __call__(self):
-            return self.func(job_id=self.job_id, data=self.data)
 
     def process_task(task_wrapper, start_time):
         """Worker function to process tasks"""
