@@ -58,18 +58,7 @@ RUN apt-get update && \
     fontconfig \
     fonts-liberation \
     imagemagick \
-    # FFmpeg runtime dependencies (corrected package names)
-    libavcodec59 \
-    libavformat59 \
-    libavutil57 \
-    libswscale6 \
-    libswresample4 \
-    libavfilter8 \
-    # Audio/video codec libraries (corrected package names)
-    libx264-163 \
-    libx265-199 \
-    libvpx7 \
-    libaom3 \
+    # Essential audio/video libraries (simplified to avoid version conflicts)
     libmp3lame0 \
     libopus0 \
     libvorbis0a \
@@ -79,7 +68,6 @@ RUN apt-get update && \
     libfontconfig1 \
     libfribidi0 \
     libharfbuzz0b \
-    libwebp7 \
     # System utilities
     xdg-utils \
     && rm -rf /var/lib/apt/lists/* \
