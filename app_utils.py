@@ -16,7 +16,7 @@
 
 
 
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, has_request_context
 from functools import wraps
 import jsonschema
 import os
@@ -32,25 +32,33 @@ def validate_payload(schema):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if not request.json:
-                return jsonify({"message": "Missing JSON in request"}), 400
-            try:
-                # Pre-process boolean strings to actual booleans for validation
-                def convert_bools(obj):
-                    if isinstance(obj, dict):
-                        return {k: convert_bools(v) for k, v in obj.items()}
-                    elif isinstance(obj, list):
-                        return [convert_bools(item) for item in obj]
-                    elif isinstance(obj, str) and obj.lower() in ['true', 'false']:
-                        return obj.lower() == 'true'
-                    return obj
+            # Check if we're in a Flask request context
+            if has_request_context():
+                # We're in an HTTP request context, perform normal validation
+                if not request.json:
+                    return jsonify({"message": "Missing JSON in request"}), 400
+                try:
+                    # Pre-process boolean strings to actual booleans for validation
+                    def convert_bools(obj):
+                        if isinstance(obj, dict):
+                            return {k: convert_bools(v) for k, v in obj.items()}
+                        elif isinstance(obj, list):
+                            return [convert_bools(item) for item in obj]
+                        elif isinstance(obj, str) and obj.lower() in ['true', 'false']:
+                            return obj.lower() == 'true'
+                        return obj
 
-                data = convert_bools(request.json)
-                jsonschema.validate(instance=data, schema=schema)
-                # Store converted data in a custom attribute that the route can access
-                setattr(request, '_validated_json', data)
-            except jsonschema.exceptions.ValidationError as validation_error:
-                return jsonify({"message": f"Invalid payload: {validation_error.message}"}), 400
+                    data = convert_bools(request.json)
+                    jsonschema.validate(instance=data, schema=schema)
+                    # Store converted data in a custom attribute that the route can access
+                    setattr(request, '_validated_json', data)
+                except jsonschema.exceptions.ValidationError as validation_error:
+                    return jsonify({"message": f"Invalid payload: {validation_error.message}"}), 400
+            else:
+                # We're in a worker context (no request context)
+                # Validation was already performed when the task was queued
+                # So we can proceed without validating again
+                pass
             
             return f(*args, **kwargs)
         return decorated_function
