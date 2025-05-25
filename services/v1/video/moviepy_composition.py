@@ -269,6 +269,9 @@ class MoviePyRenderer:
                 caption_end = max(caption["end"] for caption in captions)
                 padding = config.get("padding_back", 0.5)
                 duration = max(duration, caption_end + padding)
+            else:
+                logger.error("No captions provided, unable to calculate duration")
+                raise ValueError("No captions provided, unable to calculate duration")
             
             # Convert URLs to local paths if needed
             video_path = self._url_to_local_path(video_url)
