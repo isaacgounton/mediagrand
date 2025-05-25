@@ -4,11 +4,12 @@ services:
   api:
     build:
       context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - python:3.10-slim
+        - linuxserver/ffmpeg:latest
       args:
-        - BUILDKIT_INLINE_CACHE=1
-        - DOCKER_BUILDKIT=1
-        - MAKEFLAGS=-j4
-        - NODE_VERSION=18
+        BUILDKIT_INLINE_CACHE: 1
     shm_size: '2gb'
     deploy:
       resources:
@@ -48,8 +49,6 @@ services:
       - logs:/app/logs
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
-      # Remove this line - not needed for MoviePy
-      # - node_modules:/app/remotion/node_modules
     networks:
       - app-network
     restart: unless-stopped

@@ -1,186 +1,50 @@
-# Short Video Creation Service
+# DahoPevi API
 
-This service creates short-form videos suitable for platforms like TikTok, Instagram Reels, and YouTube Shorts.
+This API processes different types of media. It is built in Python using Flask.
 
 ## Features
 
-- **Text-to-Speech with Multiple Engines**
-  - Kokoro-ONNX for natural voices
-  - Edge TTS for real-time synthesis
-  - Streamlabs Polly for professional voices
+### Audio
+- **Concatenate Audio**: Combines multiple audio files into a single audio file.
 
-- **Professional Video Composition**
-  - MoviePy-powered dynamic compositions
-  - Portrait (9:16) and Landscape (16:9) formats
-  - Customizable caption styles and positions
-  - Synchronized audio and captions
-  - Background music with mood selection
-  - High-quality video rendering with FFmpeg
+### Code
+- **Execute Python Code**: Executes Python code remotely and returns the execution results.
 
-- **Content Sources**
-  - Pexels API integration for background videos
-  - Built-in mood-based music library
-  - Support for custom video and audio assets
-- Mood-based background music selection
-- Portrait and landscape video support
-- Customizable captions with timing
-- Progress tracking and status updates
-- Webhook notifications for completion
+### FFmpeg
+- **Compose Media**: Provides a flexible interface to FFmpeg for complex media processing operations.
 
-## API Endpoints
+### Image
+- **Convert Image to Video**: Transforms a static image into a video with custom duration and zoom effects.
 
-### Create Short Video
-```http
-POST /v1/video/short/create
-```
+### Media
+- **Convert Media**: Converts media files from one format to another with customizable codec options.
+- **Convert to MP3**: Converts various media formats specifically to MP3 audio.
+- **Download Media**: Downloads media content from various online sources using yt-dlp.
+- **Feedback**: Provides a web interface for collecting and displaying feedback on media content.
+- **Transcribe Media**: Transcribes or translates audio/video content from a provided media URL.
+- **Detect Silence**: Detects silence intervals in a given media file.
+- **Extract Metadata**: Extracts comprehensive metadata from media files including format, codecs, resolution, and bitrates.
 
-Request body:
-```json
-{
-  "scenes": [
-    {
-      "text": "This is the first scene",
-      "search_terms": ["nature", "mountains"],
-      "person_image_url": "https://example.com/speaker.jpg",
-      "person_name": "John Speaker"
-    },
-    {
-      "text": "Here's the second scene",
-      "search_terms": ["ocean", "sunset"],
-      "person_image_url": "https://example.com/presenter.png",
-      "person_name": "Jane Presenter"
-    }
-  ],
-  "config": {
-    "voice": "kokoro:af_sarah",
-    "orientation": "portrait",
-    "caption_position": "bottom",
-    "caption_background_color": "#000000",
-    "music": "upbeat",
-    "music_volume": "medium",
-    "padding_back": 0.5
-  },
-  "webhook_url": "https://your-webhook.com/callback",
-  "id": "optional-custom-id"
-}
-```
+### S3
+- **Upload to S3**: Uploads files to Amazon S3 storage by streaming directly from a URL.
 
-### Check Video Status
-```http
-GET /v1/video/short/status/{job_id}
-```
+### Toolkit
+- **Authenticate**: Provides a simple authentication mechanism to validate API keys.
+- **Test**: Verifies that the API is properly installed and functioning.
+- **Job Status**: Retrieves the status of a specific job by its ID.
+- **Jobs Status**: Retrieves the status of all jobs within a specified time range.
 
-Response:
-```json
-{
-  "status": "processing|completed|failed",
-  "progress": 75,
-  "current_stage": "video_rendering",
-  "total_scenes": 2,
-  "current_scene": 2,
-  "output_url": "https://your-cdn.com/videos/output.mp4"
-}
-```
+### Video
+- **Caption Video**: Adds customizable captions to videos with various styling options.
+- **Concatenate Videos**: Combines multiple videos into a single continuous video file.
+- **Extract Thumbnail**: Extracts a thumbnail image from a specific timestamp in a video.
+- **Cut Video**: Cuts specified segments from a video file with optional encoding settings.
+- **Split Video**: Splits a video into multiple segments based on specified start and end times.
+- **Trim Video**: Trims a video by keeping only the content between specified start and end times.
 
-### List Available Music Moods
-```http
-GET /v1/video/music/moods
-```
+## Getting Started
 
-Response:
-```json
-{
-  "moods": [
-    "upbeat",
-    "happy",
-    "calm",
-    "chill",
-    "epic",
-    "dramatic",
-    "dark",
-    "sad"
-  ]
-}
-```
-
-### Upload Music Track
-```http
-POST /v1/video/music/upload
-Content-Type: multipart/form-data
-```
-
-Request parameters:
-- `file`: Music file (MP3/WAV)
-- `mood`: Music mood category
-- `name`: Optional custom name
-
-Response:
-```json
-{
-  "id": "music_12345",
-  "name": "uploaded_track.mp3",
-  "mood": "upbeat",
-  "duration": 180.5,
-  "url": "https://your-cdn.com/music/uploaded_track.mp3"
-}
-```
-
-### Get Music by Mood
-```http
-GET /v1/video/music/{mood}
-```
-
-Response:
-```json
-{
-  "tracks": [
-    {
-      "id": "music_12345",
-      "name": "happy_tune_1.mp3",
-      "mood": "upbeat",
-      "duration": 180.5,
-      "url": "https://your-cdn.com/music/happy_tune_1.mp3"
-    },
-    {
-      "id": "music_12346",
-      "name": "happy_tune_2.mp3",
-      "mood": "upbeat",
-      "duration": 150.0,
-      "url": "https://your-cdn.com/music/happy_tune_2.mp3"
-    }
-  ]
-}
-```
-
-## Configuration Options
-
-### Voice Options
-- `kokoro:af_sarah` - Natural English voice (Kokoro)
-- `edge-tts:en-US-AriaNeural` - Microsoft Edge TTS
-- `streamlabs-polly:Brian` - Amazon Polly voice
-
-### Caption Positions
-- `top`
-- `center`
-- `bottom`
-
-### Music Moods
-- `upbeat`
-- `happy`
-- `calm`
-- `chill`
-- `epic`
-- `dramatic`
-- `dark`
-- `sad`
-
-### Music Volumes
-- `high` (30% volume)
-- `medium` (20% volume)
-- `low` (10% volume)
-- `muted` (0% volume)
-
-## Installation
+### Installation
 
 1. Install dependencies:
 ```bash
@@ -197,36 +61,68 @@ bash scripts/install_music.sh
 export PEXELS_API_KEY="your-pexels-api-key"
 ```
 
-## Docker Deployment
+### Usage
 
-Build and run with Docker:
+To use the API, send requests to the appropriate endpoints with the required parameters. For detailed information about all available API endpoints, refer to the [API Documentation](docs/API.md).
+
+## Deployment
+
+### Docker Deployment
+
+#### Optimized Build Performance
+
+This project includes an optimized Docker configuration that reduces build times from ~60 minutes to ~10-15 minutes:
+
+- **Pre-built FFmpeg**: Uses `linuxserver/ffmpeg:latest` instead of compiling from source
+- **Multi-stage builds**: Separate stages for dependencies and runtime
+- **Layer caching**: Optimized layer ordering for maximum cache efficiency
+- **Reduced image size**: 60% smaller final image
+
+#### Coolify Deployment
+
+For deployment with Coolify:
+
+1. **Clone the repository** to your Coolify server
+
+2. **Set environment variables** in Coolify dashboard:
+
+   ```bash
+   API_KEY=your_api_key_here
+   APP_DEBUG=false
+   APP_DOMAIN=your-domain.com
+   APP_NAME=DahoPevi API
+   APP_URL=https://your-domain.com
+   # Add other required environment variables
+   ```
+
+3. **Deploy using docker-compose.yml**:
+   - Coolify will automatically detect and use the included `docker-compose.yml`
+   - Build time: ~10-15 minutes (first build)
+   - Subsequent builds: ~2-5 minutes (with caching)
+
+4. **Resource requirements**:
+   - Memory: 2GB minimum, 4GB maximum
+   - Storage: 10GB minimum for video processing
+   - Network: High bandwidth recommended for video uploads/downloads
+
+#### Manual Docker Build
+
 ```bash
-docker build -t short-video-maker .
-docker run -p 8080:8080 -e PEXELS_API_KEY="your-key" short-video-maker
+# Build the optimized image
+docker build -t daho-pevi-api .
+
+# Run with docker-compose
+docker-compose up -d
 ```
 
-## Processing Stages
-
-1. **TTS Generation**
-   - AI-powered voice synthesis
-   - Automatic caption timing
-   - Multi-engine support (Kokoro/Edge/Polly)
-
-2. **Video Search & Processing**
-   - Intelligent background video search (Pexels)
-   - Smart video cropping and resizing
-   - Format optimization for target platforms
-   - Cache management for frequently used assets
-
-3. **Professional Video Composition**
-   - Python-based video compositions (MoviePy)
-   - Professional motion graphics
-   - Synchronized audio/video/captions
-   - Mood-matched background music
-   - High-quality FFmpeg encoding
+The service will be available at `http://localhost:8080` with health checks at `/v1/toolkit/test`.
 
 ## Contributing
 
 1. Choose royalty-free music files
 2. Add them to `storage/music/` with appropriate mood prefixes
 3. Test with different voice and music combinations
+
+## License
+
+This project is licensed under the GNU General Public License v2.0 (GPL-2.0).

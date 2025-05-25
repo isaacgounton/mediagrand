@@ -175,52 +175,73 @@ List all short videos for the authenticated user with pagination.
 ### 4. Get Available Music Tags
 
 ```http
-GET /v1/video/short/music-tags
+GET /v1/video/short/music/tags
 ```
 
 Get all available music moods/tags for background music selection.
 
 **Response**
 ```json
-[
-  {"tag": "happy", "description": "Happy music"},
-  {"tag": "sad", "description": "Sad music"},
-  {"tag": "epic", "description": "Epic music"},
-  {"tag": "calm", "description": "Calm music"},
-  {"tag": "dark", "description": "Dark music"},
-  {"tag": "energetic", "description": "Energetic music"},
-  {"tag": "upbeat", "description": "Upbeat music"},
-  {"tag": "chill", "description": "Chill music"},
-  {"tag": "dramatic", "description": "Dramatic music"}
-]
+{
+  "tags": [
+    {"tag": "happy", "description": "Happy music"},
+    {"tag": "sad", "description": "Sad music"},
+    {"tag": "epic", "description": "Epic music"},
+    {"tag": "calm", "description": "Calm music"},
+    {"tag": "dark", "description": "Dark music"},
+    {"tag": "energetic", "description": "Energetic music"},
+    {"tag": "upbeat", "description": "Upbeat music"},
+    {"tag": "chill", "description": "Chill music"},
+    {"tag": "dramatic", "description": "Dramatic music"}
+  ]
+}
 ```
 
-### 5. Get Music by Mood
+### 5. List Available Music Moods
 
 ```http
-GET /v1/video/short/music-by-mood/{mood}
+GET /v1/video/short/music/moods
 ```
 
-Get music tracks filtered by specific mood.
+Lists all available mood categories for background music.
+
+**Response**
+```json
+{
+  "moods": ["happy", "sad", "epic", "calm", "dark", "energetic", "upbeat", "chill", "dramatic"]
+}
+```
+
+### 6. Get Music by Mood
+
+```http
+GET /v1/video/short/music/{mood}
+```
+
+Get list of music tracks for a specific mood with detailed information.
 
 **Parameters**
 - `mood` (path parameter) - Music mood (happy, sad, epic, calm, dark, energetic, upbeat, chill, dramatic)
 
 **Response**
 ```json
-[
-  {
-    "tag": "happy",
-    "path": "/storage/music/happy_track.mp3",
-    "description": "Happy music"
-  }
-]
+{
+  "tracks": [
+    {
+      "id": "music_track_name",
+      "name": "track.mp3",
+      "mood": "happy",
+      "duration": 180.5,
+      "url": "/music/happy_track.mp3"
+    }
+  ]
+}
 ```
 
-### 6. Get Music by Tempo
+### 7. Get Music by Tempo
 
 ```http
-GET /v1/video/short/music-by-tempo/{tempo}
+GET /v1/video/short/music/by-tempo/{tempo}
 ```
 
 Get music tracks filtered by tempo.
@@ -230,20 +251,22 @@ Get music tracks filtered by tempo.
 
 **Response**
 ```json
-[
-  {
-    "tag": "calm",
-    "tempo": "slow",
-    "path": "/storage/music/calm_track.mp3",
-    "description": "Calm slow tempo music"
-  }
-]
+{
+  "tracks": [
+    {
+      "tag": "calm",
+      "tempo": "slow",
+      "path": "/storage/music/calm_track.mp3",
+      "description": "Calm slow tempo music"
+    }
+  ]
+}
 ```
 
-### 7. Get Music Recommendations
+### 8. Get Music Recommendations
 
 ```http
-GET /v1/video/short/music-recommendations/{content_type}
+GET /v1/video/short/music/recommendations/{content_type}
 ```
 
 Get music recommendations based on content type.
@@ -253,44 +276,30 @@ Get music recommendations based on content type.
 
 **Response**
 ```json
-[
-  {
-    "tag": "upbeat",
-    "content_type": "tutorial",
-    "path": "/storage/music/upbeat_track.mp3",
-    "description": "Upbeat music recommended for tutorial content"
-  }
-]
-```
-
-## Alternative Music API Endpoints
-
-These endpoints provide additional music management functionality:
-
-### 8. List Music Moods
-
-```http
-GET /moods
-```
-
-**Response**
-```json
 {
-  "moods": ["happy", "sad", "epic", "calm", "dark", "energetic", "upbeat", "chill", "dramatic"]
+  "recommendations": [
+    {
+      "tag": "upbeat",
+      "content_type": "tutorial",
+      "path": "/storage/music/upbeat_track.mp3",
+      "description": "Upbeat music recommended for tutorial content"
+    }
+  ]
 }
 ```
 
 ### 9. Upload Music Track
 
 ```http
-POST /upload
+POST /v1/video/short/music/upload
+Content-Type: multipart/form-data
 ```
 
 Upload a new music track with mood categorization.
 
-**Form Data**
-- `file` (file, required) - Music file (MP3, WAV, etc.)
-- `mood` (string, required) - Mood category for the track
+**Request Parameters**
+- `file` (required) - Music file (MP3, WAV, M4A, OGG format)
+- `mood` (required) - Mood category for the track
 
 **Response**
 ```json
@@ -300,27 +309,6 @@ Upload a new music track with mood categorization.
   "mood": "happy",
   "duration": 180.5,
   "url": "/music/happy_track.mp3"
-}
-```
-
-### 10. Get Music Tracks by Mood
-
-```http
-GET /{mood}
-```
-
-**Response**
-```json
-{
-  "tracks": [
-    {
-      "id": "music_track_name",
-      "name": "track.mp3", 
-      "mood": "happy",
-      "duration": 180.5,
-      "url": "/music/happy_track.mp3"
-    }
-  ]
 }
 ```
 

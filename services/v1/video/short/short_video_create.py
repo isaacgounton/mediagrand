@@ -1,13 +1,16 @@
 import os
 import json
 import logging
+import gc
+import time
+import shutil
 from services.v1.video.short.short_video_status import (
     update_processing_stage,
     update_video_status
 )
 from services.v1.video.moviepy_composition import MoviePyRenderer
 from services.v1.video.short.short_video_music import MusicManager
-from services.v1.audio.speech import generate_tts
+from services.v1.audio.speech import generate_tts_optimized
 from config import LOCAL_STORAGE_PATH
 import requests
 from typing import List, Dict, Any
@@ -105,9 +108,55 @@ class PixabayAPI(VideoAPI):
             logger.error(f"Error searching Pixabay videos: {str(e)}")
             return []
 
+def analyze_text_complexity(text: str) -> Dict[str, Any]:
+    """
+    Analyze text complexity to determine optimal processing parameters.
+    
+    Args:
+        text: Input text to analyze
+        
+    Returns:
+        Dict with analysis results and recommended settings
+    """
+    char_count = len(text)
+    word_count = len(text.split())
+    sentence_count = len([s for s in text.split('.') if s.strip()])
+    
+    # Determine complexity level
+    if char_count > 5000:
+        complexity = "extreme"
+        chunk_size = 800  # Smaller chunks for extreme texts
+        max_workers = 2   # Limit concurrency
+    elif char_count > 2000:
+        complexity = "high"
+        chunk_size = 1000
+        max_workers = 3
+    elif char_count > 1000:
+        complexity = "medium"
+        chunk_size = 1200
+        max_workers = 4
+    else:
+        complexity = "low"
+        chunk_size = 2000
+        max_workers = 1
+    
+    analysis = {
+        "char_count": char_count,
+        "word_count": word_count,
+        "sentence_count": sentence_count,
+        "complexity": complexity,
+        "recommended_chunk_size": chunk_size,
+        "recommended_max_workers": max_workers,
+        "estimated_duration_minutes": word_count / 150  # Rough estimate based on reading speed
+    }
+    
+    logger.info(f"Text analysis: {analysis}")
+    return analysis
+
 def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
     """
     Create a short video from text scenes with background videos, music, and captions.
+    Now optimized to handle extremely long texts efficiently.
     
     Args:
         scenes: List of scene objects with text and search_terms
@@ -117,7 +166,18 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
     Returns:
         Path to the generated video file
     """
-    logger.info(f"Job {job_id}: Starting short video creation with {len(scenes)} scenes")
+    logger.info(f"Job {job_id}: Starting optimized short video creation with {len(scenes)} scenes")
+    
+    # Analyze text complexity for each scene
+    scene_analyses = []
+    total_chars = 0
+    for i, scene in enumerate(scenes):
+        analysis = analyze_text_complexity(scene["text"])
+        scene_analyses.append(analysis)
+        total_chars += analysis["char_count"]
+        logger.info(f"Scene {i+1} analysis: {analysis['char_count']} chars, complexity: {analysis['complexity']}")
+    
+    logger.info(f"Total text length: {total_chars} characters across {len(scenes)} scenes")
     
     try:
         # Initialize services
@@ -138,32 +198,62 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         update_video_status(job_id, {
             "status": "processing",
             "progress": 0,
-            "total_scenes": len(scenes)
+            "total_scenes": len(scenes),
+            "optimization_info": {
+                "total_characters": total_chars,
+                "using_optimized_processor": True
+            }
         })
         
         processed_scenes = []
         
-        # Step 1: Generate TTS audio and captions
+        # Step 1: Generate TTS audio and captions with optimization
         update_processing_stage(job_id, "tts_generation", "processing")
         
         for i, scene in enumerate(scenes):
-            logger.info(f"Job {job_id}: Processing scene {i+1}/{len(scenes)} - TTS")
+            scene_analysis = scene_analyses[i]
+            logger.info(f"Job {job_id}: Processing scene {i+1}/{len(scenes)} - TTS (Optimized)")
+            logger.info(f"Scene {i+1}: {scene_analysis['char_count']} characters, complexity: {scene_analysis['complexity']}")
             
             # Update progress (0-30%)
             progress = int((i / len(scenes)) * 30)
-            update_video_status(job_id, {"progress": progress})
+            update_video_status(job_id, {
+                "progress": progress,
+                "current_scene": i + 1,
+                "scene_complexity": scene_analysis['complexity']
+            })
             
-            # Generate TTS audio and captions
+            # Use optimized TTS with dynamic chunk sizing based on complexity
             tts_engine, voice_name = voice.split(":") if ":" in voice else ("kokoro", voice)
-            audio_path, subtitle_path = generate_tts(
-                tts=tts_engine,
-                text=scene["text"],
-                voice=voice_name,
-                job_id=f"{job_id}_scene_{i}"
-            )
             
-            # Read caption data
-            with open(subtitle_path, 'r') as f:
+            start_time = time.time()
+            try:
+                audio_path, subtitle_path = generate_tts_optimized(
+                    tts=tts_engine,
+                    text=scene["text"],
+                    voice=voice_name,
+                    job_id=f"{job_id}_scene_{i}",
+                    max_chunk_chars=scene_analysis['recommended_chunk_size']
+                )
+                
+                processing_time = time.time() - start_time
+                logger.info(f"Scene {i+1} TTS completed in {processing_time:.2f} seconds")
+                
+            except Exception as e:
+                logger.error(f"Scene {i+1} TTS failed: {str(e)}")
+                # Force garbage collection and retry with smaller chunks
+                gc.collect()
+                
+                logger.info(f"Retrying scene {i+1} with smaller chunks...")
+                audio_path, subtitle_path = generate_tts_optimized(
+                    tts=tts_engine,
+                    text=scene["text"],
+                    voice=voice_name,
+                    job_id=f"{job_id}_scene_{i}_retry",
+                    max_chunk_chars=min(500, scene_analysis['recommended_chunk_size'] // 2)
+                )
+              # Read caption data
+            with open(subtitle_path, 'r', encoding='utf-8') as f:
                 captions_raw = f.read()
             
             # Parse SRT format to get timing
@@ -181,9 +271,15 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             
             scene_data = {
                 "audio_path": audio_path,
-                "captions": captions
+                "captions": captions,
+                "analysis": scene_analysis,
+                "person_image_url": scene.get("person_image_url"),
+                "person_name": scene.get("person_name")
             }
             processed_scenes.append(scene_data)
+            
+            # Force garbage collection after each scene
+            gc.collect()
         
         update_processing_stage(job_id, "tts_generation", "completed")
         update_processing_stage(job_id, "video_search", "processing")
@@ -384,7 +480,6 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             concatenated_output = process_video_concatenate(video_urls, f"concat_{job_id}")
             
             # Move the concatenated file to the final output path
-            import shutil
             shutil.move(concatenated_output, output_path)
             
             # Clean up individual scene videos
@@ -401,17 +496,31 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         update_video_status(job_id, {
             "status": "completed",
             "progress": 100,
-            "output_file": output_filename
+            "output_file": output_filename,
+            "optimization_info": {
+                "total_characters_processed": total_chars,
+                "scenes_processed": len(scenes),
+                "optimization_used": True
+            }
         })
+        
+        # Final cleanup
+        gc.collect()
         
         return output_path
         
     except Exception as e:
-        logger.error(f"Job {job_id}: Error creating short video: {str(e)}", exc_info=True)
+        logger.error(f"Job {job_id}: Error creating optimized short video: {str(e)}", exc_info=True)
         update_video_status(job_id, {
             "status": "failed",
-            "error": str(e)
+            "error": str(e),
+            "optimization_info": {
+                "total_characters": total_chars,
+                "failed_at_optimization": True
+            }
         })
+        # Cleanup on failure
+        gc.collect()
         raise
 
 def _srt_time_to_seconds(time_str: str) -> float:
