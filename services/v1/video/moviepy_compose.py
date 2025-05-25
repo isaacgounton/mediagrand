@@ -228,7 +228,41 @@ class MoviePyComposer:
         
         # Add background if specified
         if bg_color:
+            # Parse background color if it's a string
+            if isinstance(bg_color, str):
+                if bg_color.startswith("rgba("):
+                    # Parse RGBA format: rgba(r,g,b,a)
+                    rgba_str = bg_color[5:-1]  # Remove "rgba(" and ")"
+                    rgba_parts = [float(x.strip()) for x in rgba_str.split(",")]
+                    if len(rgba_parts) == 4:
+                        bg_color = (int(rgba_parts[0]), int(rgba_parts[1]), int(rgba_parts[2]))
+                        # Apply opacity later
+                        bg_opacity = rgba_parts[3]
+                    else:
+                        bg_color = (0, 0, 0)
+                        bg_opacity = 0.5
+                else:
+                    # Use color conversion helper
+                    color_map = {
+                        "black": (0, 0, 0),
+                        "white": (255, 255, 255),
+                        "red": (255, 0, 0),
+                        "green": (0, 255, 0),
+                        "blue": (0, 0, 255),
+                        "yellow": (255, 255, 0),
+                        "cyan": (0, 255, 255),
+                        "magenta": (255, 0, 255),
+                        "gray": (128, 128, 128),
+                        "grey": (128, 128, 128)
+                    }
+                    bg_color = color_map.get(bg_color.lower(), (0, 0, 0))
+                    bg_opacity = 0.5
+            else:
+                bg_opacity = 1.0
+                
             bg_clip = ColorClip(text_clip.size, color=bg_color, duration=text_clip.duration)
+            if bg_opacity < 1.0:
+                bg_clip = bg_clip.with_opacity(bg_opacity)
             text_clip = CompositeVideoClip([bg_clip, text_clip])
         
         # Apply transformations
@@ -255,6 +289,22 @@ class MoviePyComposer:
         color = config.get("color", "black")
         width = config.get("width", 100)
         height = config.get("height", 100)
+        
+        # Convert color string to RGB tuple if needed
+        if isinstance(color, str):
+            color_map = {
+                "black": (0, 0, 0),
+                "white": (255, 255, 255),
+                "red": (255, 0, 0),
+                "green": (0, 255, 0),
+                "blue": (0, 0, 255),
+                "yellow": (255, 255, 0),
+                "cyan": (0, 255, 255),
+                "magenta": (255, 0, 255),
+                "gray": (128, 128, 128),
+                "grey": (128, 128, 128)
+            }
+            color = color_map.get(color.lower(), (0, 0, 0))  # Default to black
         
         # Create color clip
         color_clip = ColorClip((width, height), color=color)
@@ -308,11 +358,19 @@ class MoviePyComposer:
         if duration is not None:
             clip = clip.with_duration(duration)
         
-        # Apply timing
+        # Apply timing (subclip for video/audio, subclipped for image/color clips)
         start_time = config.get("start_time")
         end_time = config.get("end_time")
         if start_time is not None or end_time is not None:
-            clip = clip.subclip(start_time or 0, end_time)
+            # Check if clip has subclip method (VideoClip, AudioClip)
+            if hasattr(clip, 'subclip'):
+                clip = clip.subclip(start_time or 0, end_time)
+            # For ImageClip and ColorClip, use subclipped
+            elif hasattr(clip, 'subclipped'):
+                clip = clip.subclipped(start_time or 0, end_time)
+            # For clips that don't support timing, just set start time
+            elif start_time is not None:
+                clip = clip.with_start(start_time)
         
         # Apply resizing
         width = config.get("width")
@@ -354,6 +412,43 @@ class MoviePyComposer:
             # Create main composite clip
             main_clip = self._create_clip(composition)
             
+            # Handle TTS voice generation if specified
+            voice_config = composition.get("voice")
+            if voice_config and voice_config.get("type") == "tts":
+                try:
+                    from services.v1.audio.speech import generate_speech_file
+                    
+                    tts_text = voice_config.get("text", "")
+                    tts_engine = voice_config.get("engine", "edge-tts:en-US-AriaNeural")
+                    
+                    if tts_text:
+                        logger.info("Generating TTS audio...")
+                        # Generate TTS audio file
+                        tts_audio_path = generate_speech_file(
+                            text=tts_text,
+                            tts=tts_engine.split(":")[0] if ":" in tts_engine else tts_engine,
+                            voice=tts_engine.split(":")[1] if ":" in tts_engine else None,
+                            speed=voice_config.get("speed", 1.0),
+                            output_format="mp3"
+                        )
+                        
+                        # Add TTS audio to composition
+                        if tts_audio_path and os.path.exists(tts_audio_path):
+                            tts_audio_clip = AudioFileClip(tts_audio_path)
+                            
+                            # If there's existing audio, layer them
+                            existing_audio = main_clip.audio
+                            if existing_audio:
+                                main_clip = main_clip.with_audio(CompositeAudioClip([existing_audio, tts_audio_clip]))
+                            else:
+                                main_clip = main_clip.with_audio(tts_audio_clip)
+                            
+                            logger.info("TTS audio added to composition")
+                        else:
+                            logger.warning("TTS audio generation failed")
+                except Exception as e:
+                    logger.warning(f"Failed to generate TTS audio: {str(e)}")
+            
             # Add audio if specified
             audio_config = composition.get("audio")
             if audio_config:
@@ -368,12 +463,16 @@ class MoviePyComposer:
                     audio_clip = self._create_audio_clip(audio_config)
                     audio_clips.append(audio_clip)
                 
-                # Create composite audio
-                if len(audio_clips) > 1:
-                    composite_audio = CompositeAudioClip(audio_clips)
-                    main_clip = main_clip.with_audio(composite_audio)
-                elif len(audio_clips) == 1:
-                    main_clip = main_clip.with_audio(audio_clips[0])
+                # Create composite audio or combine with existing
+                if len(audio_clips) > 0:
+                    new_audio = CompositeAudioClip(audio_clips) if len(audio_clips) > 1 else audio_clips[0]
+                    
+                    # Combine with existing audio if present
+                    existing_audio = main_clip.audio
+                    if existing_audio:
+                        main_clip = main_clip.with_audio(CompositeAudioClip([existing_audio, new_audio]))
+                    else:
+                        main_clip = main_clip.with_audio(new_audio)
             
             # Get rendering parameters
             fps = composition.get("fps", 30)
