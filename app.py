@@ -193,8 +193,6 @@ def create_app():
 
     app.queue_task = queue_task
 
-    # Create RQ worker in a separate process
-    Worker(['tasks'], connection=redis_conn).work(with_scheduler=True)
 
     # Import blueprints
     from routes.media_to_mp3 import convert_bp

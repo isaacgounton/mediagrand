@@ -113,9 +113,23 @@ RUN python3 scripts/create_placeholders.py
 # Create startup script for RQ workers and Gunicorn
 RUN echo '#!/bin/bash\n\
 \n\
+# Handle SIGTERM for graceful shutdown\n\
+cleanup() {\n\
+    echo "Received SIGTERM, shutting down..."\n\
+    kill \${pids[@]}\n\
+    wait\n\
+    exit 0\n\
+}\n\
+\n\
+trap cleanup SIGTERM\n\
+\n\
+# Array to store background process PIDs\n\
+declare -a pids\n\
+\n\
 # Start RQ workers\n\
 for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
     rq worker tasks --url redis://redis:6379 &\n\
+    pids+=($!)\n\
 done\n\
 \n\
 # Start Gunicorn\n\
@@ -125,7 +139,11 @@ gunicorn --bind 0.0.0.0:8080 \
     --worker-class sync \
     --keep-alive 80 \
     --preload \
-    app:app' > /app/run_services.sh && \
+    app:app &\n\
+pids+=($!)\n\
+\n\
+# Wait for all processes\n\
+wait' > /app/run_services.sh && \
     chmod +x /app/run_services.sh
 
 # Set environment variables
