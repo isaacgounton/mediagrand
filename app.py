@@ -24,9 +24,18 @@ import os
 import time
 import logging
 from functools import wraps
-import importlib # Added import
+import importlib
 from version import BUILD_NUMBER
-from app_utils import log_job_status
+from app_utils import log_job_status # Assuming log_job_status is here
+
+# Global RQ and Redis setup
+redis_url = os.environ.get('REDIS_URL', 'redis://redis:6379')
+redis_conn = Redis.from_url(redis_url)
+task_queue = Queue(
+    'tasks',
+    connection=redis_conn,
+    default_timeout='1h'
+)
 
 MAX_QUEUE_LENGTH = int(os.environ.get('MAX_QUEUE_LENGTH', 0))
 
@@ -48,169 +57,165 @@ class TaskWrapper:
             logging.error(f"TaskWrapper: Error importing/calling {self.func_path} for job {self.job_id}: {str(e)}", exc_info=True)
             raise # Re-raise to be caught by process_task's try-except
 
+# This function will be run by RQ workers
+def process_task(task_wrapper_instance, start_time):
+    """Worker function to process tasks"""
+    worker_pid = os.getpid()
+    run_start_time = time.time()
+    queue_time = time.time() - start_time
+    
+    try:
+        log_job_status(task_wrapper_instance.job_id, {
+            "job_status": "running",
+            "job_id": task_wrapper_instance.job_id,
+            "process_id": worker_pid,
+            "response": None
+        })
+        
+        logging.info(f"Worker {worker_pid}: Executing task for job {task_wrapper_instance.job_id}")
+        response = task_wrapper_instance() # Calls TaskWrapper.__call__
+        logging.info(f"Worker {worker_pid}: Task completed for job {task_wrapper_instance.job_id}")
+        
+        run_time = time.time() - run_start_time
+        total_time = time.time() - start_time
+
+        response_data = {
+            "endpoint": response[1],
+            "code": response[2],
+            "id": task_wrapper_instance.data.get("id"),
+            "job_id": task_wrapper_instance.job_id,
+            "response": response[0] if response[2] == 200 else None,
+            "message": "success" if response[2] == 200 else response[0],
+            "pid": worker_pid,
+            "run_time": round(run_time, 3),
+            "queue_time": round(queue_time, 3),
+            "total_time": round(total_time, 3),
+            "queue_length": len(task_queue), # Uses global task_queue
+            "build_number": BUILD_NUMBER
+        }
+        
+        log_job_status(task_wrapper_instance.job_id, {
+            "job_status": "done",
+            "job_id": task_wrapper_instance.job_id,
+            "process_id": worker_pid,
+            "response": response_data
+        })
+
+        if task_wrapper_instance.data.get("webhook_url"):
+            send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
+
+        return response_data
+        
+    except Exception as e:
+        logging.error(f"Worker {worker_pid}: Error processing job {task_wrapper_instance.job_id}: {str(e)}", exc_info=True)
+        log_job_status(task_wrapper_instance.job_id, {
+            "job_status": "failed",
+            "job_id": task_wrapper_instance.job_id,
+            "process_id": worker_pid,
+            "error": str(e)
+        })
+        raise
+
+def queue_task(bypass_queue=False):
+    def decorator(f): 
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            job_id = str(uuid.uuid4())
+            current_request_data = getattr(request, '_validated_json', 
+                                           request.json if request.is_json else {})
+            pid = os.getpid()
+            start_time = time.time()
+            
+            if bypass_queue or 'webhook_url' not in current_request_data:
+                log_job_status(job_id, {
+                    "job_status": "running",
+                    "job_id": job_id,
+                    "process_id": pid,
+                    "response": None
+                })
+                response = f(job_id=job_id, data=current_request_data, *args, **kwargs)
+                run_time = time.time() - start_time
+                if isinstance(response, tuple) and len(response) == 3:
+                    response_obj = {
+                        "code": response[2],
+                        "id": current_request_data.get("id"),
+                        "job_id": job_id,
+                        "response": response[0] if response[2] == 200 else None,
+                        "message": "success" if response[2] == 200 else response[0],
+                        "run_time": round(run_time, 3),
+                        "queue_time": 0,
+                        "total_time": round(run_time, 3),
+                        "pid": pid,
+                        "queue_length": len(task_queue), # Uses global task_queue
+                        "build_number": BUILD_NUMBER
+                    }
+                    log_job_status(job_id, {
+                        "job_status": "done",
+                        "job_id": job_id,
+                        "process_id": pid,
+                        "response": response_obj
+                    })
+                    return response_obj, response[2]
+                return response
+            else:
+                if MAX_QUEUE_LENGTH > 0 and len(task_queue) >= MAX_QUEUE_LENGTH: # Uses global task_queue
+                    error_response = {
+                        "code": 429,
+                        "id": current_request_data.get("id"),
+                        "job_id": job_id,
+                        "message": f"MAX_QUEUE_LENGTH ({MAX_QUEUE_LENGTH}) reached",
+                        "pid": pid,
+                        "queue_length": len(task_queue), # Uses global task_queue
+                        "build_number": BUILD_NUMBER
+                    }
+                    log_job_status(job_id, {
+                        "job_status": "rejected",
+                        "job_id": job_id,
+                        "process_id": pid,
+                        "response": error_response
+                    })
+                    return error_response, 429
+                
+                log_job_status(job_id, {
+                    "job_status": "queued",
+                    "job_id": job_id,
+                    "process_id": pid,
+                    "response": None
+                })
+                
+                func_path = f"{f.__module__}.{f.__name__}"
+                task_wrapper_obj = TaskWrapper(func_path, job_id, current_request_data)
+                
+                job = task_queue.enqueue( # Uses global task_queue
+                    'app.process_task', # Target is the global process_task, referenced by its import path
+                    args=(task_wrapper_obj, start_time),
+                    job_id=job_id,
+                    job_timeout='1h'
+                )
+                
+                return {
+                    "code": 202,
+                    "id": current_request_data.get("id"),
+                    "job_id": job_id,
+                    "message": "processing",
+                    "pid": pid,
+                    "max_queue_length": MAX_QUEUE_LENGTH if MAX_QUEUE_LENGTH > 0 else "unlimited",
+                    "queue_length": len(task_queue), # Uses global task_queue
+                    "build_number": BUILD_NUMBER
+                }, 202
+        return wrapper
+    return decorator
+
 def create_app():
     app = Flask(__name__)
     
-    redis_url = os.environ.get('REDIS_URL', 'redis://redis:6379')
-    redis_conn = Redis.from_url(redis_url)
-    task_queue = Queue(
-        'tasks',
-        connection=redis_conn,
-        default_timeout='1h'
-    )
+    # redis_url, redis_conn, and task_queue are now global
     
-    logging.info(f"Worker {os.getpid()} starting with Redis queue")
+    logging.info(f"Flask app {os.getpid()} starting, using global Redis queue")
 
-    def process_task(task_wrapper_instance, start_time): # Renamed task_wrapper to task_wrapper_instance for clarity
-        """Worker function to process tasks"""
-        worker_pid = os.getpid()
-        run_start_time = time.time()
-        queue_time = time.time() - start_time
-        
-        try:
-            log_job_status(task_wrapper_instance.job_id, {
-                "job_status": "running",
-                "job_id": task_wrapper_instance.job_id,
-                "process_id": worker_pid,
-                "response": None
-            })
-            
-            logging.info(f"Worker {worker_pid}: Executing task for job {task_wrapper_instance.job_id}")
-            response = task_wrapper_instance() # Calls TaskWrapper.__call__
-            logging.info(f"Worker {worker_pid}: Task completed for job {task_wrapper_instance.job_id}")
-            
-            run_time = time.time() - run_start_time
-            total_time = time.time() - start_time
-
-            response_data = {
-                "endpoint": response[1],
-                "code": response[2],
-                "id": task_wrapper_instance.data.get("id"),
-                "job_id": task_wrapper_instance.job_id,
-                "response": response[0] if response[2] == 200 else None,
-                "message": "success" if response[2] == 200 else response[0],
-                "pid": worker_pid,
-                "run_time": round(run_time, 3),
-                "queue_time": round(queue_time, 3),
-                "total_time": round(total_time, 3),
-                "queue_length": len(task_queue),
-                "build_number": BUILD_NUMBER
-            }
-            
-            log_job_status(task_wrapper_instance.job_id, {
-                "job_status": "done",
-                "job_id": task_wrapper_instance.job_id,
-                "process_id": worker_pid,
-                "response": response_data
-            })
-
-            if task_wrapper_instance.data.get("webhook_url"):
-                send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
-
-            return response_data
-            
-        except Exception as e:
-            logging.error(f"Worker {worker_pid}: Error processing job {task_wrapper_instance.job_id}: {str(e)}", exc_info=True)
-            log_job_status(task_wrapper_instance.job_id, {
-                "job_status": "failed",
-                "job_id": task_wrapper_instance.job_id,
-                "process_id": worker_pid,
-                "error": str(e)
-            })
-            raise
-
-    def queue_task(bypass_queue=False):
-        def decorator(f): 
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                job_id = str(uuid.uuid4())
-                current_request_data = getattr(request, '_validated_json', 
-                                               request.json if request.is_json else {})
-                pid = os.getpid()
-                start_time = time.time()
-                
-                if bypass_queue or 'webhook_url' not in current_request_data:
-                    log_job_status(job_id, {
-                        "job_status": "running",
-                        "job_id": job_id,
-                        "process_id": pid,
-                        "response": None
-                    })
-                    response = f(job_id=job_id, data=current_request_data, *args, **kwargs)
-                    run_time = time.time() - start_time
-                    if isinstance(response, tuple) and len(response) == 3:
-                        response_obj = {
-                            "code": response[2],
-                            "id": current_request_data.get("id"),
-                            "job_id": job_id,
-                            "response": response[0] if response[2] == 200 else None,
-                            "message": "success" if response[2] == 200 else response[0],
-                            "run_time": round(run_time, 3),
-                            "queue_time": 0,
-                            "total_time": round(run_time, 3),
-                            "pid": pid,
-                            "queue_length": len(task_queue),
-                            "build_number": BUILD_NUMBER
-                        }
-                        log_job_status(job_id, {
-                            "job_status": "done",
-                            "job_id": job_id,
-                            "process_id": pid,
-                            "response": response_obj
-                        })
-                        return response_obj, response[2]
-                    return response
-                else:
-                    if MAX_QUEUE_LENGTH > 0 and len(task_queue) >= MAX_QUEUE_LENGTH:
-                        error_response = {
-                            "code": 429,
-                            "id": current_request_data.get("id"),
-                            "job_id": job_id,
-                            "message": f"MAX_QUEUE_LENGTH ({MAX_QUEUE_LENGTH}) reached",
-                            "pid": pid,
-                            "queue_length": len(task_queue),
-                            "build_number": BUILD_NUMBER
-                        }
-                        log_job_status(job_id, {
-                            "job_status": "rejected",
-                            "job_id": job_id,
-                            "process_id": pid,
-                            "response": error_response
-                        })
-                        return error_response, 429
-                    
-                    log_job_status(job_id, {
-                        "job_status": "queued",
-                        "job_id": job_id,
-                        "process_id": pid,
-                        "response": None
-                    })
-                    
-                    func_path = f"{f.__module__}.{f.__name__}"
-                    task_wrapper_obj = TaskWrapper(func_path, job_id, current_request_data)
-                    
-                    job = task_queue.enqueue(
-                        process_task, # Target is the global process_task
-                        args=(task_wrapper_obj, start_time),
-                        job_id=job_id,
-                        job_timeout='1h'
-                    )
-                    
-                    return {
-                        "code": 202,
-                        "id": current_request_data.get("id"),
-                        "job_id": job_id,
-                        "message": "processing",
-                        "pid": pid,
-                        "max_queue_length": MAX_QUEUE_LENGTH if MAX_QUEUE_LENGTH > 0 else "unlimited",
-                        "queue_length": len(task_queue),
-                        "build_number": BUILD_NUMBER
-                    }, 202
-            return wrapper
-        return decorator
-
+    # Attach the queue_task decorator (which is now global) to the app instance
+    # The decorator itself will use the global task_queue
     app.queue_task = queue_task
-
 
     # Import blueprints
     from routes.media_to_mp3 import convert_bp
