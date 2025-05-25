@@ -365,7 +365,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             
             # Use default background video if no background video found
             if not background_video_path:
-                default_video = os.environ.get('DEFAULT_BACKGROUND_VIDEO', '/tmp/assets/placeholder.mp4')
+                default_video = os.environ.get('DEFAULT_PLACEHOLDER_VIDEO', '/tmp/assets/placeholder.mp4')
                 if os.path.exists(default_video):
                     background_video_path = default_video
                     logger.warning(f"Job {job_id}: No background video found for scene {i+1}, using default background video")
