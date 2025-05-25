@@ -24,8 +24,8 @@ from config import LOCAL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 
-# Status tracking file path
-STATUS_FILE_PATH = os.path.join(LOCAL_STORAGE_PATH, "short_video_status.json")
+# Status tracking file path - Use app data directory for Docker compatibility
+STATUS_FILE_PATH = os.path.join('/app/data', "short_video_status.json")
 
 def load_status_data() -> Dict[str, Any]:
     """Load status data from JSON file."""
