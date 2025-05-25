@@ -64,18 +64,23 @@ def log_job_status(job_id, data):
         job_id (str): The unique job ID
         data (dict): Data to write to the log file
     """
-    jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
-    
-    # Create jobs directory if it doesn't exist
-    if not os.path.exists(jobs_dir):
-        os.makedirs(jobs_dir, exist_ok=True)
-    
-    # Create or update the job log file
-    job_file = os.path.join(jobs_dir, f"{job_id}.json")
-    
-    # Write data directly to file
-    with open(job_file, 'w') as f:
-        json.dump(data, f, indent=2)
+    try:
+        # Use app directory instead of /tmp for Docker compatibility
+        jobs_dir = os.path.join('/app/data', 'jobs')
+        
+        # Create jobs directory if it doesn't exist
+        if not os.path.exists(jobs_dir):
+            os.makedirs(jobs_dir, exist_ok=True)
+        
+        # Create or update the job log file
+        job_file = os.path.join(jobs_dir, f"{job_id}.json")
+        
+        # Write data directly to file
+        with open(job_file, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        # Log the error but don't crash the application
+        logging.error(f"Job {job_id}: Failed to write job status: {str(e)}")
 
 def queue_task_wrapper(bypass_queue=False):
     def decorator(f):

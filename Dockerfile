@@ -100,8 +100,9 @@ COPY ./fonts /usr/share/fonts/custom/
 RUN fc-cache -f -v
 
 # Create required directories and set permissions
-RUN mkdir -p /tmp/assets /tmp/music /app/public/assets ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR}
+RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets ${WHISPER_CACHE_DIR} && \
+    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR} && \
+    chmod -R 777 /app/data
 
 # Generate placeholder assets as appuser (faster than FFmpeg)
 USER appuser
