@@ -68,15 +68,24 @@ RUN apt-get update && \
     libfontconfig1 \
     libfribidi0 \
     libharfbuzz0b \
+    # DRM and graphics acceleration libraries for FFmpeg
+    libdrm2 \
+    libva2 \
+    libva-drm2 \
+    libvdpau1 \
     # System utilities
     xdg-utils \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove -y \
     && apt-get autoclean
 
-# Copy FFmpeg binaries from pre-built image
+# Copy FFmpeg binaries and libraries from pre-built image
 COPY --from=ffmpeg-base /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=ffmpeg-base /usr/local/bin/ffprobe /usr/local/bin/ffprobe
+# Copy FFmpeg shared libraries to ensure all dependencies are available
+COPY --from=ffmpeg-base /usr/local/lib/ /usr/local/lib/
+# Update library cache
+RUN ldconfig
 
 # Copy Python virtual environment
 COPY --from=python-builder /opt/venv /opt/venv
