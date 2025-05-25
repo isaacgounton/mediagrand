@@ -66,23 +66,16 @@ def log_job_status(job_id, data):
     """
     jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
     
-    try:
-        # Create jobs directory if it doesn't exist
-        if not os.path.exists(jobs_dir):
-            os.makedirs(jobs_dir, exist_ok=True)
-            logging.info(f"Created jobs directory: {jobs_dir}")
-        
-        # Create or update the job log file
-        job_file = os.path.join(jobs_dir, f"{job_id}.json")
-        
-        # Write data directly to file
-        with open(job_file, 'w') as f:
-            json.dump(data, f, indent=2)
-            
-        logging.debug(f"Job {job_id}: Successfully wrote status to {job_file}")
-    except Exception as e:
-        # Log the error but don't crash the application
-        logging.error(f"Job {job_id}: Failed to write job status: {str(e)}")
+    # Create jobs directory if it doesn't exist
+    if not os.path.exists(jobs_dir):
+        os.makedirs(jobs_dir, exist_ok=True)
+    
+    # Create or update the job log file
+    job_file = os.path.join(jobs_dir, f"{job_id}.json")
+    
+    # Write data directly to file
+    with open(job_file, 'w') as f:
+        json.dump(data, f, indent=2)
 
 def queue_task_wrapper(bypass_queue=False):
     def decorator(f):
