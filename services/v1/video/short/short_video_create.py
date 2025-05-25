@@ -271,6 +271,11 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                 
                 # Check if this is a subtitle number (digits only)
                 if line.isdigit():
+                    # Save previous caption if exists
+                    if current_caption and 'text' in current_caption:
+                        captions.append(current_caption.copy())
+                        current_caption = {}
+                        
                     # Next line should be timing
                     if i + 1 < len(lines) and '-->' in lines[i + 1]:
                         timing_line = lines[i + 1].strip()
@@ -281,20 +286,22 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                         # Collect subtitle text (may span multiple lines)
                         text_lines = []
                         j = i + 2
-                        while j < len(lines) and lines[j].strip() and not lines[j].strip().isdigit():
+                        while j < len(lines) and lines[j].strip() and (j + 1 >= len(lines) or not lines[j + 1].strip().isdigit() or not lines[j].strip().isdigit()):
                             text_lines.append(lines[j].strip())
                             j += 1
                         
                         if text_lines:
                             current_caption['text'] = ' '.join(text_lines)
-                            captions.append(current_caption.copy())
                         
-                        current_caption = {}
                         i = j
                     else:
                         i += 1
                 else:
                     i += 1
+            
+            # Add the last caption
+            if current_caption and 'text' in current_caption:
+                captions.append(current_caption.copy())
             
             scene_data = {
                 "audio_path": audio_path,
