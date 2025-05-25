@@ -128,9 +128,7 @@ declare -a pids\n\
 \n\
 # Start RQ workers with correct settings\n\
 for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
-    rq worker tasks \\\n\
-        --url redis://redis:6379 \\\n\
-        --logging_level info & # Changed from warning to info\n\
+    python start_worker.py & # Use custom worker script to avoid CLI conflicts\n\
     pids+=($!)\n\
 done\n\
 \n\

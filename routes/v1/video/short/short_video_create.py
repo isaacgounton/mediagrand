@@ -1,5 +1,4 @@
-# Copyright (c) 2025 Stephen G. Pope
-#
+# Copyright (c) 2025 Isaac Gounton
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -14,12 +13,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify
 from app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.authentication import authenticate
 from services.cloud_storage import upload_file
-from services.v1.video.short.short_video_create import create_short_video
+from services.v1.video.short.short_video_create import create_short_video as process_short_video
 from services.v1.video.short.short_video_status import (
     create_video_status,
     mark_video_completed,
@@ -74,21 +73,8 @@ logger = logging.getLogger(__name__)
     "required": ["scenes"],
     "additionalProperties": False
 })
-def create_short_video_endpoint():
-    """HTTP endpoint that handles authentication and queues the task."""
-    data = request.get_json()
-    
-    # Queue the task for background processing (without authentication decorators)
-    from app_utils import queue_task
-    job_id = queue_task(create_short_video_worker, data)
-    
-    return jsonify({
-        "job_id": job_id,
-        "status": "queued",
-        "message": "Short video creation task has been queued"
-    }), 202
-
-def create_short_video_worker(data, job_id=None):
+@queue_task_wrapper(bypass_queue=False)
+def create_short_video(job_id, data):
     """Create a short video from text scenes with background videos, music, and captions."""
     scenes = data['scenes']
     config = data.get('config', {})
@@ -110,9 +96,8 @@ def create_short_video_worker(data, job_id=None):
     user_id = getattr(data, 'user_id', 'unknown')  # This might need adjustment based on auth system
     create_video_status(job_id, user_id, len(scenes), config)
 
-    try:
-        # Process the short video creation
-        output_filename = create_short_video(
+    try:        # Process the short video creation
+        output_filename = process_short_video(
             scenes=scenes,
             config=config,
             job_id=job_id
