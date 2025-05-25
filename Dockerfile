@@ -1,10 +1,5 @@
 # ====================================================================
-# Stage 1: Base image with pre-built FFmpeg
-# ====================================================================
-FROM linuxserver/ffmpeg:latest as ffmpeg-base
-
-# ====================================================================
-# Stage 2: Python dependencies builder
+# Stage 1: Python dependencies builder
 # ====================================================================
 FROM python:3.10-slim as python-builder
 
@@ -42,11 +37,11 @@ RUN python -c "import whisper; whisper.load_model('base')"
 RUN python -m nltk.downloader punkt averaged_perceptron_tagger stopwords
 
 # ====================================================================
-# Stage 3: Final runtime image
+# Stage 2: Final runtime image
 # ====================================================================
 FROM python:3.10-slim
 
-# Install only runtime dependencies (no build tools)
+# Install runtime dependencies including FFmpeg
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     # Core system libraries
@@ -54,11 +49,13 @@ RUN apt-get update && \
     ca-certificates \
     curl \
     wget \
+    # FFmpeg and multimedia libraries
+    ffmpeg \
     # Font and media libraries
     fontconfig \
     fonts-liberation \
     imagemagick \
-    # Essential audio/video libraries (simplified to avoid version conflicts)
+    # Essential audio/video libraries
     libmp3lame0 \
     libopus0 \
     libvorbis0a \
@@ -68,7 +65,7 @@ RUN apt-get update && \
     libfontconfig1 \
     libfribidi0 \
     libharfbuzz0b \
-    # DRM and graphics acceleration libraries for FFmpeg
+    # DRM and graphics acceleration libraries
     libdrm2 \
     libva2 \
     libva-drm2 \
@@ -78,14 +75,6 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove -y \
     && apt-get autoclean
-
-# Copy FFmpeg binaries and libraries from pre-built image
-COPY --from=ffmpeg-base /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
-COPY --from=ffmpeg-base /usr/local/bin/ffprobe /usr/local/bin/ffprobe
-# Copy FFmpeg shared libraries to ensure all dependencies are available
-COPY --from=ffmpeg-base /usr/local/lib/ /usr/local/lib/
-# Update library cache
-RUN ldconfig
 
 # Copy Python virtual environment
 COPY --from=python-builder /opt/venv /opt/venv
