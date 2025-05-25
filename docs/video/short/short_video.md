@@ -65,6 +65,7 @@ Configuration (object, optional):
 - `orientation` (string, optional) - "portrait" (9:16) or "landscape" (16:9), default "portrait"
 - `caption_position` (string, optional) - "top", "center", or "bottom", default "bottom"
 - `caption_background_color` (string, optional) - Caption background color in hex format, default "#000000"
+- `show_captions` (boolean, optional) - Whether to display captions on the video, default true
 - `music` (string, optional) - Music mood category (ignored if music_url is provided)
 - `music_url` (string, optional, URL format) - Direct URL to background music file (MP3, WAV, etc.). Takes priority over music mood selection
 - `music_volume` (string, optional) - "low", "medium", "high", or "muted", default "medium"
