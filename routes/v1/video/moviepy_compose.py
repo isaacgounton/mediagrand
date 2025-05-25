@@ -10,7 +10,7 @@ import uuid
 import logging
 from services.v1.video.moviepy_compose import MoviePyComposer
 from config import LOCAL_STORAGE_PATH
-from services.file_management import get_presigned_url, upload_file_to_s3
+from services.cloud_storage import upload_file
 from services.request_validation import validate_json_request
 import json
 
@@ -74,8 +74,8 @@ def compose_video():
         logger.info(f"Starting video composition for job {job_id}")
         result_path = composer.compose_video(composition, output_path)
         
-        # Upload to S3 if configured
-        video_url = get_presigned_url(result_path) if os.path.exists(result_path) else None
+        # Upload to cloud storage
+        video_url = upload_file(result_path) if os.path.exists(result_path) else None
         
         # Return result
         return jsonify({
