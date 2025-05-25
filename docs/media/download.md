@@ -13,7 +13,8 @@ Downloads media from URLs with support for YouTube-specific features like transc
 ```json
 {
     "media_url": "https://www.youtube.com/watch?v=...",
-    "cookies_path": "/path/to/cookies.txt",  // Optional: For age-restricted videos
+    "cookies_path": "/path/to/cookies.txt",  // Optional: Local path to cookies file for age-restricted videos
+    "cookies_url": "https://example.com/cookies.txt",  // Optional: URL to cookies file for age-restricted videos
     "transcript": {  // Optional: For YouTube videos only
         "languages": ["en", "es"],  // Language preference order
         "preserve_formatting": false,  // Keep HTML tags
@@ -111,6 +112,10 @@ Downloads media from URLs with support for YouTube-specific features like transc
 
 For age-restricted or private videos, the endpoint will first try to access the content without authentication. If that fails, it will use the provided cookies file.
 
+You can provide cookies in two ways:
+1. `cookies_path`: A local path to a cookies file
+2. `cookies_url`: A URL to a cookies file that will be downloaded automatically
+
 You can obtain YouTube cookies using:
 
 1. yt-dlp's `--cookies-from-browser` option:
@@ -130,7 +135,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "Age-restricted or private video requires authentication",
-    "solution": "Please provide a cookies_path parameter with valid YouTube cookies..."
+    "solution": "Please provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
 }
 ```
 
@@ -138,7 +143,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "YouTube is requesting verification",
-    "solution": "Please provide a cookies_path parameter with valid YouTube cookies..."
+    "solution": "Please provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
 }
 ```
 
@@ -146,7 +151,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "This is a private video",
-    "solution": "If you have access to this video, provide a cookies_path parameter with valid YouTube cookies."
+    "solution": "If you have access to this video, provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file."
 }
 ```
 

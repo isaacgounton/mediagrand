@@ -47,6 +47,11 @@ logger = logging.getLogger(__name__)
             "type": "string",
             "description": "Path to cookies file for age-restricted videos"
         },
+        "cookies_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to a cookies file for age-restricted videos"
+        },
         "transcript": {
             "type": "object",
             "properties": {
@@ -64,10 +69,6 @@ logger = logging.getLogger(__name__)
                     "description": "Language code to translate transcript to"
                 }
             }
-        },
-        "cookies_path": {
-            "type": "string",
-            "description": "Path to cookies file for age-restricted videos"
         },
         "format": {
             "type": "object",
@@ -140,30 +141,43 @@ def download_media(job_id, data):
             preserve_formatting = transcript_options.get('preserve_formatting', False)
             translate_to = transcript_options.get('translate_to')
 
-            # Try without cookies first
-            ytt_api = YouTubeTranscriptApi()
-            try:
-                transcript_list = ytt_api.list(video_id)
-            except Exception as e:
-                error_str = str(e)
-                # If it's age-restricted, try again with cookies
-                if any(msg in error_str.lower() for msg in [
-                    "too many requests",
-                    "sign in to confirm your age",
-                    "try signing in"
-                ]):
-                    cookies_path = data.get('cookies_path')
-                    if cookies_path:
-                        logger.info(f"Using cookies for transcript of age-restricted video {video_id}")
-                        ytt_api = YouTubeTranscriptApi(cookie_path=cookies_path)
-                        transcript_list = ytt_api.list(video_id)
+            # Create a temporary directory for downloads if it doesn't exist yet
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Try without cookies first
+                ytt_api = YouTubeTranscriptApi()
+                try:
+                    transcript_list = ytt_api.list(video_id)
+                except Exception as e:
+                    error_str = str(e)
+                    # If it's age-restricted, try again with cookies
+                    if any(msg in error_str.lower() for msg in [
+                        "too many requests",
+                        "sign in to confirm your age",
+                        "try signing in"
+                    ]):
+                        cookies_path = data.get('cookies_path')
+                        cookies_url = data.get('cookies_url')
+                        
+                        # Handle cookies provided via URL
+                        if cookies_url and not cookies_path:
+                            try:
+                                logger.info(f"Downloading cookies from URL for transcript of age-restricted video {video_id}")
+                                cookies_path = download_file(cookies_url, temp_dir)
+                            except Exception as e:
+                                logger.error(f"Failed to download cookies from URL: {str(e)}")
+                                raise Exception(f"Failed to download cookies from URL: {str(e)}")
+                        
+                        if cookies_path:
+                            logger.info(f"Using cookies for transcript of age-restricted video {video_id}")
+                            ytt_api = YouTubeTranscriptApi(cookie_path=cookies_path)
+                            transcript_list = ytt_api.list(video_id)
+                        else:
+                            raise Exception("Age-restricted video requires cookies for transcript access")
+                    elif "Transcript is unavailable" in error_str:
+                        logger.warning(f"No transcript available for video {video_id}")
+                        return
                     else:
-                        raise Exception("Age-restricted video requires cookies for transcript access")
-                elif "Transcript is unavailable" in error_str:
-                    logger.warning(f"No transcript available for video {video_id}")
-                    return
-                else:
-                    raise
+                        raise
 
             try:
                 # Find transcript in requested languages
@@ -240,6 +254,17 @@ def download_media(job_id, data):
                     ]):
                         # Only use cookies if we hit an age restriction or similar
                         cookies_path = data.get('cookies_path')
+                        cookies_url = data.get('cookies_url')
+                        
+                        # Handle cookies provided via URL
+                        if cookies_url and not cookies_path:
+                            try:
+                                logger.info(f"Job {job_id}: Downloading cookies from URL {cookies_url}")
+                                cookies_path = download_file(cookies_url, temp_dir)
+                            except Exception as e:
+                                logger.error(f"Job {job_id}: Failed to download cookies from URL: {str(e)}")
+                                raise Exception(f"Failed to download cookies from URL: {str(e)}")
+                        
                         if cookies_path:
                             logger.info(f"Job {job_id}: Using cookies from {cookies_path}")
                             ydl_opts['cookiefile'] = cookies_path
@@ -248,8 +273,21 @@ def download_media(job_id, data):
                     else:
                         raise
             # For non-YouTube videos, use cookies if provided
-            elif data.get('cookies_path'):
-                ydl_opts['cookiefile'] = data.get('cookies_path')
+            elif data.get('cookies_path') or data.get('cookies_url'):
+                cookies_path = data.get('cookies_path')
+                cookies_url = data.get('cookies_url')
+                
+                # Handle cookies provided via URL
+                if cookies_url and not cookies_path:
+                    try:
+                        logger.info(f"Job {job_id}: Downloading cookies from URL {cookies_url}")
+                        cookies_path = download_file(cookies_url, temp_dir)
+                    except Exception as e:
+                        logger.error(f"Job {job_id}: Failed to download cookies from URL: {str(e)}")
+                        raise Exception(f"Failed to download cookies from URL: {str(e)}")
+                
+                if cookies_path:
+                    ydl_opts['cookiefile'] = cookies_path
 
             # Add format options if specified
             if format_options:
@@ -376,13 +414,18 @@ def download_media(job_id, data):
         if "Sign in to confirm your age" in error_str or "Sign in to continue" in error_str:
             return {
                 "error": "Age-restricted or private video requires authentication",
-                "solution": "Please provide a cookies_path parameter with valid YouTube cookies. You can export cookies from your browser using browser extensions or yt-dlp's --cookies-from-browser option. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp for detailed instructions."
+                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. You can export cookies from your browser using browser extensions or yt-dlp's --cookies-from-browser option. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp for detailed instructions."
             }, "/v1/media/download", 401
         elif "Sign in to confirm you're not a bot" in error_str:
             return {
                 "error": "YouTube is requesting verification",
-                "solution": "Please provide a cookies_path parameter with valid YouTube cookies. Export them from your browser using yt-dlp's --cookies-from-browser option or a browser extension. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
+                "solution": "Please provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file. Export them from your browser using yt-dlp's --cookies-from-browser option or a browser extension. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
             }, "/v1/media/download", 401
+        elif "Failed to download cookies from URL" in error_str:
+            return {
+                "error": error_str,
+                "solution": "Make sure the cookies_url is accessible and points to a valid cookies file."
+            }, "/v1/media/download", 400
         elif "Video unavailable" in error_str or "This video is not available" in error_str:
             return {
                 "error": "Video is not available",
@@ -391,10 +434,10 @@ def download_media(job_id, data):
         elif "Private video" in error_str:
             return {
                 "error": "This is a private video",
-                "solution": "If you have access to this video, provide a cookies_path parameter with valid YouTube cookies."
+                "solution": "If you have access to this video, provide a cookies_path parameter with valid YouTube cookies, or a cookies_url parameter with a URL to a valid cookies file."
             }, "/v1/media/download", 403
         else:
             return {
                 "error": error_str,
-                "tip": "If this is a YouTube video requiring authentication, try providing a cookies_path parameter."
+                "tip": "If this is a YouTube video requiring authentication, try providing a cookies_path or cookies_url parameter."
             }, "/v1/media/download", 500

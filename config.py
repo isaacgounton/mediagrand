@@ -31,14 +31,14 @@ LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', '/tmp')
 GCP_SA_CREDENTIALS = os.environ.get('GCP_SA_CREDENTIALS', '')
 GCP_BUCKET_NAME = os.environ.get('GCP_BUCKET_NAME', '')
 
-# Video service API keys
-PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY')
+# Video service API keys (optional - used for background video search)
+PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY', '')
 if not PEXELS_API_KEY:
-    raise ValueError("PEXELS_API_KEY environment variable is not set")
+    logging.warning("PEXELS_API_KEY not set - Pexels video search will be unavailable")
 
-PIXABAY_API_KEY = os.environ.get('PIXABAY_API_KEY')
+PIXABAY_API_KEY = os.environ.get('PIXABAY_API_KEY', '')
 if not PIXABAY_API_KEY:
-    raise ValueError("PIXABAY_API_KEY environment variable is not set")
+    logging.warning("PIXABAY_API_KEY not set - Pixabay video search will be unavailable")
 
 # Default video placeholder path
 DEFAULT_PLACEHOLDER_VIDEO = os.environ.get('DEFAULT_PLACEHOLDER_VIDEO', 

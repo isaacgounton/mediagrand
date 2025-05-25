@@ -100,8 +100,8 @@ COPY ./fonts /usr/share/fonts/custom/
 RUN fc-cache -f -v
 
 # Create required directories and set permissions
-RUN mkdir -p /tmp/assets /tmp/music /app/public/assets ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR}
+RUN mkdir -p /tmp/assets /tmp/music /tmp/jobs /app/public/assets ${WHISPER_CACHE_DIR} && \
+    chown -R appuser:appuser /app /tmp/assets /tmp/music /tmp/jobs ${WHISPER_CACHE_DIR}
 
 # Generate placeholder assets as appuser (faster than FFmpeg)
 USER appuser
@@ -126,7 +126,6 @@ ENV PYTHONUNBUFFERED=1 \
     DEFAULT_BACKGROUND_VIDEO="/tmp/assets/placeholder.jpg" \
     DEFAULT_BACKGROUND_MUSIC="/tmp/music/default.wav" \
     WHISPER_CACHE_DIR="/opt/whisper_cache" \
-    PEXELS_API_KEY="" \
     PATH="/opt/venv/bin:$PATH"
 
 # Expose port

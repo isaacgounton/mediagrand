@@ -180,8 +180,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
     logger.info(f"Total text length: {total_chars} characters across {len(scenes)} scenes")
     
     try:
-        # Initialize services
-        pexels = PexelsAPI()
+        # Initialize services (video APIs will be initialized later with error handling)
         moviepy_renderer = MoviePyRenderer()
         music_manager = MusicManager()
         
@@ -284,8 +283,7 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
         update_processing_stage(job_id, "tts_generation", "completed")
         update_processing_stage(job_id, "video_search", "processing")
         update_video_status(job_id, {"progress": 30})
-        
-        # Step 2: Search and download background videos
+          # Step 2: Search and download background videos
         for i, scene_data in enumerate(processed_scenes):
             logger.info(f"Job {job_id}: Getting background video for scene {i+1}")
             
@@ -293,9 +291,19 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
             progress = 30 + int((i / len(processed_scenes)) * 30)
             update_video_status(job_id, {"progress": progress})
             
-            # Initialize video APIs
-            pexels = PexelsAPI()
-            pixabay = PixabayAPI()
+            # Initialize video APIs with error handling
+            pexels_api = None
+            pixabay_api = None
+            
+            try:
+                pexels_api = PexelsAPI()
+            except ValueError as e:
+                logger.warning(f"Pexels API unavailable: {str(e)}")
+            
+            try:
+                pixabay_api = PixabayAPI()
+            except ValueError as e:
+                logger.warning(f"Pixabay API unavailable: {str(e)}")
             
             # Check if direct video URL is provided
             background_video_path = None
@@ -313,37 +321,47 @@ def create_short_video(scenes: List[Dict], config: Dict, job_id: str) -> str:
                 except Exception as e:
                     logger.error(f"Job {job_id}: Error downloading provided video URL: {str(e)}")
                     background_video_path = None
-            
-            # If no direct URL or download failed, try stock video APIs
+              # If no direct URL or download failed, try stock video APIs
             if not background_video_path and "search_terms" in scenes[i]:
-                # Try Pexels first
+                # Try Pexels first (if available)
                 search_query = " ".join(scenes[i]["search_terms"])
-                videos = pexels.search_videos(search_query, orientation=orientation)
                 
-                if videos:
-                    video_filename = f"background_{job_id}_scene_{i}.mp4"
-                    video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
+                if pexels_api:
                     try:
-                        pexels.download_video(videos[0]["url"], video_path)
-                        background_video_path = video_path
-                        logger.info(f"Job {job_id}: Found and downloaded Pexels video for scene {i+1}")
+                        videos = pexels_api.search_videos(search_query, orientation=orientation)
+                        if videos:
+                            video_filename = f"background_{job_id}_scene_{i}.mp4"
+                            video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
+                            try:
+                                pexels_api.download_video(videos[0]["url"], video_path)
+                                background_video_path = video_path
+                                logger.info(f"Job {job_id}: Found and downloaded Pexels video for scene {i+1}")
+                            except Exception as e:
+                                logger.error(f"Job {job_id}: Error downloading Pexels video: {str(e)}")
+                                background_video_path = None
                     except Exception as e:
-                        logger.error(f"Job {job_id}: Error downloading Pexels video: {str(e)}")
-                        background_video_path = None
+                        logger.error(f"Job {job_id}: Error searching Pexels videos: {str(e)}")
                 
-                # If Pexels failed, try Pixabay
-                if not background_video_path:
-                    videos = pixabay.search_videos(search_query, orientation=orientation)
-                    if videos:
-                        video_filename = f"background_{job_id}_scene_{i}.mp4"
-                        video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
-                        try:
-                            pixabay.download_video(videos[0]["url"], video_path)
-                            background_video_path = video_path
-                            logger.info(f"Job {job_id}: Found and downloaded Pixabay video for scene {i+1}")
-                        except Exception as e:
-                            logger.error(f"Job {job_id}: Error downloading Pixabay video: {str(e)}")
-                            background_video_path = None
+                # If Pexels failed, try Pixabay (if available)
+                if not background_video_path and pixabay_api:
+                    try:
+                        videos = pixabay_api.search_videos(search_query, orientation=orientation)
+                        if videos:
+                            video_filename = f"background_{job_id}_scene_{i}.mp4"
+                            video_path = os.path.join(LOCAL_STORAGE_PATH, video_filename)
+                            try:
+                                pixabay_api.download_video(videos[0]["url"], video_path)
+                                background_video_path = video_path
+                                logger.info(f"Job {job_id}: Found and downloaded Pixabay video for scene {i+1}")
+                            except Exception as e:
+                                logger.error(f"Job {job_id}: Error downloading Pixabay video: {str(e)}")
+                                background_video_path = None
+                    except Exception as e:
+                        logger.error(f"Job {job_id}: Error searching Pixabay videos: {str(e)}")
+                
+                # Log if no video APIs are available
+                if not pexels_api and not pixabay_api:
+                    logger.warning(f"Job {job_id}: No video API keys configured - skipping background video search for scene {i+1}")
             
             # Use default background video if no background video found
             if not background_video_path:

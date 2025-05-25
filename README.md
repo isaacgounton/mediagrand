@@ -117,6 +117,159 @@ docker-compose up -d
 
 The service will be available at `http://localhost:8080` with health checks at `/v1/toolkit/test`.
 
+## Troubleshooting
+
+### Pre-Deployment Validation
+
+Before deploying, run the startup validation script to check for common issues:
+
+```bash
+python scripts/validate_startup.py
+```
+
+This script will check:
+- Required environment variables
+- Directory permissions
+- Python dependencies
+- System commands (FFmpeg)
+- Placeholder assets
+- Application startup
+
+### Common Issues
+
+#### 1. Application Won't Start
+
+**Symptom**: Container crashes immediately or Flask app fails to start
+
+**Solutions**:
+```bash
+# Check if API_KEY is set
+echo $API_KEY
+
+# Validate startup requirements
+python scripts/validate_startup.py
+
+# Check Docker logs
+docker-compose logs app
+```
+
+#### 2. Video Search APIs Not Working
+
+**Symptom**: Background videos not found, using default placeholder videos
+
+**Solutions**:
+- **Optional**: Video search APIs (Pexels, Pixabay) are optional
+- Set `PEXELS_API_KEY` and/or `PIXABAY_API_KEY` if you want background video search
+- Get API keys from:
+  - Pexels: https://www.pexels.com/api/
+  - Pixabay: https://pixabay.com/api/docs/
+
+#### 3. Permission Denied Errors
+
+**Symptom**: Cannot write to `/tmp/jobs` or other directories
+
+**Solutions**:
+```bash
+# Ensure directories exist and have correct permissions
+mkdir -p /tmp/assets /tmp/music /tmp/jobs
+chown -R appuser:appuser /tmp/assets /tmp/music /tmp/jobs
+
+# Or rebuild with correct permissions
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+#### 4. Missing Placeholder Assets
+
+**Symptom**: Errors about missing placeholder.mp4 or default.wav
+
+**Solutions**:
+```bash
+# Create placeholder assets
+python scripts/create_placeholders.py
+
+# Or rebuild Docker image
+docker-compose build --no-cache
+```
+
+#### 5. FFmpeg Not Found
+
+**Symptom**: ffmpeg or ffprobe command not found
+
+**Solutions**:
+```bash
+# For Docker deployment (should be included)
+docker-compose build --no-cache
+
+# For local development
+# Ubuntu/Debian:
+sudo apt update && sudo apt install ffmpeg
+
+# macOS:
+brew install ffmpeg
+
+# Windows:
+# Download from https://ffmpeg.org/download.html
+```
+
+#### 6. Memory Issues
+
+**Symptom**: Container runs out of memory during video processing
+
+**Solutions**:
+```bash
+# Increase Docker memory limits
+# In docker-compose.yml, add:
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+```
+
+#### 7. Slow Build Times
+
+**Symptom**: Docker build takes 30+ minutes
+
+**Solutions**:
+- Use the optimized multi-stage Dockerfile (included)
+- Enable Docker BuildKit: `export DOCKER_BUILDKIT=1`
+- Use build cache: `docker-compose build --parallel`
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure required variables:
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
+
+**Required**:
+- `API_KEY`: Your API authentication key
+
+**Optional** (for enhanced functionality):
+- `PEXELS_API_KEY`: For background video search
+- `PIXABAY_API_KEY`: For background video search  
+- `S3_*` or `GCP_*`: For cloud storage
+
+### Health Checks
+
+Test your deployment:
+
+```bash
+# Basic health check
+curl http://localhost:8080/v1/toolkit/test
+
+# Authentication test
+curl -H "X-API-Key: your-api-key" http://localhost:8080/v1/toolkit/authenticate
+
+# Check application logs
+docker-compose logs -f app
+```
+
 ## Contributing
 
 1. Choose royalty-free music files
