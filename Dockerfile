@@ -126,9 +126,17 @@ trap cleanup SIGTERM\n\
 # Array to store background process PIDs\n\
 declare -a pids\n\
 \n\
-# Start RQ workers\n\
+# Start RQ workers with custom settings\n\
 for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
-    rq worker tasks --url redis://redis:6379 &\n\
+    rq worker tasks \
+        --url redis://redis:6379 \
+        --serializer json \
+        --worker-class "rq.Worker" \
+        --job-class "rq.Job" \
+        --queue-class "rq.Queue" \
+        --connection-class "redis.Redis" \
+        --burst false \
+        --logging-level warning &\n\
     pids+=($!)\n\
 done\n\
 \n\
