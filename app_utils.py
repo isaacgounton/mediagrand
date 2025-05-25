@@ -62,9 +62,12 @@ def log_job_status(job_id, data):
     """
     jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
     
-    # Create jobs directory if it doesn't exist
+    # Create jobs directory if it doesn't exist with proper permissions
     if not os.path.exists(jobs_dir):
-        os.makedirs(jobs_dir, exist_ok=True)
+        os.makedirs(jobs_dir, mode=0o777, exist_ok=True)
+    else:
+        # Ensure proper permissions on existing directory
+        os.chmod(jobs_dir, 0o777)
     
     # Create or update the job log file
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
