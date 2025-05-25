@@ -62,21 +62,16 @@ def log_job_status(job_id, data):
     """
     jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
     
-    # Create a user-specific jobs directory under /tmp to avoid permission issues
-    user_jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'app_user_jobs')
+    # Create jobs directory if it doesn't exist
+    if not os.path.exists(jobs_dir):
+        try:
+            os.makedirs(jobs_dir, mode=0o777, exist_ok=True)
+        except PermissionError:
+            # If we can't set 777, try creating with default permissions
+            os.makedirs(jobs_dir, exist_ok=True)
     
-    # Create directory with user permissions
-    if not os.path.exists(user_jobs_dir):
-        os.makedirs(user_jobs_dir, mode=0o755, exist_ok=True)
-    
-    jobs_dir = user_jobs_dir
-    
-    # Create or update the job log file with user permissions
+    # Create or update the job log file
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
-    
-    # Ensure parent directory exists and is writable
-    if not os.access(jobs_dir, os.W_OK):
-        raise PermissionError(f"Cannot write to jobs directory: {jobs_dir}")
     
     # Write data directly to file
     with open(job_file, 'w') as f:
