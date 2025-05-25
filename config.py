@@ -25,7 +25,7 @@ if not API_KEY:
     raise ValueError("API_KEY environment variable is not set")
 
 # Storage path setting
-LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', '/tmp')
+LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', '/app/data/tmp') # Changed default
 
 # GCP environment variables
 GCP_SA_CREDENTIALS = os.environ.get('GCP_SA_CREDENTIALS', '')
