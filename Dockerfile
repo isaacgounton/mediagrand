@@ -130,6 +130,7 @@ declare -a pids\n\
 for i in $(seq 1 ${RQ_WORKERS:-2}); do\n\
     rq worker tasks \\\n\
         --url redis://redis:6379 \\\n\
+        --serializer rq.serializers.DefaultSerializer \\\n\
         --logging_level warning &\n\
     pids+=($!)\n\
 done\n\
