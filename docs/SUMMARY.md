@@ -5,8 +5,7 @@
 ## 🎥 Video Operations
 
 ### Short Videos
-* [Music Management](video/short/music.md)
-* [Video Creation](video/short/short_video.md)
+* [Short Video Creation API](video/short-video.md)
 
 ### Basic Operations
 * [Caption Video](video/caption_video.md)

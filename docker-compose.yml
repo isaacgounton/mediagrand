@@ -12,6 +12,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+    restart: unless-stopped
 
   api:
     depends_on:
@@ -30,6 +31,7 @@ services:
       resources:
         limits:
           memory: 4G
+          cpus: '2'
         reservations:
           memory: 2G
     healthcheck:
@@ -42,7 +44,7 @@ services:
       - "8080:8080"
     environment:
       - API_KEY=${API_KEY}
-      - APP_DEBUG=${APP_DEBUG}
+      - APP_DEBUG=false
       - APP_DOMAIN=${APP_DOMAIN}
       - APP_NAME=${APP_NAME}
       - APP_URL=${APP_URL}
@@ -50,11 +52,11 @@ services:
       - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
       - GCP_SA_CREDENTIALS=${GCP_SA_CREDENTIALS}
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT}
-      - GUNICORN_WORKERS=${GUNICORN_WORKERS}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
       - LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH}
       - PEXELS_API_KEY=${PEXELS_API_KEY}
       - PIXABAY_API_KEY=${PIXABAY_API_KEY}
-      - RQ_WORKERS=${RQ_WORKERS:-2}
+      - RQ_WORKERS=${RQ_WORKERS:-4}
       - REDIS_URL=redis://redis:6379
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
@@ -66,8 +68,56 @@ services:
       - logs:/app/logs
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "3"
     networks:
       - app-network
+    restart: unless-stopped
+
+  short-creator:
+    build:
+      context: ./short-video-maker
+      dockerfile: main.Dockerfile
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+        reservations:
+          memory: 2G
+    ports:
+      - "3123:3123"
+    environment:
+      - DEV=false
+      - NODE_ENV=production
+      - DAHOPEVI_API_KEY=${API_KEY}
+      - DAHOPEVI_BASE_URL=http://api:8080
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - PIXABAY_API_KEY=${PIXABAY_API_KEY}
+      - CONCURRENCY=2
+      - VIDEO_CACHE_SIZE_IN_BYTES=2097152000
+    volumes:
+      - storage:/app/storage
+      - tmp-assets:/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3123/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
@@ -79,9 +129,8 @@ volumes:
     driver: local
   tmp-assets:
     driver: local
-  node_modules:
-    driver: local
 
 networks:
   app-network:
     driver: bridge
+    name: dahopevi_network
