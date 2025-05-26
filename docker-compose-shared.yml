@@ -37,14 +37,14 @@ services:
       - NODE_ENV=production
       - DATA_DIR_PATH=/app/data
       - DOCKER=true
-      - WHISPER_MODEL=base.en
+      - WHISPER_MODEL=base
       - CONCURRENCY=2
       - VIDEO_CACHE_SIZE_IN_BYTES=2097152000
-      - SHARED_WHISPER_PATH=/shared/whisper
-      - DAHOPEVI_BASE_URL=https://api.dahopevi.com
+      - SHARED_WHISPER_PATH=/opt/whisper_cache
+      - DAHOPEVI_BASE_URL=http://dahopevi:8080
       - DAHOPEVI_API_KEY=${DAHOPEVI_API_KEY:-}
     volumes:
-      - whisper_models:/shared/whisper:ro  # Read-only access to shared whisper
+      - whisper_models:/opt/whisper_cache:ro  # Read-only access to shared whisper
       - short_video_data:/app/data  # Use named volume for better cloud compatibility
     depends_on:
       - dahopevi
