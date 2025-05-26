@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # Main dahopevi service with shared whisper volume
+  dahopevi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WHISPER_CACHE_DIR=/opt/whisper_cache
+      - RQ_WORKERS=2
+      - GUNICORN_WORKERS=2
+      - GUNICORN_TIMEOUT=300
+    volumes:
+      - whisper_models:/opt/whisper_cache
+      - ./data:/app/data
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Short video maker service using shared whisper
+  short-video-maker:
+    build:
+      context: ./short-video-maker
+      dockerfile: main-shared.Dockerfile
+    ports:
+      - "3123:3123"
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR_PATH=/app/data
+      - DOCKER=true
+      - WHISPER_MODEL=base.en
+      - CONCURRENCY=2
+      - VIDEO_CACHE_SIZE_IN_BYTES=2097152000
+      - SHARED_WHISPER_PATH=/shared/whisper
+    volumes:
+      - whisper_models:/shared/whisper:ro  # Read-only access to shared whisper
+      - ./short-video-maker/data:/app/data
+    depends_on:
+      - dahopevi
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3123/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for dahopevi job queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  whisper_models:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: dahopevi-network
