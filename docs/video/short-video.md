@@ -49,7 +49,8 @@ http://localhost:3123
 - `music` (string, optional): Music mood tag (`sad`, `melancholic`, `happy`, `euphoric`, `excited`, `chill`, `uneasy`, `angry`, `dark`, `hopeful`, `contemplative`, `funny`)
 - `captionPosition` (string, optional): Position of captions (`top`, `center`, `bottom`)
 - `captionBackgroundColor` (string, optional): Background color for captions (CSS color)
-- `voice` (string, optional): TTS voice to use (default: "en-US-AvaNeural")
+- `voice` (string, optional): TTS voice to use (default: "af_heart")
+- `ttsEngine` (string, optional): TTS engine to use (`kokoro`, `edge-tts`, `streamlabs-polly`) (default: "kokoro")
 - `orientation` (string, optional): Video orientation (`portrait`, `landscape`)
 - `musicVolume` (string, optional): Volume of background music (`muted`, `low`, `medium`, `high`)
 
@@ -76,42 +77,93 @@ http://localhost:3123
 }
 ```
 
-### List Available Voices
-- **URL**: `/api/short/voices`
+### List Available Voices (Legacy)
+- **URL**: `/api/voices`
 - **Method**: `GET`
-- **Description**: Lists all available TTS voices
+- **Description**: Lists available TTS voices for Kokoro engine
+
+#### Response
+
+```json
+[
+  "af_heart",
+  "af_alloy", 
+  "af_nova",
+  "am_adam",
+  "am_echo"
+]
+```
+
+### List Available TTS Engines
+- **URL**: `/api/tts-engines`
+- **Method**: `GET`
+- **Description**: Lists all available TTS engines
+
+#### Response
+
+```json
+{
+  "engines": [
+    "kokoro",
+    "edge-tts",
+    "streamlabs-polly"
+  ]
+}
+```
+
+### List All TTS Voices
+- **URL**: `/api/tts-voices`
+- **Method**: `GET`
+- **Description**: Lists all available TTS voices for all engines
+
+#### Response
+
+```json
+{
+  "voices": {
+    "kokoro": ["af_heart", "af_alloy", "af_nova", "am_adam", "am_echo"],
+    "edge-tts": ["af_heart", "af_alloy", "af_nova", "am_adam", "am_echo"],
+    "streamlabs-polly": ["af_heart", "af_alloy", "af_nova", "am_adam", "am_echo"]
+  }
+}
+```
+
+### List Voices for Specific TTS Engine
+- **URL**: `/api/tts-voices/:engine`
+- **Method**: `GET`
+- **Description**: Lists available voices for a specific TTS engine
+
+#### Parameters
+- `engine` (string): TTS engine name (`kokoro`, `edge-tts`, `streamlabs-polly`)
 
 #### Response
 
 ```json
 {
   "voices": [
-    {
-      "name": "en-US-AvaNeural",
-      "gender": "Female",
-      "locale": "en-US",
-      "engine": "edge-tts"
-    }
+    "af_heart",
+    "af_alloy", 
+    "af_nova",
+    "am_adam",
+    "am_echo"
   ]
 }
 ```
 
 ### List Available Music Tags
-- **URL**: `/api/short/music/tags`
+- **URL**: `/api/music-tags`
 - **Method**: `GET`
 - **Description**: Lists all available music mood tags
 
 #### Response
 
 ```json
-{
-  "tags": [
-    "happy",
-    "sad",
-    "excited",
-    "chill"
-  ]
-}
+[
+  "happy",
+  "sad",
+  "excited",
+  "chill"
+]
 ```
 
 ### Get Video File
