@@ -41,7 +41,7 @@ services:
       - CONCURRENCY=2
       - VIDEO_CACHE_SIZE_IN_BYTES=2097152000
       - SHARED_WHISPER_PATH=/shared/whisper
-      - DAHOPEVI_URL=https://api.dahopevi.com:8080
+      - DAHOPEVI_BASE_URL=https://api.dahopevi.com
       - DAHOPEVI_API_KEY=${DAHOPEVI_API_KEY:-}
     volumes:
       - whisper_models:/shared/whisper:ro  # Read-only access to shared whisper
