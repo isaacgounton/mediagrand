@@ -16,7 +16,7 @@ services:
       - GUNICORN_TIMEOUT=300
     volumes:
       - whisper_models:/opt/whisper_cache
-      - ./data:/app/data
+      - dahopevi_data:/app/data
     depends_on:
       - redis
     restart: unless-stopped
@@ -75,6 +75,8 @@ volumes:
   redis_data:
     driver: local
   short_video_data:
+    driver: local
+  dahopevi_data:
     driver: local
 
 networks:
