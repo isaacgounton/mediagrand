@@ -45,7 +45,7 @@ services:
       - DAHOPEVI_API_KEY=${DAHOPEVI_API_KEY:-}
     volumes:
       - whisper_models:/shared/whisper:ro  # Read-only access to shared whisper
-      - ./short-video-maker/data:/app/data
+      - short_video_data:/app/data  # Use named volume for better cloud compatibility
     depends_on:
       - dahopevi
     restart: unless-stopped
@@ -73,6 +73,8 @@ volumes:
   whisper_models:
     driver: local
   redis_data:
+    driver: local
+  short_video_data:
     driver: local
 
 networks:
