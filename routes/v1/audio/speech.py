@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 @v1_audio_speech_bp.route("/v1/audio/speech/voices", methods=["GET"])
 @queue_task_wrapper(bypass_queue=True)  # This decorator should be innermost
 @authenticate
-def get_voices():
+def get_voices(job_id=None, data=None):
     """List available voices for text-to-speech"""
     try:
         voices = list_voices()

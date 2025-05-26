@@ -27,7 +27,7 @@ API_KEY = os.environ.get('API_KEY')
 
 @v1_toolkit_auth_bp.route('/v1/toolkit/authenticate', methods=['GET'])
 @queue_task_wrapper(bypass_queue=True)
-def authenticate_endpoint(**kwargs):
+def authenticate_endpoint(job_id=None, data=None, **kwargs):
     api_key = request.headers.get('X-API-Key')
     if api_key == API_KEY:
         return "Authorized", "/authenticate", 200
