@@ -78,8 +78,9 @@ services:
     restart: unless-stopped
 
   short-creator:
+    container_name: short-creator
     build:
-      context: ./short-video-maker
+      context: short-video-maker
       dockerfile: main.Dockerfile
     deploy:
       resources:
