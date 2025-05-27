@@ -125,21 +125,59 @@ def ensure_kokoro_files():
             VOICES_PATH
         )
 
+def load_voices_from_file(engine_name):
+    """Load voices from static JSON files"""
+    try:
+        voices_file = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'voices', f'{engine_name}_voices.json')
+        with open(voices_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.warning(f"Voices file not found for {engine_name}, using fallback")
+        return []
+    except Exception as e:
+        logger.error(f"Error loading voices for {engine_name}: {e}")
+        return []
+
 async def get_edge_voices():
-    """Get list of available Edge TTS voices"""
-    voices = await edge_tts.list_voices()
-    return [
-        {
-            'name': voice['ShortName'],
-            'gender': voice['Gender'],
-            'locale': voice['Locale'],
-            'engine': 'edge-tts'
-        }
-        for voice in voices
-    ]
+    """Get list of available Edge TTS voices from static file with API fallback"""
+    try:
+        # First try to load from static file
+        static_voices = load_voices_from_file('edge_tts')
+        if static_voices:
+            logger.info(f"Loaded {len(static_voices)} EdgeTTS voices from static file")
+            return static_voices
+        
+        # Fallback to API call with short timeout
+        logger.info("Static voices not found, trying API with short timeout...")
+        voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=10.0)
+        return [
+            {
+                'name': voice['ShortName'],
+                'gender': voice['Gender'],
+                'locale': voice['Locale'],
+                'engine': 'edge-tts'
+            }
+            for voice in voices
+        ]
+    except Exception as e:
+        logger.warning(f"Could not get EdgeTTS voices from API: {e}, using hardcoded fallback")
+        # Hardcoded fallback for essential voices
+        return [
+            {'name': 'en-US-AriaNeural', 'gender': 'female', 'locale': 'en-US', 'engine': 'edge-tts'},
+            {'name': 'en-US-JennyNeural', 'gender': 'female', 'locale': 'en-US', 'engine': 'edge-tts'},
+            {'name': 'en-US-GuyNeural', 'gender': 'male', 'locale': 'en-US', 'engine': 'edge-tts'},
+            {'name': 'en-GB-SoniaNeural', 'gender': 'female', 'locale': 'en-GB', 'engine': 'edge-tts'},
+            {'name': 'en-GB-RyanNeural', 'gender': 'male', 'locale': 'en-GB', 'engine': 'edge-tts'},
+        ]
 
 def get_streamlabs_voices():
-    """Get list of available Streamlabs Polly voices"""
+    """Get list of available Streamlabs Polly voices from static file"""
+    static_voices = load_voices_from_file('streamlabs')
+    if static_voices:
+        logger.info(f"Loaded {len(static_voices)} Streamlabs voices from static file")
+        return static_voices
+    
+    # Fallback to hardcoded list
     VALID_VOICES = [
         "Brian", "Emma", "Russell", "Joey", "Matthew", "Joanna", "Kimberly", 
         "Amy", "Geraint", "Nicole", "Justin", "Ivy", "Kendra", "Salli", "Raveena"
@@ -148,35 +186,69 @@ def get_streamlabs_voices():
         {
             'name': voice,
             'engine': 'streamlabs-polly',
-            'locale': 'en-US'
+            'locale': 'en-US',
+            'gender': 'neutral'
         }
         for voice in VALID_VOICES
     ]
 
 def get_kokoro_voices():
-    """Get list of available Kokoro voices"""
-    ensure_kokoro_files()
-    kokoro = kokoro_onnx.Kokoro(MODEL_PATH, VOICES_PATH)
-    voices = kokoro.get_voices()
-    return [
-        {
-            'name': voice,
-            'engine': 'kokoro',
-            'locale': 'en-US'  # Kokoro currently supports English
-        }
-        for voice in voices
-    ]
+    """Get list of available Kokoro voices from static file with model fallback"""
+    try:
+        static_voices = load_voices_from_file('kokoro')
+        if static_voices:
+            logger.info(f"Loaded {len(static_voices)} Kokoro voices from static file")
+            return static_voices
+    except Exception as e:
+        logger.warning(f"Could not load Kokoro voices from static file: {e}")
+    
+    # Fallback to model query (with error handling)
+    try:
+        ensure_kokoro_files()
+        kokoro = kokoro_onnx.Kokoro(MODEL_PATH, VOICES_PATH)
+        voices = kokoro.get_voices()
+        return [
+            {
+                'name': voice,
+                'engine': 'kokoro',
+                'locale': 'en-US',
+                'gender': 'neutral'
+            }
+            for voice in voices
+        ]
+    except Exception as e:
+        logger.warning(f"Could not get Kokoro voices from model: {e}, using hardcoded fallback")
+        # Hardcoded fallback
+        return [
+            {'name': 'af_sarah', 'engine': 'kokoro', 'locale': 'en-US', 'gender': 'female'},
+            {'name': 'af_heart', 'engine': 'kokoro', 'locale': 'en-US', 'gender': 'female'},
+            {'name': 'af_alloy', 'engine': 'kokoro', 'locale': 'en-US', 'gender': 'neutral'},
+            {'name': 'af_nova', 'engine': 'kokoro', 'locale': 'en-US', 'gender': 'female'},
+        ]
 
 async def _list_voices_async():
     """Internal async function to list all available voices"""
-    edge_voices = await get_edge_voices()
-    streamlabs_voices = get_streamlabs_voices()
-    kokoro_voices = get_kokoro_voices()
-    return edge_voices + streamlabs_voices + kokoro_voices
+    try:
+        edge_voices = await get_edge_voices()
+        streamlabs_voices = get_streamlabs_voices()
+        kokoro_voices = get_kokoro_voices()
+        return edge_voices + streamlabs_voices + kokoro_voices
+    except Exception as e:
+        logger.error(f"Error listing voices: {e}")
+        return []
 
 def list_voices():
-    """List all available voices from all TTS engines"""
-    return asyncio.run(_list_voices_async())
+    """List all available voices from all TTS engines using static files"""
+    try:
+        return asyncio.run(_list_voices_async())
+    except Exception as e:
+        logger.error(f"Error in list_voices: {e}")
+        # Return minimal fallback set
+        return [
+            {'name': 'en-US-AriaNeural', 'gender': 'female', 'locale': 'en-US', 'engine': 'edge-tts'},
+            {'name': 'Brian', 'gender': 'male', 'locale': 'en-US', 'engine': 'streamlabs-polly'},
+            {'name': 'af_sarah', 'gender': 'female', 'locale': 'en-US', 'engine': 'kokoro'},
+        ]
 
 def check_ratelimit(response: requests.Response) -> bool:
     """
@@ -314,23 +386,68 @@ def handle_streamlabs_polly_tts(text, voice, job_id, rate=None, volume=None, pit
 
 def handle_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
     """
-    Generate TTS audio using edge-tts, upload to cloud, and return the cloud URL.
+    Generate TTS audio using edge-tts with improved error handling and chunking for long texts.
     """
-    speed=1.0
-    format="mp3"
+    speed = 1.0
+    format = "mp3"
+    
+    # Parse rate if provided
+    if rate:
+        try:
+            # Handle rate formats like "+10%", "-5%", "1.2", etc.
+            if rate.endswith('%'):
+                rate_percent = int(rate.replace('%', '').replace('+', ''))
+                speed = 1.0 + (rate_percent / 100.0)
+            else:
+                speed = float(rate)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid rate format '{rate}', using default speed 1.0")
+            speed = 1.0
+    
+    # Clamp speed to reasonable range
+    speed = max(0.5, min(3.0, speed))
 
     async def _generate_tts_async(text, voice, output_path, rate="+0%", format="mp3"):
-        # Fetch available voices
-        voices = await edge_tts.list_voices()
-        valid_voices = {v["ShortName"] for v in voices}
-        
-        # Map invalid voice to valid one
-        voice = map_voice_to_valid(voice, valid_voices)
-        
-        communicate = edge_tts.Communicate(text, voice, rate=rate)
-        await communicate.save(output_path)
+        try:
+            # Fetch available voices with timeout
+            logger.debug("Fetching EdgeTTS voices...")
+            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=30.0)
+            valid_voices = {v["ShortName"] for v in voices}
+            
+            # Map invalid voice to valid one
+            voice = map_voice_to_valid(voice, valid_voices)
+            logger.info(f"Using EdgeTTS voice: {voice}")
+            
+            # Create communicate object
+            communicate = edge_tts.Communicate(text, voice, rate=rate)
+            
+            # Generate audio with timeout
+            logger.debug(f"Generating EdgeTTS audio for {len(text)} characters...")
+            await asyncio.wait_for(communicate.save(output_path), timeout=120.0)
+            
+            # Verify the output file was created and has content
+            if not os.path.exists(output_path):
+                raise FileNotFoundError(f"EdgeTTS failed to create output file: {output_path}")
+            
+            file_size = os.path.getsize(output_path)
+            if file_size == 0:
+                raise ValueError(f"EdgeTTS generated empty audio file: {output_path}")
+            
+            logger.info(f"EdgeTTS audio generated successfully: {file_size} bytes")
+            
+        except asyncio.TimeoutError:
+            logger.error("EdgeTTS generation timed out")
+            raise Exception("EdgeTTS generation timed out - the text might be too long or the service is slow")
+        except Exception as e:
+            logger.error(f"EdgeTTS generation failed: {str(e)}")
+            raise
 
-    # Prepare output path
+    # Handle long texts by chunking
+    if len(text) > 1000:  # Chunk texts longer than 1000 characters
+        logger.info(f"Text is long ({len(text)} chars), using chunked EdgeTTS approach")
+        return _handle_edge_tts_chunked(text, voice, job_id, speed, format)
+    
+    # For shorter texts, use direct approach
     output_filename = f"{job_id}.{format}"
     output_path = os.path.join(LOCAL_STORAGE_PATH, output_filename)
 
@@ -338,10 +455,123 @@ def handle_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
     rate_percent = int((speed - 1.0) * 100)
     rate_str = f"{rate_percent:+d}%"
 
-    # Run edge-tts asynchronously
-    asyncio.run(_generate_tts_async(text, voice, output_path, rate=rate_str, format=format))
+    # Run edge-tts asynchronously with proper error handling
+    try:
+        logger.debug(f"Starting EdgeTTS generation for job {job_id}")
+        asyncio.run(_generate_tts_async(text, voice, output_path, rate=rate_str, format=format))
+        
+        # Final verification
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            raise Exception("EdgeTTS failed to generate valid audio file")
+            
+        logger.info(f"EdgeTTS generation completed successfully for job {job_id}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"EdgeTTS generation failed for job {job_id}: {str(e)}")
+        # Clean up any partial files
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+            except:
+                pass
+        raise
 
-    return output_path
+def _handle_edge_tts_chunked(text, voice, job_id, speed, format):
+    """
+    Handle long texts by chunking them for EdgeTTS.
+    """
+    logger.info(f"Using chunked EdgeTTS for {len(text)} characters")
+    
+    # Chunk the text intelligently
+    chunks = chunk_text_for_tts(text, 800)  # Smaller chunks for EdgeTTS
+    chunk_paths = []
+    
+    async def _generate_chunk_async(chunk_text, chunk_voice, chunk_path, chunk_rate):
+        try:
+            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=30.0)
+            valid_voices = {v["ShortName"] for v in voices}
+            chunk_voice = map_voice_to_valid(chunk_voice, valid_voices)
+            
+            communicate = edge_tts.Communicate(chunk_text, chunk_voice, rate=chunk_rate)
+            await asyncio.wait_for(communicate.save(chunk_path), timeout=60.0)
+            
+            if not os.path.exists(chunk_path) or os.path.getsize(chunk_path) == 0:
+                raise Exception(f"Failed to generate chunk: {chunk_path}")
+                
+        except Exception as e:
+            logger.error(f"Chunk generation failed: {str(e)}")
+            raise
+    
+    # Generate each chunk
+    rate_percent = int((speed - 1.0) * 100)
+    rate_str = f"{rate_percent:+d}%"
+    
+    for i, chunk in enumerate(chunks):
+        chunk_filename = f"{job_id}_chunk_{i}.{format}"
+        chunk_path = os.path.join(LOCAL_STORAGE_PATH, chunk_filename)
+        
+        try:
+            logger.debug(f"Generating chunk {i+1}/{len(chunks)}")
+            asyncio.run(_generate_chunk_async(chunk, voice, chunk_path, rate_str))
+            chunk_paths.append(chunk_path)
+        except Exception as e:
+            # Clean up any generated chunks on failure
+            for path in chunk_paths:
+                try:
+                    os.remove(path)
+                except:
+                    pass
+            raise Exception(f"Failed to generate chunk {i+1}: {str(e)}")
+    
+    # Combine chunks using ffmpeg
+    if not chunk_paths:
+        raise Exception("No audio chunks were generated")
+    
+    output_filename = f"{job_id}.{format}"
+    output_path = os.path.join(LOCAL_STORAGE_PATH, output_filename)
+    
+    try:
+        if len(chunk_paths) == 1:
+            # Single chunk, just rename
+            os.rename(chunk_paths[0], output_path)
+        else:
+            # Multiple chunks, combine with ffmpeg
+            concat_file_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_concat_list.txt")
+            with open(concat_file_path, 'w') as concat_file:
+                for path in chunk_paths:
+                    concat_file.write(f"file '{os.path.abspath(path)}'\n")
+            
+            # Use ffmpeg to concatenate
+            ffmpeg.input(concat_file_path, format='concat', safe=0).output(
+                output_path, acodec='copy'
+            ).run(overwrite_output=True, quiet=True)
+            
+            # Clean up
+            for path in chunk_paths:
+                os.remove(path)
+            os.remove(concat_file_path)
+        
+        # Verify final output
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            raise Exception("Failed to create final combined audio file")
+        
+        logger.info(f"Successfully combined {len(chunks)} EdgeTTS chunks")
+        return output_path
+        
+    except Exception as e:
+        # Clean up on failure
+        for path in chunk_paths:
+            try:
+                os.remove(path)
+            except:
+                pass
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+            except:
+                pass
+        raise Exception(f"Failed to combine EdgeTTS chunks: {str(e)}")
 
 def handle_kokoro_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
     """
