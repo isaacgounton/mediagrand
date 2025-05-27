@@ -438,6 +438,30 @@ Forces restart of the video processing queue (admin tool).
 
 **Returns:** Confirmation message
 
+#### get-voice-examples
+Gets example voices for different languages and TTS engines with proper format guidelines.
+
+**Parameters:** None
+
+**Returns:** JSON object with voice examples organized by language and engine:
+```json
+{
+  "English": {
+    "kokoro": ["af_heart", "am_adam", "bm_lewis"],
+    "edge-tts": ["en-US-AriaNeural", "en-US-JennyNeural"],
+    "streamlabs-polly": ["Joanna", "Matthew", "Amy"]
+  },
+  "French": {
+    "edge-tts": ["fr-FR-DeniseNeural", "fr-FR-HenriNeural"],
+    "note": "Use edge-tts for French. DO NOT use fr-FR-Standard-A"
+  },
+  "IMPORTANT_NOTES": {
+    "voice_format_warning": "Each TTS engine uses different voice formats!",
+    "common_mistake": "Do NOT mix voice formats!"
+  }
+}
+```
+
 ## Error Responses
 
 The API returns appropriate HTTP status codes and error messages:
