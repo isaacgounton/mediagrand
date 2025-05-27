@@ -131,8 +131,22 @@ def load_voices_from_file(engine_name):
         from config import VOICE_FILES_PATH
         voices_file = os.path.join(VOICE_FILES_PATH, f'{engine_name}_voices.json')
         logger.info(f"Looking for voices file at: {voices_file}")
+        if not os.path.exists(voices_file):
+            # Try to load from the project's data directory as fallback
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            fallback_file = os.path.join(project_root, 'data', 'voices', f'{engine_name}_voices.json')
+            logger.info(f"Voice file not found, trying fallback location: {fallback_file}")
+            if os.path.exists(fallback_file):
+                # If found in fallback location, copy it to the correct location
+                os.makedirs(os.path.dirname(voices_file), exist_ok=True)
+                import shutil
+                shutil.copy2(fallback_file, voices_file)
+                logger.info(f"Copied voice file from fallback location to: {voices_file}")
+
         with open(voices_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            voices = json.load(f)
+            logger.info(f"Successfully loaded {len(voices)} voices for {engine_name}")
+            return voices
     except FileNotFoundError:
         logger.warning(f"Voices file not found for {engine_name}, using fallback")
         return []
