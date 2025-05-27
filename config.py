@@ -24,8 +24,13 @@ API_KEY = os.environ.get('API_KEY')
 if not API_KEY:
     raise ValueError("API_KEY environment variable is not set")
 
-# Storage path setting
+# Storage path settings
 LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', '/app/data/tmp') # Changed default
+VOICE_FILES_PATH = os.environ.get('VOICE_FILES_PATH', '/app/data/voices')
+
+# Create voice files directory if it doesn't exist
+if not os.path.exists(VOICE_FILES_PATH):
+    os.makedirs(VOICE_FILES_PATH, exist_ok=True)
 
 # GCP environment variables
 GCP_SA_CREDENTIALS = os.environ.get('GCP_SA_CREDENTIALS', '')

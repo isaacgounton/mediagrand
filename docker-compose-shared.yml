@@ -11,6 +11,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - WHISPER_CACHE_DIR=/opt/whisper_cache
+      - VOICE_FILES_PATH=/app/data/voices
       - RQ_WORKERS=2
       - GUNICORN_WORKERS=2
       - GUNICORN_TIMEOUT=300
@@ -43,6 +44,7 @@ services:
       - CONCURRENCY=2
       - VIDEO_CACHE_SIZE_IN_BYTES=2097152000
       - SHARED_WHISPER_PATH=/opt/whisper_cache
+      - VOICE_FILES_PATH=/app/data/voices
       - DAHOPEVI_BASE_URL=http://dahopevi:8080
       - DAHOPEVI_API_KEY=${DAHOPEVI_API_KEY:-}
       - API_KEY=${API_KEY:-}

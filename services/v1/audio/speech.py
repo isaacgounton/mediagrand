@@ -128,7 +128,9 @@ def ensure_kokoro_files():
 def load_voices_from_file(engine_name):
     """Load voices from static JSON files"""
     try:
-        voices_file = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'voices', f'{engine_name}_voices.json')
+        from config import VOICE_FILES_PATH
+        voices_file = os.path.join(VOICE_FILES_PATH, f'{engine_name}_voices.json')
+        logger.info(f"Looking for voices file at: {voices_file}")
         with open(voices_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
