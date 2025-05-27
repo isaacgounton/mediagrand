@@ -18,6 +18,7 @@ services:
     volumes:
       - whisper_models:/opt/whisper_cache
       - dahopevi_data:/app/data
+      - voice_data:/app/data/voices
     depends_on:
       - redis
     restart: unless-stopped
@@ -48,6 +49,7 @@ services:
     volumes:
       - whisper_models:/opt/whisper_cache:ro  # Read-only access to shared whisper
       - short_video_data:/app/data  # Use named volume for better cloud compatibility
+      - voice_data:/app/data/voices:ro  # Read-only access to shared voice files
     depends_on:
       - dahopevi
     restart: unless-stopped
@@ -79,6 +81,8 @@ volumes:
   short_video_data:
     driver: local
   dahopevi_data:
+    driver: local
+  voice_data:
     driver: local
 
 networks:

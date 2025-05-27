@@ -99,13 +99,17 @@ RUN useradd -r -s /bin/false -d /app appuser
 # Copy application code
 COPY . .
 
+# Copy voice files to data directory
+RUN mkdir -p /app/data/voices
+COPY ./data/voices/*.json /app/data/voices/
+
 # Copy fonts and rebuild font cache
 COPY ./fonts /usr/share/fonts/custom/
 RUN fc-cache -f -v
 
 # Create required directories and set permissions
 RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR} && \
+    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR} /app/data/voices && \
     chmod -R 777 /app/data
 
 # Generate placeholder assets as appuser (faster than FFmpeg)
