@@ -46,6 +46,7 @@ def get_voices(job_id=None, data=None):
         return str(e), "/v1/audio/speech/voices", 500
 
 @v1_audio_speech_bp.route("/v1/audio/speech", methods=["POST"])
+@queue_task_wrapper(bypass_queue=False)
 @authenticate
 @validate_payload({
     "type": "object",
@@ -63,7 +64,6 @@ def get_voices(job_id=None, data=None):
     "required": ["text"],
     "additionalProperties": False
 })
-@queue_task_wrapper(bypass_queue=False)
 def text_to_speech(job_id, data):
     tts = data.get("tts", "edge-tts")
     text = data["text"]

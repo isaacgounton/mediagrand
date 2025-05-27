@@ -35,6 +35,67 @@ import soundfile as sf
 
 logger = logging.getLogger(__name__)
 
+# Voice mapping for common invalid or legacy voice names to valid EdgeTTS voices
+VOICE_MAPPING = {
+    # Common invalid French voices mapped to valid ones
+    'fr-FR-Louise': 'fr-FR-DeniseNeural',
+    'fr-FR-Marie': 'fr-FR-DeniseNeural', 
+    'fr-FR-Celine': 'fr-FR-JosephineNeural',
+    'fr-FR-Pierre': 'fr-FR-HenriNeural',
+    'fr-FR-Jean': 'fr-FR-JeromeNeural',
+    
+    # Common English voice variations
+    'en-US-Aria': 'en-US-AriaNeural',
+    'en-US-Jenny': 'en-US-JennyNeural',
+    'en-US-Guy': 'en-US-GuyNeural',
+    
+    # Legacy voice names
+    'Microsoft David': 'en-US-GuyNeural',
+    'Microsoft Zira': 'en-US-AriaNeural',
+    'Microsoft Mark': 'en-US-GuyNeural',
+}
+
+def map_voice_to_valid(voice: str, valid_voices: set) -> str:
+    """
+    Map an invalid voice to a valid one, or return a default if no mapping exists.
+    
+    Args:
+        voice: The requested voice name
+        valid_voices: Set of valid voice names
+        
+    Returns:
+        A valid voice name
+    """
+    if not voice:
+        return "en-US-AriaNeural"  # Default voice
+        
+    # If voice is already valid, return it
+    if voice in valid_voices:
+        return voice
+        
+    # Try direct mapping
+    if voice in VOICE_MAPPING:
+        mapped_voice = VOICE_MAPPING[voice]
+        if mapped_voice in valid_voices:
+            logger.info(f"Mapped invalid voice '{voice}' to '{mapped_voice}'")
+            return mapped_voice
+    
+    # Try to find a similar voice by language/locale
+    if '-' in voice:
+        locale = voice.split('-')[:2]  # e.g., ['fr', 'FR']
+        locale_prefix = '-'.join(locale)  # e.g., 'fr-FR'
+        
+        # Find any voice with the same locale
+        for valid_voice in valid_voices:
+            if valid_voice.startswith(locale_prefix):
+                logger.info(f"Mapped invalid voice '{voice}' to similar locale voice '{valid_voice}'")
+                return valid_voice
+    
+    # Last resort: return default voice
+    default_voice = "en-US-AriaNeural"
+    logger.warning(f"Could not map invalid voice '{voice}' to any valid voice. Using default: {default_voice}")
+    return default_voice
+
 # Suppress phonemizer warnings that clutter logs
 warnings.filterwarnings('ignore', category=UserWarning, module='phonemizer')
 
@@ -262,15 +323,10 @@ def handle_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
         # Fetch available voices
         voices = await edge_tts.list_voices()
         valid_voices = {v["ShortName"] for v in voices}
-        # Default or validate voice
-        if not voice:
-            voice = "en-US-AvaNeural"
-        elif voice not in valid_voices:
-            raise ValueError(
-                f"Invalid voice: {voice}.\n"
-                f"You can preview voice samples at: https://tts.travisvn.com/\n\n"
-                f"Available voices are:\n" + ", ".join(sorted(valid_voices))
-            )
+        
+        # Map invalid voice to valid one
+        voice = map_voice_to_valid(voice, valid_voices)
+        
         communicate = edge_tts.Communicate(text, voice, rate=rate)
         await communicate.save(output_path)
 
