@@ -354,6 +354,90 @@ Gets the status of a video creation job by video ID.
 **Parameters:**
 - `videoId`: The ID of the video to check
 
+#### list-available-voices
+Lists all available TTS voices for all engines.
+
+**Parameters:** None
+
+**Returns:** JSON object with voices organized by engine:
+```json
+{
+  "kokoro": ["af_heart", "af_alloy", ...],
+  "edge-tts": ["en-US-AriaNeural", "fr-FR-DeniseNeural", ...],
+  "streamlabs-polly": ["Joanna", "Matthew", ...]
+}
+```
+
+#### list-voices-for-engine
+Lists available voices for a specific TTS engine.
+
+**Parameters:**
+- `engine`: TTS engine name (`kokoro`, `edge-tts`, `streamlabs-polly`)
+
+**Returns:** JSON object with engine name and its voices
+
+#### list-tts-engines
+Lists all available TTS engines.
+
+**Parameters:** None
+
+**Returns:** JSON object with available engines:
+```json
+{
+  "engines": ["kokoro", "edge-tts", "streamlabs-polly"]
+}
+```
+
+#### list-all-videos
+Lists all videos in the system with their status.
+
+**Parameters:** None
+
+**Returns:** JSON object with videos and their status:
+```json
+{
+  "videos": [
+    {"id": "video_id", "status": "ready"},
+    {"id": "video_id2", "status": "processing"}
+  ]
+}
+```
+
+#### list-music-tags
+Lists all available music mood tags.
+
+**Parameters:** None
+
+**Returns:** JSON object with available music tags:
+```json
+{
+  "musicTags": ["happy", "sad", "excited", "chill", ...]
+}
+```
+
+### Admin MCP Tools
+
+#### get-queue-status
+Gets the current status of the video processing queue (admin tool).
+
+**Parameters:** None
+
+**Returns:** Queue status with processing state and item details
+
+#### clear-stuck-videos
+Removes videos that have been stuck in the queue for more than 30 minutes (admin tool).
+
+**Parameters:** None
+
+**Returns:** Number of videos removed and processing state changes
+
+#### restart-queue
+Forces restart of the video processing queue (admin tool).
+
+**Parameters:** None
+
+**Returns:** Confirmation message
+
 ## Error Responses
 
 The API returns appropriate HTTP status codes and error messages:
