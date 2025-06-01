@@ -79,6 +79,10 @@ def text_to_speech(job_id, data):
     if rate or volume or pitch:
         logger.info(f"Job {job_id}: Using adjustments - rate: {rate}, volume: {volume}, pitch: {pitch}")
 
+    # Initialize variables to ensure they exist in finally block
+    audio_file = None
+    subtitle_file = None
+    
     try:
         audio_file, subtitle_file = generate_tts(
             tts=tts,
@@ -105,9 +109,9 @@ def text_to_speech(job_id, data):
         return str(e), "/v1/audio/speech", 500
     finally:
         try:
-            if os.path.exists(audio_file):
+            if audio_file and os.path.exists(audio_file):
                 os.remove(audio_file)
-            if os.path.exists(subtitle_file):
+            if subtitle_file and os.path.exists(subtitle_file):
                 os.remove(subtitle_file)
         except Exception as cleanup_error:
             logger.warning(f"Cleanup failed: {cleanup_error}")

@@ -163,9 +163,9 @@ async def get_edge_voices():
             logger.info(f"Loaded {len(static_voices)} EdgeTTS voices from static file")
             return static_voices
         
-        # Fallback to API call with short timeout
-        logger.info("Static voices not found, trying API with short timeout...")
-        voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=10.0)
+        # Fallback to API call with longer timeout
+        logger.info("Static voices not found, trying API with longer timeout...")
+        voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=30.0)
         return [
             {
                 'name': voice['ShortName'],
@@ -427,7 +427,7 @@ def handle_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
         try:
             # Fetch available voices with timeout
             logger.debug("Fetching EdgeTTS voices...")
-            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=30.0)
+            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=60.0)
             valid_voices = {v["ShortName"] for v in voices}
             
             # Map invalid voice to valid one
@@ -439,7 +439,7 @@ def handle_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
             
             # Generate audio with timeout
             logger.debug(f"Generating EdgeTTS audio for {len(text)} characters...")
-            await asyncio.wait_for(communicate.save(output_path), timeout=120.0)
+            await asyncio.wait_for(communicate.save(output_path), timeout=180.0)
             
             # Verify the output file was created and has content
             if not os.path.exists(output_path):
@@ -505,12 +505,12 @@ def _handle_edge_tts_chunked(text, voice, job_id, speed, format):
     
     async def _generate_chunk_async(chunk_text, chunk_voice, chunk_path, chunk_rate):
         try:
-            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=30.0)
+            voices = await asyncio.wait_for(edge_tts.list_voices(), timeout=60.0)
             valid_voices = {v["ShortName"] for v in voices}
             chunk_voice = map_voice_to_valid(chunk_voice, valid_voices)
             
             communicate = edge_tts.Communicate(chunk_text, chunk_voice, rate=chunk_rate)
-            await asyncio.wait_for(communicate.save(chunk_path), timeout=60.0)
+            await asyncio.wait_for(communicate.save(chunk_path), timeout=120.0)
             
             if not os.path.exists(chunk_path) or os.path.getsize(chunk_path) == 0:
                 raise Exception(f"Failed to generate chunk: {chunk_path}")
