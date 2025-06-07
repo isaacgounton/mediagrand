@@ -346,13 +346,30 @@ def handle_streamlabs_polly_tts(text, voice, job_id, rate=None, volume=None, pit
                 if response.status_code == 200:  # Success
                     try:
                         # Get the audio URL from the response and download the audio file
-                        voice_data = requests.get(response.json()["speak_url"])
+                        response_data = response.json()
+                        if "speak_url" not in response_data:
+                            print(f"Error: No speak_url in response for chunk {idx}")
+                            return None
+                            
+                        voice_data = requests.get(response_data["speak_url"], timeout=30)
+                        voice_data.raise_for_status()  # Raise exception for bad status codes
+                        
+                        # Validate audio content
+                        if len(voice_data.content) < 100:  # Less than 100 bytes is likely invalid
+                            print(f"Error: Audio content too small for chunk {idx}")
+                            return None
+                        
                         chunk_filename = f"{job_id}_part_{idx}.mp3"
                         chunk_path = os.path.join(LOCAL_STORAGE_PATH, chunk_filename)
 
                         # Save the audio to the file system
                         with open(chunk_path, "wb") as f:
                             f.write(voice_data.content)
+                        
+                        # Verify file was written correctly
+                        if not os.path.exists(chunk_path) or os.path.getsize(chunk_path) < 100:
+                            print(f"Error: Failed to save valid audio file for chunk {idx}")
+                            return None
 
                         audio_chunk_paths.append(chunk_path)
                         print(f"Chunk {idx} saved successfully.")
@@ -381,8 +398,46 @@ def handle_streamlabs_polly_tts(text, voice, job_id, rate=None, volume=None, pit
             for path in audio_chunk_paths:
                 concat_file.write(f"file '{os.path.abspath(path)}'\n")
 
-        # Concatenate the audio files using ffmpeg
-        ffmpeg.input(concat_file_path, format='concat', safe=0).output(output_path, acodec='aac').run(overwrite_output=True)
+        # Concatenate the audio files using ffmpeg with improved error handling
+        try:
+            # First, try to concatenate with re-encoding to ensure compatibility
+            ffmpeg.input(concat_file_path, format='concat', safe=0).output(
+                output_path, 
+                acodec='libmp3lame',  # Use libmp3lame for MP3 output
+                audio_bitrate='128k',  # Set consistent bitrate
+                ar='22050',  # Set consistent sample rate
+                ac='1'  # Set mono channel
+            ).run(overwrite_output=True, quiet=True)
+        except ffmpeg.Error as e:
+            # If concat fails, try an alternative approach
+            logger.warning(f"FFmpeg concat failed, trying alternative method: {e}")
+            
+            # Alternative: Use filter_complex for more robust concatenation
+            input_files = []
+            for path in audio_chunk_paths:
+                input_files.append(ffmpeg.input(path))
+            
+            if len(input_files) == 1:
+                # Single file, just copy with re-encoding
+                ffmpeg.output(
+                    input_files[0], 
+                    output_path,
+                    acodec='libmp3lame',
+                    audio_bitrate='128k',
+                    ar='22050',
+                    ac='1'
+                ).run(overwrite_output=True, quiet=True)
+            else:
+                # Multiple files, use filter_complex
+                joined = ffmpeg.filter(input_files, 'concat', n=len(input_files), v=0, a=1)
+                ffmpeg.output(
+                    joined, 
+                    output_path,
+                    acodec='libmp3lame',
+                    audio_bitrate='128k',
+                    ar='22050',
+                    ac='1'
+                ).run(overwrite_output=True, quiet=True)
 
         # Clean up chunk files and concat file
         for path in audio_chunk_paths:
