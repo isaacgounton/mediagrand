@@ -242,13 +242,31 @@ def get_kokoro_voices():
             {'name': 'af_nova', 'engine': 'kokoro', 'locale': 'en-US', 'gender': 'female'},
         ]
 
+def get_openai_edge_tts_voices():
+    """Get list of available OpenAI Edge TTS voices from static file"""
+    static_voices = load_voices_from_file('openai_edge_tts')
+    if static_voices:
+        logger.info(f"Loaded {len(static_voices)} OpenAI Edge TTS voices from static file")
+        return static_voices
+    
+    # Fallback to hardcoded list
+    return [
+        {'name': 'alloy', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'female'},
+        {'name': 'echo', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'male'},
+        {'name': 'fable', 'engine': 'openai-edge-tts', 'locale': 'en-GB', 'gender': 'female'},
+        {'name': 'onyx', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'male'},
+        {'name': 'nova', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'male'},
+        {'name': 'shimmer', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'female'},
+    ]
+
 async def _list_voices_async():
     """Internal async function to list all available voices"""
     try:
         edge_voices = await get_edge_voices()
         streamlabs_voices = get_streamlabs_voices()
         kokoro_voices = get_kokoro_voices()
-        return edge_voices + streamlabs_voices + kokoro_voices
+        openai_edge_voices = get_openai_edge_tts_voices()
+        return edge_voices + streamlabs_voices + kokoro_voices + openai_edge_voices
     except Exception as e:
         logger.error(f"Error listing voices: {e}")
         return []
@@ -730,10 +748,242 @@ def handle_kokoro_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
         print(f"Error generating audio with Kokoro: {str(e)}")
         raise
 
+def prepare_tts_input_with_context(text: str) -> str:
+    """
+    Advanced text preprocessing for better TTS output.
+    Handles markdown, emojis, code blocks, and other formatting.
+    """
+    try:
+        import emoji
+    except ImportError:
+        logger.warning("emoji package not available, skipping emoji removal")
+        emoji = None
+    
+    # Remove emojis if package is available
+    if emoji:
+        text = emoji.replace_emoji(text, replace='')
+    
+    # Add context for headers
+    def header_replacer(match):
+        level = len(match.group(1))  # Number of '#' symbols
+        header_text = match.group(2).strip()
+        if level == 1:
+            return f"Title — {header_text}\n"
+        elif level == 2:
+            return f"Section — {header_text}\n"
+        else:
+            return f"Subsection — {header_text}\n"
+    
+    text = re.sub(r"^(#{1,6})\s+(.*)", header_replacer, text, flags=re.MULTILINE)
+    
+    # Remove links while keeping the link text
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+    
+    # Describe inline code
+    text = re.sub(r"`([^`]+)`", r"code snippet: \1", text)
+    
+    # Remove bold/italic symbols but keep the content
+    text = re.sub(r"(\*\*|__|\*|_)", '', text)
+    
+    # Remove code blocks (multi-line) with a description
+    text = re.sub(r"```([\s\S]+?)```", r"(code block omitted)", text)
+    
+    # Remove image syntax but add alt text if available
+    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"Image: \1", text)
+    
+    # Remove HTML tags
+    text = re.sub(r"</?[^>]+(>|$)", '', text)
+    
+    # Normalize line breaks
+    text = re.sub(r"\n{2,}", '\n\n', text)
+    
+    # Replace multiple spaces within lines
+    text = re.sub(r" {2,}", ' ', text)
+    
+    # Trim leading and trailing whitespace
+    text = text.strip()
+    
+    return text
+
+def handle_openai_edge_tts(text, voice, job_id, rate=None, volume=None, pitch=None):
+    """
+    Handle OpenAI Edge TTS requests using integrated OpenAI-compatible Edge TTS implementation.
+    This provides OpenAI TTS API compatibility using Microsoft Edge TTS backend.
+    """
+    import tempfile
+    import subprocess
+    from pathlib import Path
+    
+    logger.info(f"Generating OpenAI Edge TTS for job {job_id} with voice {voice}")
+    
+    # OpenAI voice names mapped to edge-tts equivalents
+    voice_mapping = {
+        'alloy': 'en-US-AvaNeural',
+        'echo': 'en-US-AndrewNeural',
+        'fable': 'en-GB-SoniaNeural',
+        'onyx': 'en-US-EricNeural',
+        'nova': 'en-US-SteffanNeural',
+        'shimmer': 'en-US-EmmaNeural'
+    }
+    
+    def is_ffmpeg_installed():
+        """Check if FFmpeg is installed and accessible."""
+        try:
+            subprocess.run(['ffmpeg', '-version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
+    
+    def speed_to_rate(speed: float) -> str:
+        """
+        Converts a multiplicative speed value to the edge-tts "rate" format.
+        """
+        if speed < 0 or speed > 2:
+            raise ValueError("Speed must be between 0 and 2 (inclusive).")
+        
+        # Convert speed to percentage change
+        percentage_change = (speed - 1) * 100
+        
+        # Format with a leading "+" or "-" as required
+        return f"{percentage_change:+.0f}%"
+    
+    async def _generate_audio_async(text, voice, response_format, speed):
+        """Generate TTS audio and optionally convert to a different format."""
+        # Determine if the voice is an OpenAI-compatible voice or a direct edge-tts voice
+        edge_tts_voice = voice_mapping.get(voice, voice)  # Use mapping if in OpenAI names, otherwise use as-is
+        
+        # Generate the TTS output in mp3 format first
+        temp_mp3_file_obj = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        temp_mp3_path = temp_mp3_file_obj.name
+        
+        # Convert speed to SSML rate format
+        try:
+            speed_rate = speed_to_rate(speed)  # Convert speed value to "+X%" or "-X%"
+        except Exception as e:
+            logger.warning(f"Error converting speed: {e}. Defaulting to +0%.")
+            speed_rate = "+0%"
+        
+        # Generate the MP3 file
+        communicator = edge_tts.Communicate(text=text, voice=edge_tts_voice, rate=speed_rate)
+        await communicator.save(temp_mp3_path)
+        temp_mp3_file_obj.close()  # Explicitly close our file object for the initial mp3
+        
+        # If the requested format is mp3, return the generated file directly
+        if response_format == "mp3":
+            return temp_mp3_path
+        
+        # Check if FFmpeg is installed
+        if not is_ffmpeg_installed():
+            logger.warning("FFmpeg is not available. Returning unmodified mp3 file.")
+            return temp_mp3_path  # Return the original mp3 path
+        
+        # Create a new temporary file for the converted output
+        converted_file_obj = tempfile.NamedTemporaryFile(delete=False, suffix=f".{response_format}")
+        converted_path = converted_file_obj.name
+        converted_file_obj.close()  # Close file object, ffmpeg will write to the path
+        
+        # Build the FFmpeg command
+        ffmpeg_command = [
+            "ffmpeg",
+            "-i", temp_mp3_path,  # Input file path
+            "-c:a", {
+                "aac": "aac",
+                "mp3": "libmp3lame",
+                "wav": "pcm_s16le",
+                "opus": "libopus",
+                "flac": "flac"
+            }.get(response_format, "aac"),  # Default to AAC if unknown
+        ]
+        
+        if response_format != "wav":
+            ffmpeg_command.extend(["-b:a", "192k"])
+        
+        ffmpeg_command.extend([
+            "-f", {
+                "aac": "mp4",  # AAC in MP4 container
+                "mp3": "mp3",
+                "wav": "wav",
+                "opus": "ogg",
+                "flac": "flac"
+            }.get(response_format, response_format),  # Default to matching format
+            "-y",  # Overwrite without prompt
+            converted_path  # Output file path
+        ])
+        
+        try:
+            # Run FFmpeg command and ensure no errors occur
+            subprocess.run(ffmpeg_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            # Clean up potentially created (but incomplete) converted file
+            Path(converted_path).unlink(missing_ok=True)
+            # Clean up the original mp3 file as well, since conversion failed
+            Path(temp_mp3_path).unlink(missing_ok=True)
+            
+            error_message = f"FFmpeg error during audio conversion: {e}"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+        
+        # Clean up the original temporary file (original mp3) as it's now converted
+        Path(temp_mp3_path).unlink(missing_ok=True)
+        
+        return converted_path
+    
+    # Prepare text
+    processed_text = prepare_tts_input_with_context(text)
+    
+    # Set default voice if not provided
+    if not voice:
+        voice = 'alloy'  # Default OpenAI voice
+    
+    # Parse speed/rate parameter
+    speed = 1.0
+    if rate:
+        try:
+            # Handle rate formats like "+10%", "-5%", "1.2", etc.
+            if rate.endswith('%'):
+                rate_percent = int(rate.replace('%', '').replace('+', ''))
+                speed = 1.0 + (rate_percent / 100.0)
+            else:
+                speed = float(rate)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid rate format '{rate}', using default speed 1.0")
+            speed = 1.0
+    
+    # Clamp speed to reasonable range
+    speed = max(0.25, min(2.0, speed))
+    
+    # Generate audio using the async function
+    try:
+        temp_audio_path = asyncio.run(_generate_audio_async(processed_text, voice, "mp3", speed))
+        
+        # Move to final location with job_id
+        output_filename = f"{job_id}.mp3"
+        output_path = os.path.join(LOCAL_STORAGE_PATH, output_filename)
+        
+        # Copy the temp file to the final location
+        import shutil
+        shutil.move(temp_audio_path, output_path)
+        
+        # Verify the output file was created and has content
+        if not os.path.exists(output_path):
+            raise FileNotFoundError(f"OpenAI Edge TTS failed to create output file: {output_path}")
+        
+        file_size = os.path.getsize(output_path)
+        if file_size == 0:
+            raise ValueError(f"OpenAI Edge TTS generated empty audio file: {output_path}")
+        
+        logger.info(f"OpenAI Edge TTS audio generated successfully: {file_size} bytes")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"OpenAI Edge TTS generation failed for job {job_id}: {str(e)}")
+        raise Exception(f"OpenAI Edge TTS generation failed: {str(e)}")
+
 TTS_HANDLERS = {
     'edge-tts': handle_edge_tts,
     'streamlabs-polly': handle_streamlabs_polly_tts,
-    'kokoro': handle_kokoro_tts
+    'kokoro': handle_kokoro_tts,
+    'openai-edge-tts': handle_openai_edge_tts
 }
 
 class OptimizedTTSProcessor:

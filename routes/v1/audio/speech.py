@@ -21,7 +21,7 @@
 # Date: May 2025
 # Created new route: /v1/audio/speech
 
-from flask import Blueprint
+from flask import Blueprint, request
 from app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.authentication import authenticate
@@ -32,15 +32,95 @@ import os
 v1_audio_speech_bp = Blueprint("v1_audio_speech", __name__)
 logger = logging.getLogger(__name__)
 
+@v1_audio_speech_bp.route("/v1/models", methods=["GET", "POST"])
+@queue_task_wrapper(bypass_queue=True)
+@authenticate
+def list_models(job_id=None, data=None):
+    """List available TTS models (OpenAI TTS API compatibility)"""
+    try:
+        models = [
+            {"id": "tts-1", "name": "Text-to-speech v1"},
+            {"id": "tts-1-hd", "name": "Text-to-speech v1 HD"}
+        ]
+        logger.info("Successfully retrieved TTS models")
+        return {"data": models}, "/v1/models", 200
+    except Exception as e:
+        logger.error(f"Error listing TTS models: {str(e)}")
+        return str(e), "/v1/models", 500
+
+@v1_audio_speech_bp.route("/v1/voices", methods=["GET", "POST"])
+@queue_task_wrapper(bypass_queue=True)
+@authenticate
+def list_voices_openai_compatible(job_id=None, data=None):
+    """List voices with OpenAI Edge TTS API compatibility"""
+    try:
+        # Get language parameter from query string or request body
+        specific_language = None
+        if request.method == 'GET':
+            specific_language = request.args.get('language') or request.args.get('locale')
+        else:  # POST
+            data = request.get_json() or {}
+            specific_language = data.get('language') or data.get('locale')
+        
+        voices = list_voices()
+        
+        # Filter by language if specified
+        if specific_language and specific_language.lower() != 'all':
+            filtered_voices = [
+                voice for voice in voices 
+                if voice.get('locale', '').lower().startswith(specific_language.lower()) or
+                   voice.get('language', '').lower().startswith(specific_language.lower())
+            ]
+        else:
+            filtered_voices = voices
+        
+        logger.info(f"Successfully retrieved {len(filtered_voices)} voices for OpenAI API compatibility")
+        return {"voices": filtered_voices}, "/v1/voices", 200
+    except Exception as e:
+        logger.error(f"Error listing voices: {str(e)}")
+        return str(e), "/v1/voices", 500
+
+
 @v1_audio_speech_bp.route("/v1/audio/speech/voices", methods=["GET"])
 @queue_task_wrapper(bypass_queue=True)  # This decorator should be innermost
 @authenticate
 def get_voices(job_id=None, data=None):
-    """List available voices for text-to-speech"""
+    """List available voices for text-to-speech with optional language filtering"""
     try:
+        # Get query parameters for filtering
+        language = request.args.get('language')
+        locale = request.args.get('locale')
+        engine = request.args.get('engine')
+        
+        # Use language or locale for filtering
+        filter_language = language or locale
+        
         voices = list_voices()
-        logger.info(f"Successfully retrieved {len(voices)} TTS voices")
-        return {'voices': voices}, "/v1/audio/speech/voices", 200
+        
+        # Apply filters if provided
+        if filter_language:
+            if filter_language.lower() == 'all':
+                # Return all voices without filtering
+                filtered_voices = voices
+            else:
+                # Filter by language/locale
+                filtered_voices = [
+                    voice for voice in voices 
+                    if voice.get('locale', '').lower().startswith(filter_language.lower()) or
+                       voice.get('language', '').lower().startswith(filter_language.lower())
+                ]
+        else:
+            filtered_voices = voices
+        
+        # Apply engine filter if provided
+        if engine:
+            filtered_voices = [
+                voice for voice in filtered_voices
+                if voice.get('engine', '').lower() == engine.lower()
+            ]
+        
+        logger.info(f"Successfully retrieved {len(filtered_voices)} TTS voices (filtered from {len(voices)} total)")
+        return {'voices': filtered_voices}, "/v1/audio/speech/voices", 200
     except Exception as e:
         logger.error(f"Error listing TTS voices: {str(e)}")
         return str(e), "/v1/audio/speech/voices", 500
@@ -51,7 +131,7 @@ def get_voices(job_id=None, data=None):
 @validate_payload({
     "type": "object",
     "properties": {
-        "tts": {"type": "string", "enum": ["edge-tts", "streamlabs-polly", "kokoro"]},
+        "tts": {"type": "string", "enum": ["edge-tts", "streamlabs-polly", "kokoro", "openai-edge-tts"]},
         "text": {"type": "string"},
         "voice": {"type": "string"},
         "rate": {"type": "string", "pattern": "^[+-]\\d+%$"},
