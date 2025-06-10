@@ -131,6 +131,7 @@ def load_voices_from_file(engine_name):
         from config import VOICE_FILES_PATH
         voices_file = os.path.join(VOICE_FILES_PATH, f'{engine_name}_voices.json')
         logger.info(f"Looking for voices file at: {voices_file}")
+        
         if not os.path.exists(voices_file):
             # Try to load from the project's data directory as fallback
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))

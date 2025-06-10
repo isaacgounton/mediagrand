@@ -32,6 +32,43 @@ VOICE_FILES_PATH = os.environ.get('VOICE_FILES_PATH', '/app/data/voices')
 if not os.path.exists(VOICE_FILES_PATH):
     os.makedirs(VOICE_FILES_PATH, exist_ok=True)
 
+# Ensure voice files are available in the expected location
+def ensure_voice_files():
+    """Copy voice files from project directory to VOICE_FILES_PATH if they don't exist"""
+    import shutil
+    
+    # Voice files that should exist
+    voice_files = [
+        'edge_tts_voices.json',
+        'kokoro_voices.json', 
+        'openai_edge_tts_voices.json',
+        'streamlabs_voices.json'
+    ]
+    
+    for voice_file in voice_files:
+        target_path = os.path.join(VOICE_FILES_PATH, voice_file)
+        if not os.path.exists(target_path):
+            # Try to find the source file in project directory
+            possible_sources = [
+                os.path.join('data', 'voices', voice_file),  # Current working directory
+                os.path.join(os.path.dirname(__file__), 'data', 'voices', voice_file),  # Relative to config.py
+                os.path.join('/app', 'data', 'voices', voice_file),  # Docker path
+            ]
+            
+            for source_path in possible_sources:
+                if os.path.exists(source_path):
+                    try:
+                        shutil.copy2(source_path, target_path)
+                        logging.info(f"Copied {voice_file} to {target_path}")
+                        break
+                    except Exception as e:
+                        logging.warning(f"Could not copy {voice_file}: {e}")
+            else:
+                logging.warning(f"Could not find source file for {voice_file}")
+
+# Initialize voice files on import
+ensure_voice_files()
+
 # GCP environment variables
 GCP_SA_CREDENTIALS = os.environ.get('GCP_SA_CREDENTIALS', '')
 GCP_BUCKET_NAME = os.environ.get('GCP_BUCKET_NAME', '')
