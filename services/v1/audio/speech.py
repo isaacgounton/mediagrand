@@ -126,33 +126,130 @@ def ensure_kokoro_files():
         )
 
 def load_voices_from_file(engine_name):
-    """Load voices from static JSON files"""
+    """Load voices from static JSON files with enhanced debugging"""
     try:
         from config import VOICE_FILES_PATH
         voices_file = os.path.join(VOICE_FILES_PATH, f'{engine_name}_voices.json')
         logger.info(f"Looking for voices file at: {voices_file}")
+        logger.info(f"VOICE_FILES_PATH is set to: {VOICE_FILES_PATH}")
+        
+        # Check if the directory exists
+        if not os.path.exists(VOICE_FILES_PATH):
+            logger.error(f"Voice files directory does not exist: {VOICE_FILES_PATH}")
+            # Try to create it
+            try:
+                os.makedirs(VOICE_FILES_PATH, exist_ok=True)
+                logger.info(f"Created voice files directory: {VOICE_FILES_PATH}")
+            except Exception as create_error:
+                logger.error(f"Failed to create voice files directory: {create_error}")
+        
+        # List contents of voice files directory for debugging
+        try:
+            if os.path.exists(VOICE_FILES_PATH):
+                contents = os.listdir(VOICE_FILES_PATH)
+                logger.info(f"Contents of {VOICE_FILES_PATH}: {contents}")
+            else:
+                logger.warning(f"Voice files directory does not exist: {VOICE_FILES_PATH}")
+        except Exception as list_error:
+            logger.error(f"Error listing voice files directory: {list_error}")
         
         if not os.path.exists(voices_file):
-            # Try to load from the project's data directory as fallback
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-            fallback_file = os.path.join(project_root, 'data', 'voices', f'{engine_name}_voices.json')
-            logger.info(f"Voice file not found, trying fallback location: {fallback_file}")
-            if os.path.exists(fallback_file):
-                # If found in fallback location, copy it to the correct location
-                os.makedirs(os.path.dirname(voices_file), exist_ok=True)
-                import shutil
-                shutil.copy2(fallback_file, voices_file)
-                logger.info(f"Copied voice file from fallback location to: {voices_file}")
+            logger.warning(f"Voice file not found at expected location: {voices_file}")
+            
+            # Try multiple fallback locations
+            possible_locations = [
+                # Project root relative paths
+                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'data', 'voices', f'{engine_name}_voices.json'),
+                # Current working directory
+                os.path.join(os.getcwd(), 'data', 'voices', f'{engine_name}_voices.json'),
+                # App directory (Docker)
+                f'/app/data/voices/{engine_name}_voices.json',
+                # Alternative locations
+                os.path.join('/tmp', 'voices', f'{engine_name}_voices.json'),
+                os.path.join(os.path.expanduser('~'), 'voices', f'{engine_name}_voices.json'),
+            ]
+            
+            fallback_file = None
+            for location in possible_locations:
+                logger.info(f"Checking fallback location: {location}")
+                if os.path.exists(location):
+                    logger.info(f"Found voice file at fallback location: {location}")
+                    fallback_file = location
+                    break
+                else:
+                    logger.debug(f"Voice file not found at: {location}")
+            
+            if fallback_file:
+                try:
+                    # If found in fallback location, copy it to the correct location
+                    os.makedirs(os.path.dirname(voices_file), exist_ok=True)
+                    import shutil
+                    shutil.copy2(fallback_file, voices_file)
+                    logger.info(f"Copied voice file from {fallback_file} to: {voices_file}")
+                except Exception as copy_error:
+                    logger.error(f"Failed to copy voice file: {copy_error}")
+                    # Use the fallback file directly
+                    voices_file = fallback_file
+                    logger.info(f"Using fallback file directly: {voices_file}")
+            else:
+                logger.error(f"Could not find {engine_name}_voices.json in any location")
+                return []
 
-        with open(voices_file, 'r', encoding='utf-8') as f:
-            voices = json.load(f)
-            logger.info(f"Successfully loaded {len(voices)} voices for {engine_name}")
-            return voices
+        # Check file size and permissions
+        try:
+            file_stat = os.stat(voices_file)
+            logger.info(f"Voice file {voices_file} - Size: {file_stat.st_size} bytes, Mode: {oct(file_stat.st_mode)}")
+            if file_stat.st_size == 0:
+                logger.error(f"Voice file is empty: {voices_file}")
+                return []
+        except Exception as stat_error:
+            logger.error(f"Error checking voice file stats: {stat_error}")
+
+        # Try to open and parse the file
+        try:
+            with open(voices_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                if not content.strip():
+                    logger.error(f"Voice file is empty or contains only whitespace: {voices_file}")
+                    return []
+                
+                # Try to parse JSON
+                voices = json.loads(content)
+                
+                if not isinstance(voices, list):
+                    logger.error(f"Voice file does not contain a list: {voices_file}, type: {type(voices)}")
+                    return []
+                
+                logger.info(f"Successfully loaded {len(voices)} voices for {engine_name}")
+                
+                # Log first few voices for debugging
+                if voices and len(voices) > 0:
+                    sample_voices = voices[:3] if len(voices) > 3 else voices
+                    logger.info(f"Sample voices for {engine_name}: {sample_voices}")
+                
+                return voices
+                
+        except json.JSONDecodeError as json_error:
+            logger.error(f"JSON parsing error for {voices_file}: {json_error}")
+            # Try to show problematic content (first 200 chars)
+            try:
+                with open(voices_file, 'r', encoding='utf-8') as f:
+                    content_preview = f.read(200)
+                    logger.error(f"File content preview: {repr(content_preview)}")
+            except:
+                pass
+            return []
+        except UnicodeDecodeError as unicode_error:
+            logger.error(f"Unicode decode error for {voices_file}: {unicode_error}")
+            return []
+            
     except FileNotFoundError:
-        logger.warning(f"Voices file not found for {engine_name}, using fallback")
+        logger.warning(f"Voices file not found for {engine_name}")
         return []
     except Exception as e:
-        logger.error(f"Error loading voices for {engine_name}: {e}")
+        logger.error(f"Unexpected error loading voices for {engine_name}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return []
 
 async def get_edge_voices():
@@ -245,12 +342,18 @@ def get_kokoro_voices():
 
 def get_openai_edge_tts_voices():
     """Get list of available OpenAI Edge TTS voices from static file"""
-    static_voices = load_voices_from_file('openai_edge_tts')
-    if static_voices:
-        logger.info(f"Loaded {len(static_voices)} OpenAI Edge TTS voices from static file")
-        return static_voices
+    try:
+        static_voices = load_voices_from_file('openai_edge_tts')
+        if static_voices:
+            logger.info(f"Loaded {len(static_voices)} OpenAI Edge TTS voices from static file")
+            return static_voices
+        else:
+            logger.warning("OpenAI Edge TTS voices file found but empty or invalid")
+    except Exception as e:
+        logger.error(f"Error loading OpenAI Edge TTS voices: {e}")
     
     # Fallback to hardcoded list
+    logger.warning("Using fallback OpenAI Edge TTS voices (6 voices only)")
     return [
         {'name': 'alloy', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'female'},
         {'name': 'echo', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'male'},
