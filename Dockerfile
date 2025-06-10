@@ -101,7 +101,10 @@ COPY . .
 
 # Copy voice files to data directory
 RUN mkdir -p /app/data/voices
-COPY ./data/voices/*.json /app/data/voices/
+COPY ./data/voices/edge_tts_voices.json /app/data/voices/
+COPY ./data/voices/kokoro_voices.json /app/data/voices/
+COPY ./data/voices/openai_edge_tts_voices.json /app/data/voices/
+COPY ./data/voices/streamlabs_voices.json /app/data/voices/
 
 # Copy fonts and rebuild font cache
 COPY ./fonts /usr/share/fonts/custom/
