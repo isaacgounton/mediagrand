@@ -342,18 +342,13 @@ def get_kokoro_voices():
 
 def get_openai_edge_tts_voices():
     """Get list of available OpenAI Edge TTS voices from static file"""
-    try:
-        static_voices = load_voices_from_file('openai_edge_tts')
-        if static_voices:
-            logger.info(f"Loaded {len(static_voices)} OpenAI Edge TTS voices from static file")
-            return static_voices
-        else:
-            logger.warning("OpenAI Edge TTS voices file found but empty or invalid")
-    except Exception as e:
-        logger.error(f"Error loading OpenAI Edge TTS voices: {e}")
+    static_voices = load_voices_from_file('openai_edge_tts')
+    if static_voices:
+        logger.info(f"Loaded {len(static_voices)} OpenAI Edge TTS voices from static file")
+        return static_voices
     
-    # Fallback to hardcoded list
-    logger.warning("Using fallback OpenAI Edge TTS voices (6 voices only)")
+    # Fallback to hardcoded list - using the same pattern as other engines
+    logger.warning("Could not load OpenAI Edge TTS voices from static file, using hardcoded fallback")
     return [
         {'name': 'alloy', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'female'},
         {'name': 'echo', 'engine': 'openai-edge-tts', 'locale': 'en-US', 'gender': 'male'},
