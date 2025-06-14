@@ -101,7 +101,6 @@ COPY . .
 
 # Copy voice files to data directory
 RUN mkdir -p /app/data/voices
-COPY ./data/voices/kokoro_voices.json /app/data/voices/
 COPY ./data/voices/openai_edge_tts_voices.json /app/data/voices/
 COPY ./data/voices/chatterbox-predefined-voices.json /app/data/voices/
 
