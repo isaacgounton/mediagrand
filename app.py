@@ -15,6 +15,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from flask import Flask, request
+from flask_cors import CORS
 from redis import Redis
 from rq import Queue, Worker
 from rq.job import Job
@@ -208,6 +209,22 @@ def queue_task(bypass_queue=False):
 
 def create_app():
     app = Flask(__name__)
+    
+    # Configure CORS to allow requests from localhost:3000 and the shorts domain
+    CORS(app, resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:3000",
+                "https://shorts.dahopevi.com",
+                "http://shorts.dahopevi.com",
+                "http://localhost:*",
+                "https://localhost:*"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "supports_credentials": True
+        }
+    })
     
     # redis_url, redis_conn, and task_queue are now global
     
