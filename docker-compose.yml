@@ -1,26 +1,71 @@
 version: '3.8'
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      API_KEY: ${API_KEY:-}
+      APP_DEBUG: 'false'
+      APP_DOMAIN: ${APP_DOMAIN}
+      APP_NAME: ${APP_NAME}
+      APP_URL: ${APP_URL}
+      DEFAULT_PLACEHOLDER_VIDEO: ${DEFAULT_PLACEHOLDER_VIDEO}
+      GCP_BUCKET_NAME: ${GCP_BUCKET_NAME}
+      GCP_SA_CREDENTIALS: ${GCP_SA_CREDENTIALS}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-300}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH}
+      PEXELS_API_KEY: ${PEXELS_API_KEY}
+      PIXABAY_API_KEY: ${PIXABAY_API_KEY}
+      REDIS_URL: ${REDIS_URL}
+      RQ_WORKERS: ${RQ_WORKERS:-2}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      S3_REGION: ${S3_REGION}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      WHISPER_CACHE_DIR: /opt/whisper_cache
+      VOICE_FILES_PATH: /app/data/voices
+    volumes:
+      - whisper_models:/opt/whisper_cache
+      - dahopevi_data:/app/data
+      - voice_data:/app/data/voices
+      - gcp-sa-credentials:/app/gcp-sa-credentials
+      - tmp-assets:/tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "200m"
+        max-file: "3"
+
   postiz:
-    image: 'ghcr.io/gitroomhq/postiz-app:latest'
+    image: ghcr.io/gitroomhq/postiz-app:latest
     container_name: postiz
-    restart: always
+    restart: unless-stopped
     environment:
       MAIN_URL: ${YOUR_DOMAIN}
       FRONTEND_URL: ${YOUR_DOMAIN}
       NEXT_PUBLIC_BACKEND_URL: ${YOUR_DOMAIN}/api
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: ${SUPABASE_DATABASE_URL}
-      REDIS_URL: redis://default:3QTRrZIT75us4wo7hUCSKk1ubie7Xw4jDtVlBD8dqhmgLLodFVzj8dLus9R1O5gp@158.220.107.177:6380/3
+      REDIS_URL: ${REDIS_URL}
       BACKEND_INTERNAL_URL: http://localhost:3000
       IS_GENERAL: 'true'
       STORAGE_PROVIDER: local
-      UPLOAD_DIRECTORY: /uploads
-      NEXT_PUBLIC_UPLOAD_DIRECTORY: /uploads
       YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
       YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
-      X_API_KEY: ${X_API_KEY}
-      X_API_SECRET: ${X_API_SECRET}
+      X_API_KEY: ${POSTIZ_X_API_KEY}
+      X_API_SECRET: ${POSTIZ_X_API_SECRET}
       TIKTOK_CLIENT_ID: ${TIKTOK_CLIENT_ID}
       TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
       THREADS_APP_ID: ${THREADS_APP_ID}
@@ -43,66 +88,11 @@ services:
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
       INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID}
       INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
-    volumes:
-      - postiz-config:/config/
-      - postiz-uploads:/uploads/
     ports:
-      - '5000:5000'
-    restart: unless-stopped
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      API_KEY: ${API_KEY:-}
-      APP_DEBUG: 'false'
-      APP_DOMAIN: ${APP_DOMAIN}
-      APP_NAME: ${APP_NAME}
-      APP_URL: ${APP_URL}
-      DEFAULT_PLACEHOLDER_VIDEO: ${DEFAULT_PLACEHOLDER_VIDEO}
-      GCP_BUCKET_NAME: ${GCP_BUCKET_NAME}
-      GCP_SA_CREDENTIALS: ${GCP_SA_CREDENTIALS}
-      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-300}
-      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
-      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH}
-      PEXELS_API_KEY: ${PEXELS_API_KEY}
-      PIXABAY_API_KEY: ${PIXABAY_API_KEY}
-      REDIS_URL: redis://default:3QTRrZIT75us4wo7hUCSKk1ubie7Xw4jDtVlBD8dqhmgLLodFVzj8dLus9R1O5gp@158.220.107.177:6380/3
-      RQ_WORKERS: ${RQ_WORKERS:-2}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
-      S3_REGION: ${S3_REGION}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      WHISPER_CACHE_DIR: /opt/whisper_cache
-      VOICE_FILES_PATH: /app/data/voices
+      - "5000:5000"
     volumes:
-      - whisper_models:/opt/whisper_cache
-      - dahopevi_data:/app/data
-      - voice_data:/app/data/voices
-      - gcp-sa-credentials:/app/gcp-sa-credentials
-      - tmp-assets:/tmp
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2'
-        reservations:
-          memory: 2G
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "200m"
-        max-file: "3"
+      - postiz-config:/config
+      - postiz-uploads:/uploads
 
 volumes:
   whisper_models:
@@ -119,7 +109,3 @@ volumes:
     driver: local
   postiz-uploads:
     driver: local
-
-networks:
-  default:
-    name: dahopevi-network
