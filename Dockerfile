@@ -12,6 +12,7 @@ RUN apt-get update && \
     pkg-config \
     libssl-dev \
     libffi-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up virtual environment for better dependency isolation
@@ -24,14 +25,8 @@ COPY requirements.txt .
 
 # Upgrade pip and install requirements with optimized flags
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --find-links https://download.pytorch.org/whl/cpu \
-    torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt jsonschema
-
-# Download ML models in builder stage to avoid repeated downloads
-ENV WHISPER_CACHE_DIR="/opt/whisper_cache"
-RUN mkdir -p ${WHISPER_CACHE_DIR}
-RUN python -c "import whisper; whisper.load_model('base')"
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Download NLTK data
 RUN python -m nltk.downloader punkt averaged_perceptron_tagger stopwords
@@ -80,8 +75,7 @@ RUN apt-get update && \
 COPY --from=python-builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy pre-downloaded models and NLTK data
-COPY --from=python-builder /opt/whisper_cache /opt/whisper_cache
+# Copy NLTK data
 COPY --from=python-builder /root/nltk_data /usr/local/share/nltk_data
 
 # Set working directory
@@ -93,19 +87,16 @@ RUN useradd -r -s /bin/false -d /app appuser
 # Copy application code
 COPY . .
 
-# Create data/voices directory for backward compatibility
-RUN mkdir -p /app/data/voices
-
 # Copy fonts and rebuild font cache
 COPY ./fonts /usr/share/fonts/custom/
 RUN fc-cache -f -v
 
 # Create required directories and set permissions
-RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets ${WHISPER_CACHE_DIR} && \
-    chown -R appuser:appuser /app /tmp/assets /tmp/music ${WHISPER_CACHE_DIR} /app/data/voices && \
+RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets && \
+    chown -R appuser:appuser /app /tmp/assets /tmp/music && \
     chmod -R 777 /app/data
 
-# Generate placeholder assets as appuser (faster than FFmpeg)
+# Generate placeholder assets as appuser
 USER appuser
 
 # Create lightweight placeholder files using Python script
@@ -152,7 +143,6 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEFAULT_BACKGROUND_VIDEO="/tmp/assets/placeholder.jpg" \
     DEFAULT_BACKGROUND_MUSIC="/tmp/music/default.wav" \
-    WHISPER_CACHE_DIR="/opt/whisper_cache" \
     PATH="/opt/venv/bin:$PATH"
 
 # Expose port
