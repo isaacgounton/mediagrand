@@ -1,6 +1,6 @@
 # TTS (Text-to-Speech) API Endpoint Documentation
 
-**Implemented by:** [Harrison Fisher](https://github.com/HarrisonFisher)
+**Implemented by:** [Isaac Gounton](https://github.com/isaacgounton)
 
 ## Overview
 
