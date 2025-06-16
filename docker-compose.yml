@@ -33,7 +33,7 @@ services:
     volumes:
       - whisper_models:/opt/whisper_cache
       - dahopevi_data:/app/data
-      - voice_data:/app/data/voices
+      - ./data/voices:/app/data/voices
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
     restart: unless-stopped
@@ -98,8 +98,6 @@ volumes:
   whisper_models:
     driver: local
   dahopevi_data:
-    driver: local
-  voice_data:
     driver: local
   gcp-sa-credentials:
     driver: local

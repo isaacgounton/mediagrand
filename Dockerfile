@@ -93,10 +93,8 @@ RUN useradd -r -s /bin/false -d /app appuser
 # Copy application code
 COPY . .
 
-# Copy voice files to data directory
+# Create data directories
 RUN mkdir -p /app/data/voices
-COPY ./data/voices/openai_edge_tts_voices.json /app/data/voices/
-COPY ./data/voices/chatterbox-predefined-voices.json /app/data/voices/
 
 # Copy fonts and rebuild font cache
 COPY ./fonts /usr/share/fonts/custom/
