@@ -28,8 +28,6 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK data
-RUN python -m nltk.downloader punkt averaged_perceptron_tagger stopwords
 
 # ====================================================================
 # Stage 2: Final runtime image
@@ -75,8 +73,6 @@ RUN apt-get update && \
 COPY --from=python-builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy NLTK data
-COPY --from=python-builder /root/nltk_data /usr/local/share/nltk_data
 
 # Set working directory
 WORKDIR /app
