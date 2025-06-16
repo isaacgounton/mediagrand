@@ -29,11 +29,25 @@ from config import LOCAL_STORAGE_PATH
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def process_transcribe_media(media_url, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line=None):
-    """Transcribe or translate media and return the transcript/translation, SRT or VTT file path."""
-    logger.info(f"Starting {task} for media URL: {media_url}")
-    input_filename = download_file(media_url, os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_input"))
-    logger.info(f"Downloaded media to local file: {input_filename}")
+def process_transcribe_media(media_source, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line=None):
+    """Transcribe or translate media and return the transcript/translation, SRT or VTT file path.
+    
+    Args:
+        media_source: Either a URL string or a local file path
+    """
+    
+    # Check if media_source is a local file path or a URL
+    if os.path.exists(media_source):
+        # It's a local file path (uploaded file)
+        logger.info(f"Starting {task} for uploaded file: {media_source}")
+        input_filename = media_source
+        should_cleanup_input = False  # Don't delete the uploaded file here, it's handled in the route
+    else:
+        # It's a URL, download it
+        logger.info(f"Starting {task} for media URL: {media_source}")
+        input_filename = download_file(media_source, os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_input"))
+        logger.info(f"Downloaded media to local file: {input_filename}")
+        should_cleanup_input = True  # We should clean up downloaded files
 
     try:
         # Load a larger model for better translation quality
@@ -121,36 +135,35 @@ def process_transcribe_media(media_url, task, include_text, include_srt, include
         if include_segments is True:
             segments_json = result['segments']
 
-        os.remove(input_filename)
-        logger.info(f"Removed local file: {input_filename}")
+        if should_cleanup_input:
+            os.remove(input_filename)
+            logger.info(f"Removed local file: {input_filename}")
         logger.info(f"{task.capitalize()} successful, output type: {response_type}")
 
         if response_type == "direct":
             return text, srt_text, segments_json
         else:
             
-            if include_text is True:
+            text_filename = None
+            srt_filename = None
+            segments_filename = None
+            
+            if include_text is True and text is not None:
                 text_filename = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.txt")
                 with open(text_filename, 'w') as f:
                     f.write(text)
-            else:
-                text_file = None
             
-            if include_srt is True:
+            if include_srt is True and srt_text is not None:
                 srt_filename = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.srt")
                 with open(srt_filename, 'w') as f:
                     f.write(srt_text)
-            else:
-                srt_filename = None
 
-            if include_segments is True:
+            if include_segments is True and segments_json is not None:
                 segments_filename = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.json")
                 with open(segments_filename, 'w') as f:
                     f.write(str(segments_json))
-            else:
-                segments_filename = None
 
-            return text_filename, srt_filename, segments_filename 
+            return text_filename, srt_filename, segments_filename
 
     except Exception as e:
         logger.error(f"{task.capitalize()} failed: {str(e)}")

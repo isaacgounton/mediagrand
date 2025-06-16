@@ -10,18 +10,40 @@ The Media Transcription endpoint is part of the v1 API suite, providing audio/vi
 
 ## Request
 
-### Headers
+The endpoint supports two types of requests:
+1. **JSON Request**: Provide a `media_url` to transcribe media from a URL
+2. **Multipart Form Request**: Upload a media file directly
+
+### Option 1: JSON Request (URL-based)
+
+#### Headers
 - `x-api-key`: Required. Authentication key for API access.
 - `Content-Type`: Required. Must be `application/json`.
 
-### Body Parameters
+#### Body Parameters
 
-#### Required Parameters
+##### Required Parameters
 - `media_url` (string)
   - Format: URI
   - Description: URL of the media file to be transcribed
 
-#### Optional Parameters
+### Option 2: Multipart Form Request (File Upload)
+
+#### Headers
+- `x-api-key`: Required. Authentication key for API access.
+- `Content-Type`: Required. Must be `multipart/form-data`.
+
+#### Form Parameters
+
+##### Required Parameters
+- `file` (file)
+  - Description: Media file to be transcribed (audio or video)
+  - Supported formats: MP3, MP4, WAV, M4A, and other common audio/video formats
+
+## Common Optional Parameters
+
+The following optional parameters are available for both JSON and multipart form requests:
+
 - `task` (string)
   - Allowed values: `"transcribe"`, `"translate"`
   - Default: `"transcribe"`
@@ -59,11 +81,15 @@ The Media Transcription endpoint is part of the v1 API suite, providing audio/vi
 - `id` (string)
   - Description: Custom identifier for the transcription job
 
-- `max_words_per_line` (integer)
+- `words_per_line` (integer)
   - Minimum: 1
   - Description: Controls the maximum number of words per line in the SRT file. When specified, each segment's text will be split into multiple lines with at most the specified number of words per line.
 
-### Example Request
+**Note**: For multipart form requests, boolean parameters should be sent as strings (`"true"` or `"false"`).
+
+### Example Requests
+
+#### JSON Request (URL-based)
 
 ```bash
 curl -X POST "https://api.example.com/v1/media/transcribe" \
@@ -78,8 +104,24 @@ curl -X POST "https://api.example.com/v1/media/transcribe" \
     "response_type": "cloud",
     "webhook_url": "https://your-webhook.com/callback",
     "id": "custom-job-123",
-    "max_words_per_line": 5
+    "words_per_line": 5
   }'
+```
+
+#### Multipart Form Request (File Upload)
+
+```bash
+curl -X POST "https://api.example.com/v1/media/transcribe" \
+  -H "x-api-key: your_api_key" \
+  -F "file=@/path/to/your/audio.mp3" \
+  -F "task=transcribe" \
+  -F "include_text=true" \
+  -F "include_srt=true" \
+  -F "include_segments=true" \
+  -F "response_type=cloud" \
+  -F "webhook_url=https://your-webhook.com/callback" \
+  -F "id=custom-job-123" \
+  -F "words_per_line=5"
 ```
 
 ## Response
