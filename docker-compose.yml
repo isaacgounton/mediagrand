@@ -29,7 +29,7 @@ services:
       S3_REGION: ${S3_REGION}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       WHISPER_CACHE_DIR: /opt/whisper_cache
-      VOICE_FILES_PATH: /app/data/voices
+      TTS_SERVER_URL: ${TTS_SERVER_URL:-https://tts.dahopevi.com/api}
     volumes:
       - whisper_models:/opt/whisper_cache
       - dahopevi_data:/app/data
