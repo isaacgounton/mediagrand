@@ -4,9 +4,6 @@
 
 ## 🎥 Video Operations
 
-### Short Videos
-* [Short Video Creation API](video/short-video.md)
-
 ### Basic Operations
 * [Caption Video](video/caption_video.md)
 * [Concatenate Videos](video/concatenate.md)

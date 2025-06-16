@@ -33,12 +33,6 @@ ENV WHISPER_CACHE_DIR="/opt/whisper_cache"
 RUN mkdir -p ${WHISPER_CACHE_DIR}
 RUN python -c "import whisper; whisper.load_model('base')"
 
-# Download whisper-cpp models for short-video-maker compatibility
-RUN mkdir -p ${WHISPER_CACHE_DIR}/models && \
-    cd ${WHISPER_CACHE_DIR}/models && \
-    wget -q https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin && \
-    mv ggml-base.bin base.bin
-
 # Download NLTK data
 RUN python -m nltk.downloader punkt averaged_perceptron_tagger stopwords
 
