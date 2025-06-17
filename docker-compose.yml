@@ -90,6 +90,7 @@ services:
       BACKEND_INTERNAL_URL: http://localhost:3000
       IS_GENERAL: 'true'
       STORAGE_PROVIDER: local
+      UPLOAD_DIRECTORY: /uploads
       YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
       YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
       X_API_KEY: ${POSTIZ_X_API_KEY}
