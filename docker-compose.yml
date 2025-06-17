@@ -76,57 +76,6 @@ services:
         max-size: "200m"
         max-file: "3"
 
-  postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
-    container_name: postiz
-    restart: unless-stopped
-    environment:
-      MAIN_URL: ${YOUR_DOMAIN}
-      FRONTEND_URL: ${YOUR_DOMAIN}
-      NEXT_PUBLIC_BACKEND_URL: ${YOUR_DOMAIN}/api
-      JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: ${SUPABASE_DATABASE_URL}
-      REDIS_URL: redis://redis:6379/0
-      BACKEND_INTERNAL_URL: http://localhost:3000
-      IS_GENERAL: 'true'
-      STORAGE_PROVIDER: local
-      UPLOAD_DIRECTORY: /uploads
-      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
-      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
-      X_API_KEY: ${POSTIZ_X_API_KEY}
-      X_API_SECRET: ${POSTIZ_X_API_SECRET}
-      TIKTOK_CLIENT_ID: ${TIKTOK_CLIENT_ID}
-      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
-      THREADS_APP_ID: ${THREADS_APP_ID}
-      THREADS_APP_SECRET: ${THREADS_APP_SECRET}
-      TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME}
-      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
-      SLACK_ID: ${SLACK_ID}
-      SLACK_SECRET: ${SLACK_SECRET}
-      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID}
-      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET}
-      PINTEREST_CLIENT_ID: ${PINTEREST_CLIENT_ID}
-      PINTEREST_CLIENT_SECRET: ${PINTEREST_CLIENT_SECRET}
-      MASTODON_CLIENT_ID: ${MASTODON_CLIENT_ID}
-      MASTODON_CLIENT_SECRET: ${MASTODON_CLIENT_SECRET}
-      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
-      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
-      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
-      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
-      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
-      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
-      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID}
-      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
-    ports:
-      - "5000:5000"
-    depends_on:
-      redis:
-        condition: service_healthy
-    volumes:
-      - postiz-config:/config
-      - postiz-uploads:/uploads
-    networks:
-      - dahopevi-network
 
 volumes:
   whisper_models:
@@ -136,10 +85,6 @@ volumes:
   gcp-sa-credentials:
     driver: local
   tmp-assets:
-    driver: local
-  postiz-config:
-    driver: local
-  postiz-uploads:
     driver: local
   redis_data:
     driver: local
