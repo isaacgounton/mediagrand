@@ -1,6 +1,29 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: dahopevi-redis
+    command: redis-server --bind 0.0.0.0 --protected-mode no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - dahopevi-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   api:
     build:
       context: .
@@ -36,11 +59,17 @@ services:
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
+    networks:
+      - dahopevi-network
     logging:
       driver: json-file
       options:
@@ -89,9 +118,14 @@ services:
       INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
     ports:
       - "5000:5000"
+    depends_on:
+      redis:
+        condition: service_healthy
     volumes:
       - postiz-config:/config
       - postiz-uploads:/uploads
+    networks:
+      - dahopevi-network
 
 volumes:
   whisper_models:
@@ -106,3 +140,9 @@ volumes:
     driver: local
   postiz-uploads:
     driver: local
+  redis_data:
+    driver: local
+
+networks:
+  dahopevi-network:
+    driver: bridge

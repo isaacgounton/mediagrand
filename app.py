@@ -29,9 +29,34 @@ import importlib
 from version import BUILD_NUMBER
 from app_utils import log_job_status # Assuming log_job_status is here
 
+def create_redis_connection(max_retries=5, retry_delay=2):
+    """Create Redis connection with retry logic"""
+    redis_url = os.environ.get('REDIS_URL', 'redis://redis:6379')
+    
+    for attempt in range(max_retries):
+        try:
+            redis_conn = Redis.from_url(
+                redis_url,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                retry_on_timeout=True,
+                health_check_interval=30
+            )
+            # Test the connection
+            redis_conn.ping()
+            logging.info(f"Successfully connected to Redis at {redis_url}")
+            return redis_conn
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logging.warning(f"Could not connect to Redis instance: {str(e)}. Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 1.5  # Exponential backoff
+            else:
+                logging.error(f"Failed to connect to Redis after {max_retries} attempts: {str(e)}")
+                raise
+
 # Global RQ and Redis setup
-redis_url = os.environ.get('REDIS_URL', 'redis://redis:6379')
-redis_conn = Redis.from_url(redis_url)
+redis_conn = create_redis_connection()
 task_queue = Queue(
     'tasks',
     connection=redis_conn,
