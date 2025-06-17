@@ -24,20 +24,20 @@ from config import LOCAL_STORAGE_PATH, TTS_SERVER_URL
 logger = logging.getLogger(__name__)
 
 def _make_request(endpoint: str, method: str = "GET", **kwargs) -> Dict:
-    """Make a request to the TTS API"""
+    """Make a request to the Awesome-TTS API"""
     url = TTS_SERVER_URL.rstrip("/") + "/" + endpoint.lstrip("/")
     try:
         response = requests.request(method, url, **kwargs)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"TTS API request failed: {str(e)}")
+        logger.error(f"Awesome-TTS API request failed: {str(e)}")
         raise
 
 def check_tts_health() -> Dict:
-    """Check the health status of the TTS API"""
+    """Check the health status of the Awesome-TTS API"""
     try:
-        return _make_request("health")
+        return _make_request("status")
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return {
@@ -47,19 +47,37 @@ def check_tts_health() -> Dict:
         }
 
 def list_engines() -> List[Dict]:
-    """List available TTS engines from the API"""
+    """List available TTS providers from Awesome-TTS"""
     try:
-        response = _make_request("models")
-        return response.get('data', [])
+        # Awesome-TTS supports these providers: kokoro, chatterbox, openai-edge-tts
+        return [
+            {"id": "kokoro", "name": "Kokoro ONNX", "description": "High-quality neural TTS"},
+            {"id": "chatterbox", "name": "Chatterbox TTS", "description": "Voice cloning capabilities"},
+            {"id": "openai-edge-tts", "name": "OpenAI Edge TTS", "description": "Microsoft Edge TTS backend"}
+        ]
     except Exception as e:
         logger.error(f"Error listing engines: {str(e)}")
         return []
 
 def list_voices() -> List[Dict]:
-    """List available voices from the API"""
+    """List available voices from all Awesome-TTS providers"""
     try:
-        response = _make_request("voices")
-        return response.get('voices', [])
+        all_voices = []
+        providers = ["kokoro", "chatterbox", "openai-edge-tts"]
+        
+        for provider in providers:
+            try:
+                response = _make_request(f"voices/{provider}")
+                provider_voices = response.get('voices', [])
+                # Add provider info to each voice
+                for voice in provider_voices:
+                    voice['provider'] = provider
+                all_voices.extend(provider_voices)
+            except Exception as e:
+                logger.warning(f"Failed to get voices for {provider}: {str(e)}")
+                continue
+        
+        return all_voices
     except Exception as e:
         logger.error(f"Error listing voices: {str(e)}")
         return []
@@ -76,63 +94,105 @@ def generate_tts(
     subtitle_format: str = "srt"
 ) -> Tuple[str, str]:
     """
-    Generate TTS using the remote API
+    Generate TTS using the Awesome-TTS API
     
     Args:
-        tts: TTS engine to use
+        tts: TTS provider to use (kokoro, chatterbox, openai-edge-tts)
         text: Text to convert to speech
         voice: Voice ID to use
         job_id: Unique job identifier
-        output_format: Output audio format
+        output_format: Output audio format (wav/mp3)
         rate: Speech rate adjustment
         volume: Volume adjustment
         pitch: Pitch adjustment
-        subtitle_format: Subtitle format
+        subtitle_format: Subtitle format (not used by Awesome-TTS)
         
     Returns:
         Tuple of (audio_file_path, subtitle_file_path)
     """
     try:
-        logger.info(f"Generating TTS for job {job_id}")
+        logger.info(f"Generating TTS for job {job_id} using {tts} provider")
         
-        # Prepare request payload
+        # Convert rate to speed if provided (Awesome-TTS uses speed, not rate)
+        speed = 1.0
+        if rate:
+            # Convert rate like "+50%" to speed like 1.5
+            if rate.endswith('%'):
+                rate_percent = int(rate.rstrip('%'))
+                speed = 1.0 + (rate_percent / 100.0)
+            else:
+                try:
+                    speed = float(rate)
+                except ValueError:
+                    speed = 1.0
+        
+        # Prepare request payload for Awesome-TTS API
         payload = {
-            "tts": tts,
             "text": text,
+            "provider": tts,
             "voice": voice,
-            "output_format": output_format,
-            "subtitle_format": subtitle_format
+            "speed": speed,
+            "format": output_format.lower()
         }
         
-        # Add optional parameters if provided
-        if rate:
-            payload["rate"] = rate
-        if volume:
-            payload["volume"] = volume
+        # Add pitch if provided (only supported by some providers)
         if pitch:
-            payload["pitch"] = pitch
-            
-        # Generate TTS
-        result = _make_request("speech", method="POST", json=payload)
+            try:
+                # Convert pitch like "+50Hz" to numeric value
+                pitch_value = float(pitch.rstrip('Hz'))
+                payload["pitch"] = pitch_value
+            except ValueError:
+                logger.warning(f"Invalid pitch value: {pitch}")
         
-        # Download the generated files
-        audio_url = result['audio_url']
-        subtitle_url = result['subtitle_url']
+        logger.info(f"Sending request to Awesome-TTS: {payload}")
+        
+        # Generate TTS using Awesome-TTS API
+        result = _make_request("tts", method="POST", json=payload)
+        
+        if not result.get('success', False):
+            raise Exception(f"TTS generation failed: {result.get('error', 'Unknown error')}")
+        
+        # Get the audio URL from Awesome-TTS response
+        audio_url = result.get('audio_url')
+        if not audio_url:
+            raise Exception("No audio URL returned from TTS service")
+        
+        # If it's a relative URL, make it absolute
+        if audio_url.startswith('/'):
+            audio_url = TTS_SERVER_URL.rstrip('/') + audio_url
         
         audio_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.{output_format}")
-        subtitle_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.{subtitle_format}")
         
         # Download audio file
+        logger.info(f"Downloading audio from: {audio_url}")
         audio_response = requests.get(audio_url)
         audio_response.raise_for_status()
         with open(audio_path, 'wb') as f:
             f.write(audio_response.content)
         
-        # Download subtitle file
-        subtitle_response = requests.get(subtitle_url)
-        subtitle_response.raise_for_status()
-        with open(subtitle_path, 'wb') as f:
-            f.write(subtitle_response.content)
+        # Create a simple SRT subtitle file (Awesome-TTS doesn't generate subtitles)
+        subtitle_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.{subtitle_format}")
+        duration = result.get('duration', 5000)  # Default 5 seconds if not provided
+        duration_seconds = duration / 1000.0 if duration > 100 else duration  # Convert ms to seconds if needed
+        
+        # Generate simple subtitle
+        with open(subtitle_path, 'w', encoding='utf-8') as f:
+            if subtitle_format == 'srt':
+                f.write("1\n")
+                f.write("00:00:00,000 --> ")
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                milliseconds = int((duration_seconds % 1) * 1000)
+                f.write(f"{minutes:02d}:{seconds:02d},{milliseconds:03d}\n")
+                f.write(f"{text}\n")
+            else:  # vtt format
+                f.write("WEBVTT\n\n")
+                f.write("00:00:00.000 --> ")
+                minutes = int(duration_seconds // 60)
+                seconds = int(duration_seconds % 60)
+                milliseconds = int((duration_seconds % 1) * 1000)
+                f.write(f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}\n")
+                f.write(f"{text}\n")
         
         logger.info(f"Successfully generated TTS for job {job_id}")
         return audio_path, subtitle_path

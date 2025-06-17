@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
     "type": "object",
     "properties": {
         "tts": {"type": "string"},
+        "provider": {"type": "string"},  # Accept both tts and provider
         "text": {"type": "string"},
         "voice": {"type": "string"},
         "rate": {"type": "string", "pattern": "^[+-]?\\d+%?$|^\\d*\\.?\\d+$"},
@@ -47,9 +48,10 @@ logger = logging.getLogger(__name__)
     "additionalProperties": False
 })
 def text_to_speech(job_id, data):
-    """Generate text-to-speech using the TTS API"""
+    """Generate text-to-speech using the Awesome-TTS API"""
     text = data["text"]
-    tts = data.get("tts", "kokoro")  # Default to kokoro
+    # Accept both 'tts' and 'provider' for backward compatibility
+    provider = data.get("provider") or data.get("tts", "kokoro")  # Default to kokoro
     voice = data.get("voice")
     output_format = data.get("output_format", "mp3")
     subtitle_format = data.get("subtitle_format", "srt")
@@ -58,7 +60,7 @@ def text_to_speech(job_id, data):
     pitch = data.get("pitch")
     speed = data.get("speed")
 
-    logger.info(f"Job {job_id}: Received TTS request for text length {len(text)}")
+    logger.info(f"Job {job_id}: Received TTS request for text length {len(text)} using provider {provider}")
 
     # Convert speed to rate if provided
     if speed and not rate:
@@ -67,9 +69,9 @@ def text_to_speech(job_id, data):
         logger.info(f"Job {job_id}: Converted speed {speed} to rate {rate}")
 
     try:
-        # Generate audio and subtitles
+        # Generate audio and subtitles using Awesome-TTS
         audio_file, subtitle_file = generate_tts(
-            tts=tts,
+            tts=provider,
             text=text,
             voice=voice,
             job_id=job_id,
@@ -91,7 +93,8 @@ def text_to_speech(job_id, data):
         return {
             'audio_url': audio_url,
             'subtitle_url': subtitle_url,
-            'engine': tts,
+            'engine': provider,
+            'provider': provider,
             'voice': voice,
             'format': output_format
         }, "/v1/audio/speech", 200
