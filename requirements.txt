@@ -25,4 +25,4 @@ redis>=4.5.0
 rq>=1.16.1
 click>=8.1.7
 emoji>=2.0.0
-openai-whisper>=20230314
+openai-whisper>=20240930

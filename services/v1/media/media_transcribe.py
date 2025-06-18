@@ -50,24 +50,60 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
         should_cleanup_input = True  # We should clean up downloaded files
 
     try:
-        # Load a larger model for better translation quality
-        #model_size = "large" if task == "translate" else "base"
-        model_size = "base"
+        # Use larger model for better accuracy, especially for non-English languages
+        # Priority: large-v3 > large-v2 > large > medium > base
+        model_priorities = ["large-v3", "large-v2", "large", "medium", "base"]
+        model_size = "base"  # fallback
+        
+        for model_name in model_priorities:
+            try:
+                # Test if model is available
+                test_model = whisper.load_model(model_name)
+                model_size = model_name
+                logger.info(f"Using Whisper model: {model_size}")
+                break
+            except Exception as e:
+                logger.warning(f"Model {model_name} not available: {e}")
+                continue
+        
         model = whisper.load_model(model_size)
-        logger.info(f"Loaded Whisper {model_size} model")
 
-        # Configure transcription/translation options
+        # Enhanced options for better non-English accuracy
         options = {
             "task": task,
             "word_timestamps": word_timestamps,
-            "verbose": False
+            "verbose": False,
+            "temperature": 0.0,  # Reduce hallucinations
+            "compression_ratio_threshold": 2.4,  # Detect repetition
+            "logprob_threshold": -1.0,  # Quality threshold
+            "no_speech_threshold": 0.6,  # Silence detection
         }
 
-        # Add language specification if provided
+        # Enhanced language handling for better non-English support
         if language:
             options["language"] = language
+            logger.info(f"Language specified: {language}")
+        else:
+            # Auto-detect language but log the detection
+            logger.info("Auto-detecting language")
+
+        # For larger models, use additional parameters for better quality
+        if model_size in ["large", "large-v2", "large-v3"]:
+            options.update({
+                "best_of": 5,        # Multiple attempts for better accuracy
+                "beam_size": 5,      # Beam search for better results
+                "patience": 1.0,     # Wait for better alternatives
+                "length_penalty": 1.0,
+                "suppress_tokens": "-1",  # Suppress less likely tokens
+            })
+            logger.info("Using enhanced accuracy settings for large model")
 
         result = model.transcribe(input_filename, **options)
+        
+        # Log detected language for debugging
+        if "language" in result:
+            detected_lang = result["language"]
+            logger.info(f"Detected language: {detected_lang}")
         
         # For translation task, the result['text'] will be in English
         text = None
