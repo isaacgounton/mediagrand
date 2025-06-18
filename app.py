@@ -344,6 +344,119 @@ def create_app():
     app.register_blueprint(v1_media_duration_bp)
     app.register_blueprint(v1_media_serve_files_bp)
 
+    # Add homepage route
+    @app.route('/')
+    def homepage():
+        """Homepage showing API information and available endpoints"""
+        return {
+            "message": "DahoPevi API",
+            "version": "1.0.0",
+            "build": BUILD_NUMBER,
+            "status": "healthy",
+            "description": "DahoPevi - Video & Audio Processing API",
+            "documentation": {
+                "url": "/docs",
+                "description": "API documentation and endpoints"
+            },
+            "endpoints": {
+                "v1": {
+                    "media": {
+                        "transcribe": "/v1/media/transcribe",
+                        "convert": "/v1/media/convert", 
+                        "download": "/v1/media/download",
+                        "metadata": "/v1/media/metadata",
+                        "duration": "/v1/media/duration",
+                        "silence": "/v1/media/silence",
+                        "serve_files": "/v1/media/serve_files"
+                    },
+                    "video": {
+                        "concatenate": "/v1/video/concatenate",
+                        "caption": "/v1/video/caption",
+                        "thumbnail": "/v1/video/thumbnail",
+                        "cut": "/v1/video/cut",
+                        "split": "/v1/video/split", 
+                        "trim": "/v1/video/trim"
+                    },
+                    "audio": {
+                        "concatenate": "/v1/audio/concatenate",
+                        "speech": "/v1/audio/speech"
+                    },
+                    "image": {
+                        "convert_to_video": "/v1/image/convert/video"
+                    },
+                    "toolkit": {
+                        "test": "/v1/toolkit/test",
+                        "authenticate": "/v1/toolkit/authenticate",
+                        "job_status": "/v1/toolkit/job_status",
+                        "jobs_status": "/v1/toolkit/jobs_status"
+                    },
+                    "code": {
+                        "execute_python": "/v1/code/execute/python"
+                    },
+                    "s3": {
+                        "upload": "/v1/s3/upload"
+                    },
+                    "ffmpeg": {
+                        "compose": "/v1/ffmpeg/compose"
+                    }
+                },
+                "legacy": {
+                    "transcribe": "/transcribe",
+                    "convert": "/convert", 
+                    "combine": "/combine",
+                    "audio_mixing": "/audio_mixing",
+                    "gdrive_upload": "/gdrive_upload",
+                    "authenticate": "/authenticate",
+                    "caption": "/caption",
+                    "extract_keyframes": "/extract_keyframes",
+                    "image_to_video": "/image_to_video",
+                    "health": "/health"
+                }
+            }
+        }
+
+    # Add docs route
+    @app.route('/docs')
+    def docs():
+        """API documentation route"""
+        return {
+            "title": "DahoPevi API Documentation",
+            "version": "1.0.0",
+            "build": BUILD_NUMBER,
+            "description": "Comprehensive video and audio processing API with transcription, conversion, and manipulation capabilities.",
+            "features": [
+                "Audio/Video Transcription with Whisper AI",
+                "Media Format Conversion",
+                "Video Concatenation and Editing",
+                "Image to Video Conversion", 
+                "Text-to-Speech Generation",
+                "Cloud Storage Integration",
+                "Asynchronous Processing with Webhooks"
+            ],
+            "authentication": {
+                "method": "API Key",
+                "header": "x-api-key",
+                "description": "Include your API key in the x-api-key header"
+            },
+            "endpoints_documentation": "Visit individual endpoint URLs with OPTIONS method for detailed documentation",
+            "examples": {
+                "transcribe_media": {
+                    "url": "/v1/media/transcribe",
+                    "method": "POST",
+                    "description": "Transcribe audio/video to text with enhanced non-English language support"
+                },
+                "convert_media": {
+                    "url": "/v1/media/convert",
+                    "method": "POST", 
+                    "description": "Convert media between different formats"
+                }
+            },
+            "support": {
+                "github": "https://github.com/isaacgounton/dahopevi",
+                "contact": "isaac@etugrand.com"
+            }
+        }
+
     return app
 
 app = create_app()
