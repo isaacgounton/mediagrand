@@ -26,7 +26,8 @@ COPY requirements.txt .
 # Upgrade pip and install requirements with optimized flags
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    playwright install --with-deps chromium
 
 
 # ====================================================================

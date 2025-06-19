@@ -52,6 +52,11 @@ logger = logging.getLogger(__name__)
             "format": "uri",
             "description": "URL to a cookies file for age-restricted videos"
         },
+        "cloud_upload": {
+            "type": "boolean",
+            "default": True,
+            "description": "Whether to upload the downloaded media to cloud storage. If false, returns direct URL."
+        },
         "transcript": {
             "type": "object",
             "properties": {
@@ -345,20 +350,24 @@ def download_media(job_id, data):
                     ydl_opts['retries'] = download_options['retries']
 
             # Download the media
+            cloud_upload = data.get('cloud_upload', True)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(media_url, download=True)
-                filename = ydl.prepare_filename(info)
+                info = ydl.extract_info(media_url, download=cloud_upload)
                 
-                # Upload to cloud storage
-                cloud_url = upload_file(filename)
-                
-                # Clean up the temporary file
-                os.remove(filename)
+                if cloud_upload:
+                    filename = ydl.prepare_filename(info)
+                    # Upload to cloud storage
+                    media_url_response = upload_file(filename)
+                    # Clean up the temporary file
+                    os.remove(filename)
+                else:
+                    # Return direct URL without downloading
+                    media_url_response = info.get('url', media_url)
 
                 # Prepare response
                 response = {
                     "media": {
-                        "media_url": cloud_url,
+                        "media_url": media_url_response,
                         "video_id": video_id if is_youtube else None,
                         "title": info.get('title'),
                         "format_id": info.get('format_id'),
