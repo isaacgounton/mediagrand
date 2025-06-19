@@ -92,25 +92,33 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                 ).run(overwrite_output=True)
             )
             
-            # Then mix with background music
-            video_input = ffmpeg.input(temp_concat_path)
-            music_input = ffmpeg.input(music_file)
-            
-            # Check if video has audio stream by probing
+            # Get video duration to ensure background music loops properly
             try:
                 video_probe = ffmpeg.probe(temp_concat_path)
+                video_duration = float(video_probe['format']['duration'])
                 has_audio = any(stream['codec_type'] == 'audio' for stream in video_probe['streams'])
             except:
                 has_audio = False
+                video_duration = None
+            
+            # Prepare video and music inputs
+            video_input = ffmpeg.input(temp_concat_path)
+            
+            # Loop the background music to match video duration
+            if video_duration:
+                # Create looped music input that matches video duration
+                music_input = ffmpeg.input(music_file, stream_loop=-1, t=video_duration)
+            else:
+                music_input = ffmpeg.input(music_file)
             
             if has_audio:
                 # Video has audio - mix it with background music
-                logger.info(f"Job {job_id}: Video has audio, mixing with background music")
+                logger.info(f"Job {job_id}: Video has audio, mixing with background music (duration: {video_duration}s)")
                 (
                     ffmpeg.output(
                         video_input['v'],
                         ffmpeg.filter([video_input['a'], music_input['a']], 'amix',
-                                     inputs=2, duration='first', weights=f"1 {background_music_volume}"),
+                                     inputs=2, duration='longest', weights=f"1 {background_music_volume}"),
                         output_path,
                         vcodec='libx264',
                         acodec='aac',
@@ -123,7 +131,7 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                 )
             else:
                 # Video has no audio - just add background music as audio track
-                logger.info(f"Job {job_id}: Video has no audio, adding background music as audio track")
+                logger.info(f"Job {job_id}: Video has no audio, adding background music as audio track (duration: {video_duration}s)")
                 (
                     ffmpeg.output(
                         video_input['v'],
@@ -134,8 +142,7 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                         pix_fmt='yuv420p',
                         preset='veryfast',
                         crf=23,
-                        **{'b:a': '192k'},
-                        shortest=None  # Match video duration
+                        **{'b:a': '192k'}
                     )
                     .run(overwrite_output=True)
                 )

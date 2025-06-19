@@ -137,6 +137,11 @@ def take_screenshot(data: dict, job_id=None):
     except Exception as e:
         logger.error(f"Job {job_id}: Error taking screenshot: {str(e)}", exc_info=True)
         error_message = str(e)
+        
+        # Check for Playwright browser installation issues
+        if "Executable doesn't exist" in error_message or "chrome-linux" in error_message:
+            error_message = "PLAYWRIGHT_BROWSER_MISSING"
+        
         error_map = {
             "ELEMENT_NOT_FOUND": f"The selector '{data.get('selector')}' was not found on the page. Please check your selector.",
             "INVALID_CLIP_DIMENSIONS": "Clip dimensions must be positive and non-negative.",
@@ -145,6 +150,7 @@ def take_screenshot(data: dict, job_id=None):
             "MISSING_URL_OR_HTML": "You must provide either a 'url' or 'html' field.",
             "WAIT_FOR_SELECTOR_NOT_FOUND": "The selector specified in 'wait_for_selector' was not found on the page.",
             "QUALITY_PNG_UNSUPPORTED": "'quality' is not supported for PNG (default format). Use JPEG format instead.",
+            "PLAYWRIGHT_BROWSER_MISSING": "Playwright browser binaries are missing. The service is being restarted to install them. Please try again in a few minutes.",
         }
         error_message = error_map.get(error_message, str(e))
         return {"error": error_message}

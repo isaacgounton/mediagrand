@@ -27,7 +27,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt && \
-    playwright install --with-deps chromium
+    playwright install chromium
 
 
 # ====================================================================
@@ -74,6 +74,9 @@ RUN apt-get update && \
 COPY --from=python-builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Install Playwright browsers in the final stage
+RUN playwright install --with-deps chromium
+
 
 # Set working directory
 WORKDIR /app
@@ -111,6 +114,13 @@ cleanup() {\n\
 }\n\
 \n\
 trap cleanup SIGTERM\n\
+\n\
+# Check Playwright browsers before starting services\n\
+echo "Checking Playwright browser installation..."\n\
+python3 scripts/check_playwright.py\n\
+if [ $? -ne 0 ]; then\n\
+    echo "Playwright browser check failed, but continuing startup..."\n\
+fi\n\
 \n\
 # Array to store background process PIDs\n\
 declare -a pids\n\
