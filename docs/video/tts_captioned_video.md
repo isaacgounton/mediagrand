@@ -22,10 +22,11 @@ The request body must be a JSON object with the following properties:
 - `background_url` (required, string, URI format): The URL of the background image to be used in the video.
 - `text` (conditional, string): Text to generate speech from (required if `audio_url` not provided).
 - `audio_url` (conditional, string, URI format): URL of existing audio file (required if `text` not provided).
-- `width` (optional, integer): Width of the video in pixels (default: 1080, minimum: 1).
-- `height` (optional, integer): Height of the video in pixels (default: 1920, minimum: 1).
-- `speech_voice` (optional, string): Voice for text-to-speech generation (default: "en-US-AriaNeural").
-- `speech_speed` (optional, number): Speed of speech (default: 1.0, range: 0.1 to 3.0).
+- `width` (optional, number): Width of the video in pixels (default: 1080, minimum: 1).
+- `height` (optional, number): Height of the video in pixels (default: 1920, minimum: 1).
+- `provider` (optional, string): TTS provider to use - "kokoro", "chatterbox", or "openai-edge-tts" (default: "openai-edge-tts").
+- `voice` (optional, string): Voice for text-to-speech generation (default: "en-US-AriaNeural").
+- `speed` (optional, number): Speed of speech (default: 1.0, range: 0.1 to 3.0).
 - `webhook_url` (optional, string, URI format): The URL to which the response should be sent as a webhook.
 - `id` (optional, string): An identifier for the request.
 
@@ -50,27 +51,28 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
             "description": "URL of existing audio file (required if text not provided)"
         },
         "width": {
-            "type": "integer",
+            "type": "number",
             "minimum": 1,
-            "default": 1080,
             "description": "Width of the video (default: 1080)"
         },
         "height": {
-            "type": "integer",
+            "type": "number",
             "minimum": 1,
-            "default": 1920,
             "description": "Height of the video (default: 1920)"
         },
-        "speech_voice": {
+        "provider": {
             "type": "string",
-            "default": "en-US-AriaNeural",
+            "enum": ["kokoro", "chatterbox", "openai-edge-tts"],
+            "description": "TTS provider to use (default: openai-edge-tts)"
+        },
+        "voice": {
+            "type": "string",
             "description": "Voice for text-to-speech (default: en-US-AriaNeural)"
         },
-        "speech_speed": {
+        "speed": {
             "type": "number",
             "minimum": 0.1,
             "maximum": 3.0,
-            "default": 1.0,
             "description": "Speed of speech (default: 1.0)"
         },
         "webhook_url": {"type": "string", "format": "uri"},
@@ -94,8 +96,9 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
     "text": "Welcome to our amazing product demonstration. Let's explore the features together.",
     "width": 1080,
     "height": 1920,
-    "speech_voice": "en-US-AriaNeural",
-    "speech_speed": 1.2,
+    "provider": "openai-edge-tts",
+    "voice": "en-US-AriaNeural",
+    "speed": 1.2,
     "webhook_url": "https://example.com/webhook",
     "id": "tts-video-123"
 }
@@ -122,8 +125,9 @@ curl -X POST \
         "text": "Welcome to our amazing product demonstration. Let us explore the features together.",
         "width": 1080,
         "height": 1920,
-        "speech_voice": "en-US-AriaNeural",
-        "speech_speed": 1.2,
+        "provider": "openai-edge-tts",
+        "voice": "en-US-AriaNeural",
+        "speed": 1.2,
         "webhook_url": "https://example.com/webhook",
         "id": "tts-video-123"
      }' \
@@ -214,10 +218,12 @@ The main application context (`app.py`) also includes error handling for the tas
 
 - Either `text` or `audio_url` must be provided, but not both.
 - The background image will be scaled and padded to fit the specified video dimensions while maintaining aspect ratio.
-- When using `text`, the system will generate speech using the specified voice and speed settings.
-- When using `audio_url`, the system will transcribe the audio to generate captions.
+- When using `text`, the system will generate speech using the specified provider, voice, and speed settings.
+- When using `audio_url`, the system will use the provided audio and display a simple caption.
 - Captions are positioned at 80% down the video height by default.
 - The video duration matches the audio duration automatically.
+- The `provider` parameter aligns with the `/v1/audio/speech` endpoint providers.
+- The `voice` parameter should match the voice IDs available for the selected provider.
 - If the `webhook_url` parameter is provided, the response will be sent as a webhook to the specified URL.
 - The `id` parameter can be used to identify the request in the response.
 - Processing time varies based on text length, audio duration, and video dimensions.
@@ -227,9 +233,11 @@ The main application context (`app.py`) also includes error handling for the tas
 - Providing both `text` and `audio_url` parameters (only one should be provided).
 - Using invalid or inaccessible background image URLs.
 - Using invalid or inaccessible audio URLs when using the `audio_url` option.
-- Specifying invalid voice names for text-to-speech generation.
-- Using extreme speech speed values that may affect audio quality.
+- Specifying invalid voice names for the selected TTS provider.
+- Using extreme speed values that may affect audio quality.
 - Background images with very low resolution that don't scale well to video dimensions.
+- Mismatched provider and voice combinations (e.g., using a Kokoro voice with OpenAI Edge TTS provider).
+- Using non-numeric values for width, height, or speed parameters.
 - Exceeding the maximum queue length, which can lead to requests being rejected with a 429 Too Many Requests error.
 - Encountering unexpected errors during the video generation process, which can result in a 500 Internal Server Error.
 
@@ -237,9 +245,11 @@ The main application context (`app.py`) also includes error handling for the tas
 
 - Validate background image and audio URLs before sending the request to ensure they are accessible.
 - Use high-resolution background images for better video quality.
-- Test different speech voices and speeds to find the optimal settings for your content.
+- Test different provider and voice combinations to find the optimal settings for your content.
 - Keep text length reasonable to avoid excessively long videos.
 - Choose video dimensions that match your target platform requirements (e.g., 1920x1080 for landscape, 1080x1920 for portrait).
+- Use appropriate speed adjustments to maintain natural speech flow.
+- Consult the `/v1/audio/speech/voices` endpoint to get available voices for each provider.
 - Monitor the queue length and adjust the `MAX_QUEUE_LENGTH` value accordingly to prevent requests from being rejected due to a full queue.
 - Implement retry mechanisms for handling temporary errors or failures during the video generation process.
 - Provide meaningful and descriptive `id` values to easily identify requests in the response.
@@ -253,3 +263,29 @@ The main application context (`app.py`) also includes error handling for the tas
 - **Accessibility**: Add captions to existing audio content for hearing-impaired audiences.
 - **Multilingual Content**: Generate videos with different voice languages and caption styles.
 - **Podcast Visualization**: Convert audio podcasts into captioned video format for video platforms.
+
+## 10. Integration with Speech API
+
+This endpoint integrates with the `/v1/audio/speech` API for text-to-speech generation:
+
+- **Provider Compatibility**: Uses the same provider system (`kokoro`, `chatterbox`, `openai-edge-tts`)
+- **Voice Selection**: Supports the same voice IDs as the speech API
+- **Parameter Alignment**: `provider`, `voice`, and `speed` parameters work identically
+- **Voice Discovery**: Use `/v1/audio/speech/voices/{provider}` to discover available voices
+
+## 11. Related Endpoints
+
+### List Available Voices by Provider
+**GET** `/v1/audio/speech/voices/{provider}`
+
+Returns available voices for a specific TTS provider.
+
+### Speech Generation
+**POST** `/v1/audio/speech`
+
+Generate audio-only speech without video components.
+
+### List TTS Providers
+**GET** `/v1/audio/speech/providers`
+
+Returns available TTS providers and their capabilities.

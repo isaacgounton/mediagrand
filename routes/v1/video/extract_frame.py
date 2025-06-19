@@ -17,12 +17,56 @@
 from flask import Blueprint
 from app_utils import validate_payload, queue_task_wrapper
 import logging
+import re
 from services.v1.video.extract_frame import process_extract_frame
 from services.authentication import authenticate
 from services.cloud_storage import upload_file
 
 v1_video_extract_frame_bp = Blueprint('v1_video_extract_frame', __name__)
 logger = logging.getLogger(__name__)
+
+def parse_time_to_seconds(time_input):
+    """
+    Parse various time formats to seconds.
+    Supports:
+    - Numbers: 6, 6.5
+    - String numbers: "6", "6.5"
+    - Time formats: "00:06", "0:06", "1:30", "01:30:45", "1:30:45.5"
+    """
+    if isinstance(time_input, (int, float)):
+        return float(time_input)
+    
+    if isinstance(time_input, str):
+        # Try to parse as a simple number first
+        try:
+            return float(time_input)
+        except ValueError:
+            pass
+        
+        # Parse time format (HH:MM:SS, MM:SS, or H:M:S variations)
+        time_pattern = r'^(\d{1,2}):(\d{1,2})(?::(\d{1,2}(?:\.\d+)?))?$'
+        match = re.match(time_pattern, time_input.strip())
+        
+        if match:
+            hours_or_minutes = int(match.group(1))
+            minutes_or_seconds = int(match.group(2))
+            seconds_or_fraction = match.group(3)
+            
+            if seconds_or_fraction is not None:
+                # Format: HH:MM:SS
+                hours = hours_or_minutes
+                minutes = minutes_or_seconds
+                seconds = float(seconds_or_fraction)
+                return hours * 3600 + minutes * 60 + seconds
+            else:
+                # Format: MM:SS
+                minutes = hours_or_minutes
+                seconds = minutes_or_seconds
+                return minutes * 60 + seconds
+        
+        raise ValueError(f"Invalid time format: {time_input}")
+    
+    raise ValueError(f"Unsupported time input type: {type(time_input)}")
 
 @v1_video_extract_frame_bp.route('/v1/video/extract-frame', methods=['POST'])
 @authenticate
@@ -35,10 +79,12 @@ logger = logging.getLogger(__name__)
             "description": "URL of the video to extract frame from"
         },
         "seconds": {
-            "type": "number",
-            "minimum": 0,
+            "oneOf": [
+                {"type": "number", "minimum": 0},
+                {"type": "string"}
+            ],
             "default": 0,
-            "description": "Time in seconds to extract the frame from (default: 0)"
+            "description": "Time in seconds to extract the frame from. Accepts numbers (6, 6.5) or time strings ('00:06', '1:30', '01:30:45')"
         },
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
@@ -49,11 +95,20 @@ logger = logging.getLogger(__name__)
 @queue_task_wrapper(bypass_queue=False)
 def extract_frame(job_id, data):
     video_url = data['video_url']
-    seconds = data.get('seconds', 0)
+    seconds_input = data.get('seconds', 0)
     webhook_url = data.get('webhook_url')
     id = data.get('id')
 
-    logger.info(f"Job {job_id}: Received extract frame request for video at {seconds} seconds")
+    # Parse the seconds input to handle various formats
+    try:
+        seconds = parse_time_to_seconds(seconds_input)
+        if seconds < 0:
+            raise ValueError("Seconds cannot be negative")
+    except ValueError as e:
+        logger.error(f"Job {job_id}: Invalid seconds parameter - {str(e)}")
+        return f"Invalid seconds parameter: {str(e)}", "/v1/video/extract-frame", 400
+
+    logger.info(f"Job {job_id}: Received extract frame request for video at {seconds} seconds (parsed from {seconds_input})")
 
     try:
         output_file = process_extract_frame(

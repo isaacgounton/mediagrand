@@ -44,27 +44,28 @@ logger = logging.getLogger(__name__)
             "description": "URL of existing audio file (required if text not provided)"
         },
         "width": {
-            "type": "integer",
+            "type": "number",
             "minimum": 1,
-            "default": 1080,
             "description": "Width of the video (default: 1080)"
         },
         "height": {
-            "type": "integer",
+            "type": "number",
             "minimum": 1,
-            "default": 1920,
             "description": "Height of the video (default: 1920)"
         },
-        "speech_voice": {
+        "provider": {
             "type": "string",
-            "default": "en-US-AriaNeural",
+            "enum": ["kokoro", "chatterbox", "openai-edge-tts"],
+            "description": "TTS provider to use (default: openai-edge-tts)"
+        },
+        "voice": {
+            "type": "string",
             "description": "Voice for text-to-speech (default: en-US-AriaNeural)"
         },
-        "speech_speed": {
+        "speed": {
             "type": "number",
             "minimum": 0.1,
             "maximum": 3.0,
-            "default": 1.0,
             "description": "Speed of speech (default: 1.0)"
         },
         "webhook_url": {"type": "string", "format": "uri"},
@@ -82,10 +83,11 @@ def generate_tts_captioned_video(job_id, data):
     background_url = data['background_url']
     text = data.get('text')
     audio_url = data.get('audio_url')
-    width = data.get('width', 1080)
-    height = data.get('height', 1920)
-    speech_voice = data.get('speech_voice', 'en-US-AriaNeural')
-    speech_speed = data.get('speech_speed', 1.0)
+    width = int(data.get('width', 1080))
+    height = int(data.get('height', 1920))
+    provider = data.get('provider', 'openai-edge-tts')
+    voice = data.get('voice', 'en-US-AriaNeural')
+    speed = data.get('speed', 1.0)
     webhook_url = data.get('webhook_url')
     id = data.get('id')
 
@@ -98,8 +100,9 @@ def generate_tts_captioned_video(job_id, data):
             audio_url=audio_url,
             width=width,
             height=height,
-            speech_voice=speech_voice,
-            speech_speed=speech_speed,
+            provider=provider,
+            voice=voice,
+            speed=speed,
             job_id=job_id
         )
         logger.info(f"Job {job_id}: TTS captioned video generation completed successfully")
@@ -139,27 +142,35 @@ def generate_tts_captioned_video_options():
                 "example": "https://example.com/audio.mp3"
             },
             "width": {
-                "type": "integer",
+                "type": "number",
                 "required": False,
                 "default": 1080,
                 "description": "Width of the video",
                 "example": 1080
             },
             "height": {
-                "type": "integer",
+                "type": "number",
                 "required": False,
                 "default": 1920,
                 "description": "Height of the video",
                 "example": 1920
             },
-            "speech_voice": {
+            "provider": {
+                "type": "string",
+                "required": False,
+                "default": "openai-edge-tts",
+                "enum": ["kokoro", "chatterbox", "openai-edge-tts"],
+                "description": "TTS provider to use",
+                "example": "openai-edge-tts"
+            },
+            "voice": {
                 "type": "string",
                 "required": False,
                 "default": "en-US-AriaNeural",
                 "description": "Voice for text-to-speech",
                 "example": "en-US-AriaNeural"
             },
-            "speech_speed": {
+            "speed": {
                 "type": "number",
                 "required": False,
                 "default": 1.0,
@@ -187,7 +198,8 @@ def generate_tts_captioned_video_options():
             "text": "Hello, this is a sample text for speech generation.",
             "width": 1080,
             "height": 1920,
-            "speech_voice": "en-US-AriaNeural",
-            "speech_speed": 1.0
+            "provider": "openai-edge-tts",
+            "voice": "en-US-AriaNeural",
+            "speed": 1.0
         }
     }

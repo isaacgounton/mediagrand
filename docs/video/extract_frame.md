@@ -20,7 +20,11 @@ The `/v1/video/extract-frame` endpoint is a part of the Video API and is respons
 The request body must be a JSON object with the following properties:
 
 - `video_url` (required, string, URI format): The URL of the video file from which to extract the frame.
-- `seconds` (optional, number): The time in seconds at which to extract the frame (default: 0, minimum: 0).
+- `seconds` (optional, number or string): The time at which to extract the frame. Supports multiple formats:
+  - Numbers: `6`, `6.5` (seconds)
+  - String numbers: `"6"`, `"6.5"` (seconds)
+  - Time formats: `"00:06"` (MM:SS), `"1:30"` (MM:SS), `"01:30:45"` (HH:MM:SS), `"1:30:45.5"` (HH:MM:SS with decimals)
+  - Default: 0 (extract frame at the beginning)
 - `webhook_url` (optional, string, URI format): The URL to which the response should be sent as a webhook.
 - `id` (optional, string): An identifier for the request.
 
@@ -36,10 +40,12 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
             "description": "URL of the video to extract frame from"
         },
         "seconds": {
-            "type": "number",
-            "minimum": 0,
+            "oneOf": [
+                {"type": "number", "minimum": 0},
+                {"type": "string"}
+            ],
             "default": 0,
-            "description": "Time in seconds to extract the frame from (default: 0)"
+            "description": "Time in seconds to extract the frame from. Accepts numbers (6, 6.5) or time strings ('00:06', '1:30', '01:30:45')"
         },
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}

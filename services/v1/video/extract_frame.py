@@ -17,12 +17,13 @@
 import os
 import subprocess
 import logging
+from typing import Union
 from services.file_management import download_file
 from config import LOCAL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 
-def process_extract_frame(video_url, seconds=0, job_id=None):
+def process_extract_frame(video_url: str, seconds: Union[int, float] = 0, job_id: Union[str, None] = None) -> str:
     """
     Extracts an image frame from a video at a specified time.
     

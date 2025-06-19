@@ -84,7 +84,7 @@ def format_time(seconds):
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
 
 def process_tts_captioned_video(background_url, text=None, audio_url=None, width=1080, height=1920, 
-                               speech_voice="en-US-AriaNeural", speech_speed=1.0, job_id=None):
+                               provider="openai-edge-tts", voice="en-US-AriaNeural", speed=1.0, job_id=None):
     """
     Creates a captioned text-to-speech video.
     
@@ -94,8 +94,9 @@ def process_tts_captioned_video(background_url, text=None, audio_url=None, width
         audio_url: URL or path to existing audio file (if text not provided)
         width: Video width (default: 1080)
         height: Video height (default: 1920)
-        speech_voice: Voice for TTS (default: en-US-AriaNeural)
-        speech_speed: Speed of speech (default: 1.0)
+        provider: TTS provider (default: openai-edge-tts)
+        voice: Voice for TTS (default: en-US-AriaNeural)
+        speed: Speed of speech (default: 1.0)
         job_id: Job identifier for tracking
     
     Returns:
@@ -125,46 +126,48 @@ def process_tts_captioned_video(background_url, text=None, audio_url=None, width
                 cleanup_files.append(audio_file)
         elif text:
             # Generate TTS audio from text
-            logger.info(f"Job {job_id}: Generating TTS audio from text")
-            audio_file, _ = generate_tts("openai-edge-tts", text, speech_voice, job_id or "unknown", "wav", str(speech_speed))
+            logger.info(f"Job {job_id}: Generating TTS audio from text using {provider}")
+            
+            # Convert speed to rate string if needed
+            rate = None
+            if speed != 1.0:
+                rate_percent = int((speed - 1.0) * 100)
+                rate = f"{rate_percent:+d}%"
+            
+            audio_file, _ = generate_tts(
+                tts=provider,
+                text=text,
+                voice=voice,
+                job_id=job_id or "unknown",
+                output_format="wav",
+                rate=rate
+            )
             cleanup_files.append(audio_file)
         else:
             raise ValueError("Either text or audio_url must be provided")
 
-        # Transcribe audio to get captions with word timestamps
-        logger.info(f"Job {job_id}: Transcribing audio for captions")
-        # Use a temporary file URL approach for transcription
-        temp_audio_path = f"file://{os.path.abspath(audio_file)}"
-        transcription_result = process_transcription(temp_audio_path, "transcript")
-        
-        # For now, create simple captions from the full transcript
-        # In a real implementation, you'd want word-level timestamps
+        # Create simple captions from the text or transcription
         audio_duration = get_audio_duration(audio_file)
-        captions = [{
-            "text": transcription_result,
-            "start_ts": 0,
-            "end_ts": audio_duration
-        }]
         
-        # Convert transcription format to caption format if needed
-        if captions and isinstance(captions[0], dict) and 'word' in captions[0]:
-            # Convert whisper format to our format
-            formatted_captions = []
-            for caption in captions:
-                formatted_captions.append({
-                    "text": caption['word'],
-                    "start_ts": caption['start'],
-                    "end_ts": caption['end']
-                })
-            captions = formatted_captions
+        if text:
+            # Use the original text for captions
+            captions = [{
+                "text": text,
+                "start_ts": 0,
+                "end_ts": audio_duration
+            }]
+        else:
+            # For uploaded audio, we could transcribe it, but for now use a placeholder
+            captions = [{
+                "text": "Audio content",
+                "start_ts": 0,
+                "end_ts": audio_duration
+            }]
 
         # Create subtitle file
         subtitle_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_subtitles.ass")
         create_subtitle_file(captions, subtitle_path, width, height)
         cleanup_files.append(subtitle_path)
-
-        # Get audio duration for video length
-        audio_duration = get_audio_duration(audio_file)
         
         # Prepare output path
         output_filename = f"{job_id}_captioned_video.mp4"
