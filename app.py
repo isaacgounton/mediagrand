@@ -314,6 +314,9 @@ def create_app():
     from routes.v1.media.serve_files import v1_media_serve_files_bp
     from routes.v1.image.convert.image_convert import v1_image_convert_bp
     from routes.v1.audio.convert.audio_convert import v1_audio_convert_bp
+    from routes.v1.video.merge import v1_video_merge_bp
+    from routes.v1.video.extract_frame import v1_video_extract_frame_bp
+    from routes.v1.video.tts_captioned_video import v1_video_tts_captioned_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -347,6 +350,9 @@ def create_app():
     app.register_blueprint(v1_media_serve_files_bp)
     app.register_blueprint(v1_image_convert_bp)
     app.register_blueprint(v1_audio_convert_bp)
+    app.register_blueprint(v1_video_merge_bp)
+    app.register_blueprint(v1_video_extract_frame_bp)
+    app.register_blueprint(v1_video_tts_captioned_bp)
 
     # Add homepage route
     @app.route('/')
@@ -378,8 +384,11 @@ def create_app():
                         "caption": "/v1/video/caption",
                         "thumbnail": "/v1/video/thumbnail",
                         "cut": "/v1/video/cut",
-                        "split": "/v1/video/split", 
-                        "trim": "/v1/video/trim"
+                        "split": "/v1/video/split",
+                        "trim": "/v1/video/trim",
+                        "merge": "/v1/video/merge",
+                        "extract_frame": "/v1/video/extract-frame",
+                        "tts_captioned": "/v1/video/tts-captioned"
                     },
                     "audio": {
                         "concatenate": "/v1/audio/concatenate",
@@ -434,7 +443,10 @@ def create_app():
                 "Audio/Video Transcription with Whisper AI",
                 "Media Format Conversion",
                 "Video Concatenation and Editing",
-                "Image to Video Conversion", 
+                "Video Merging with Background Music",
+                "Frame Extraction from Videos",
+                "TTS Captioned Video Generation",
+                "Image to Video Conversion",
                 "Text-to-Speech Generation",
                 "Cloud Storage Integration",
                 "Asynchronous Processing with Webhooks"
