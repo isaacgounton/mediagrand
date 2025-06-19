@@ -27,29 +27,64 @@ def _make_request(endpoint: str, method: str = "GET", **kwargs) -> Dict:
     """Make a request to the Awesome-TTS API"""
     url = TTS_SERVER_URL.rstrip("/") + "/" + endpoint.lstrip("/")
     try:
-        response = requests.request(method, url, **kwargs)
+        logger.info(f"Making {method} request to: {url}")
+        response = requests.request(method, url, timeout=10, **kwargs)
+        logger.info(f"Response status: {response.status_code}")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"Awesome-TTS API request failed: {str(e)}")
+        logger.error(f"Awesome-TTS API request failed for {url}: {str(e)}")
         raise
 
 def check_tts_health() -> Dict:
     """Check the health status of the Awesome-TTS API"""
     try:
-        return _make_request("status")
+        # Try multiple possible health endpoints
+        health_endpoints = ["status", "health", ""]
+        
+        for endpoint in health_endpoints:
+            try:
+                result = _make_request(endpoint)
+                logger.info(f"Health check successful via /{endpoint}")
+                return {
+                    'status': 'healthy',
+                    'available': True,
+                    'endpoint': endpoint,
+                    'server_url': TTS_SERVER_URL
+                }
+            except Exception as e:
+                logger.warning(f"Health check failed for /{endpoint}: {str(e)}")
+                continue
+        
+        # If all endpoints fail
+        return {
+            'status': 'error',
+            'error': 'All health endpoints failed',
+            'available': False,
+            'server_url': TTS_SERVER_URL
+        }
+        
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return {
             'status': 'error',
             'error': str(e),
-            'available': False
+            'available': False,
+            'server_url': TTS_SERVER_URL
         }
 
 def list_engines() -> List[Dict]:
     """List available TTS providers from Awesome-TTS"""
     try:
-        # Awesome-TTS supports these providers: kokoro, chatterbox, openai-edge-tts
+        # Try to get from API first
+        try:
+            result = _make_request("engines")
+            if 'engines' in result:
+                return result['engines']
+        except Exception as e:
+            logger.warning(f"Failed to get engines from API: {str(e)}")
+        
+        # Return the known providers - these should match what's available in the TTS service
         return [
             {"id": "kokoro", "name": "Kokoro ONNX", "description": "High-quality neural TTS"},
             {"id": "chatterbox", "name": "Chatterbox TTS", "description": "Voice cloning capabilities"},
@@ -67,17 +102,32 @@ def list_voices() -> List[Dict]:
         
         for provider in providers:
             try:
+                logger.info(f"Fetching voices for provider: {provider}")
                 response = _make_request(f"voices/{provider}")
-                provider_voices = response.get('voices', [])
-                # Add provider info to each voice
+                
+                # Handle different possible response formats
+                if 'voices' in response:
+                    provider_voices = response['voices']
+                elif isinstance(response, list):
+                    provider_voices = response
+                else:
+                    logger.warning(f"Unexpected response format for {provider}: {response}")
+                    provider_voices = []
+                
+                # Add provider info to each voice if not already present
                 for voice in provider_voices:
-                    voice['provider'] = provider
+                    if 'provider' not in voice:
+                        voice['provider'] = provider
+                    
                 all_voices.extend(provider_voices)
+                logger.info(f"Found {len(provider_voices)} voices for {provider}")
+                
             except Exception as e:
                 logger.warning(f"Failed to get voices for {provider}: {str(e)}")
                 continue
         
         return all_voices
+        
     except Exception as e:
         logger.error(f"Error listing voices: {str(e)}")
         return []
@@ -85,12 +135,26 @@ def list_voices() -> List[Dict]:
 def list_voices_by_provider(provider: str) -> List[Dict]:
     """List available voices for a specific TTS provider"""
     try:
+        logger.info(f"Fetching voices for provider: {provider}")
         response = _make_request(f"voices/{provider}")
-        voices = response.get('voices', [])
-        # Add provider info to each voice
+        
+        # Handle different possible response formats
+        if 'voices' in response:
+            voices = response['voices']
+        elif isinstance(response, list):
+            voices = response
+        else:
+            logger.warning(f"Unexpected response format for {provider}: {response}")
+            voices = []
+        
+        # Add provider info to each voice if not already present
         for voice in voices:
-            voice['provider'] = provider
+            if 'provider' not in voice:
+                voice['provider'] = provider
+            
+        logger.info(f"Found {len(voices)} voices for {provider}")
         return voices
+        
     except Exception as e:
         logger.error(f"Error listing voices for provider {provider}: {str(e)}")
         return []
@@ -124,14 +188,14 @@ def generate_tts(
         Tuple of (audio_file_path, subtitle_file_path)
     """
     try:
-        logger.info(f"Generating TTS for job {job_id} using {tts} provider")
+        logger.info(f"Generating TTS for job {job_id} using {tts} provider with voice {voice}")
         
         # Convert rate to speed if provided (Awesome-TTS uses speed, not rate)
         speed = 1.0
         if rate:
             # Convert rate like "+50%" to speed like 1.5
             if rate.endswith('%'):
-                rate_percent = int(rate.rstrip('%'))
+                rate_percent = int(rate.rstrip('%').replace('+', ''))
                 speed = 1.0 + (rate_percent / 100.0)
             else:
                 try:
@@ -152,7 +216,7 @@ def generate_tts(
         if pitch:
             try:
                 # Convert pitch like "+50Hz" to numeric value
-                pitch_value = float(pitch.rstrip('Hz'))
+                pitch_value = float(pitch.rstrip('Hz').replace('+', ''))
                 payload["pitch"] = pitch_value
             except ValueError:
                 logger.warning(f"Invalid pitch value: {pitch}")
@@ -178,7 +242,7 @@ def generate_tts(
         
         # Download audio file
         logger.info(f"Downloading audio from: {audio_url}")
-        audio_response = requests.get(audio_url)
+        audio_response = requests.get(audio_url, timeout=30)
         audio_response.raise_for_status()
         with open(audio_path, 'wb') as f:
             f.write(audio_response.content)

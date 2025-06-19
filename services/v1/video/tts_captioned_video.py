@@ -77,6 +77,10 @@ def format_time(seconds):
     """
     Convert seconds to ASS time format (H:MM:SS.cc)
     """
+    # Handle None or invalid values
+    if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
+        seconds = 0.0
+    
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -238,9 +242,25 @@ def get_audio_duration(audio_file):
         ]
         
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        duration = float(result.stdout.strip())
+        duration_str = result.stdout.strip()
+        
+        # Check if we got a valid duration
+        if not duration_str:
+            logger.warning(f"Empty duration result for {audio_file}, using fallback")
+            return 60.0
+            
+        duration = float(duration_str)
+        
+        # Ensure duration is positive and reasonable
+        if duration <= 0 or duration > 86400:  # Max 24 hours
+            logger.warning(f"Invalid duration {duration} for {audio_file}, using fallback")
+            return 60.0
+            
         return duration
         
+    except (ValueError, subprocess.CalledProcessError, FileNotFoundError) as e:
+        logger.error(f"Failed to get audio duration for {audio_file}: {str(e)}")
+        return 60.0  # Default fallback duration
     except Exception as e:
-        logger.error(f"Failed to get audio duration: {str(e)}")
-        return 60  # Default fallback duration
+        logger.error(f"Unexpected error getting audio duration for {audio_file}: {str(e)}")
+        return 60.0  # Default fallback duration

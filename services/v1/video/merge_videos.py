@@ -80,36 +80,65 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
             # First concatenate the videos
             temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
             
-            # Concatenate videos first
+            # Concatenate videos first - using same pattern as working concatenate service
             (
                 ffmpeg.input(concat_file_path, format='concat', safe=0)
-                .output(temp_concat_path, 
-                       vcodec='libx264',
-                       acodec='aac',
-                       r=30,
-                       pix_fmt='yuv420p')
-                .run(overwrite_output=True)
+                .output(temp_concat_path,
+                       vcodec='libx264',     # Re-encode video for smooth transitions
+                       acodec='aac',         # Re-encode audio for compatibility
+                       r=30,                 # Ensure consistent frame rate
+                       pix_fmt='yuv420p',    # Ensure consistent pixel format
+                       movflags='faststart'  # Optimize for streaming
+                ).run(overwrite_output=True)
             )
             
             # Then mix with background music
             video_input = ffmpeg.input(temp_concat_path)
             music_input = ffmpeg.input(music_file)
             
-            (
-                ffmpeg.output(
-                    video_input['v'],
-                    ffmpeg.filter([video_input['a'], music_input['a']], 'amix', 
-                                 inputs=2, duration='first', weights=f"1 {background_music_volume}"),
-                    output_path,
-                    vcodec='libx264',
-                    acodec='aac',
-                    pix_fmt='yuv420p',
-                    preset='veryfast',
-                    crf=23,
-                    **{'b:a': '192k'}
+            # Check if video has audio stream by probing
+            try:
+                video_probe = ffmpeg.probe(temp_concat_path)
+                has_audio = any(stream['codec_type'] == 'audio' for stream in video_probe['streams'])
+            except:
+                has_audio = False
+            
+            if has_audio:
+                # Video has audio - mix it with background music
+                logger.info(f"Job {job_id}: Video has audio, mixing with background music")
+                (
+                    ffmpeg.output(
+                        video_input['v'],
+                        ffmpeg.filter([video_input['a'], music_input['a']], 'amix',
+                                     inputs=2, duration='first', weights=f"1 {background_music_volume}"),
+                        output_path,
+                        vcodec='libx264',
+                        acodec='aac',
+                        pix_fmt='yuv420p',
+                        preset='veryfast',
+                        crf=23,
+                        **{'b:a': '192k'}
+                    )
+                    .run(overwrite_output=True)
                 )
-                .run(overwrite_output=True)
-            )
+            else:
+                # Video has no audio - just add background music as audio track
+                logger.info(f"Job {job_id}: Video has no audio, adding background music as audio track")
+                (
+                    ffmpeg.output(
+                        video_input['v'],
+                        music_input['a'],
+                        output_path,
+                        vcodec='libx264',
+                        acodec='aac',
+                        pix_fmt='yuv420p',
+                        preset='veryfast',
+                        crf=23,
+                        **{'b:a': '192k'},
+                        shortest=None  # Match video duration
+                    )
+                    .run(overwrite_output=True)
+                )
             
             # Clean up temp file
             if os.path.exists(temp_concat_path):
@@ -120,15 +149,13 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
             logger.info(f"Job {job_id}: Merging videos without background music")
             (
                 ffmpeg.input(concat_file_path, format='concat', safe=0)
-                .output(output_path, 
-                       vcodec='libx264',
-                       acodec='aac',
-                       r=30,
-                       pix_fmt='yuv420p',
-                       preset='veryfast',
-                       crf=23,
-                       **{'b:a': '192k'})
-                .run(overwrite_output=True)
+                .output(output_path,
+                       vcodec='libx264',     # Re-encode video for smooth transitions
+                       acodec='aac',         # Re-encode audio for compatibility
+                       r=30,                 # Ensure consistent frame rate
+                       pix_fmt='yuv420p',    # Ensure consistent pixel format
+                       movflags='faststart'  # Optimize for streaming
+                ).run(overwrite_output=True)
             )
 
         # Clean up downloaded files and concat list
