@@ -114,7 +114,28 @@ def upload_file(file_path: str) -> str:
         if content_type is None:
             content_type = 'application/octet-stream' # Default if guess fails
         
-        logger.info(f"Uploading file to cloud storage: {file_path} with Content-Type: {content_type}")
+        # Get file extension for logging
+        file_extension = os.path.splitext(file_path)[1].lower()
+        
+        logger.info(f"Uploading file to cloud storage: {file_path}")
+        logger.info(f"File extension: {file_extension}")
+        logger.info(f"Detected Content-Type: {content_type}")
+        
+        # Additional validation for common image formats
+        if file_extension in ['.webp', '.jpg', '.jpeg', '.png', '.gif', '.bmp'] and content_type == 'application/octet-stream':
+            # Manual mapping for common image formats if mimetypes failed
+            manual_mapping = {
+                '.webp': 'image/webp',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg', 
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.bmp': 'image/bmp'
+            }
+            if file_extension in manual_mapping:
+                content_type = manual_mapping[file_extension]
+                logger.info(f"Overrode Content-Type to: {content_type} based on file extension")
+        
         url = provider.upload_file(file_path, content_type=content_type)
         logger.info(f"File uploaded successfully: {url}")
         return url

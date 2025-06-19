@@ -38,21 +38,35 @@ def validate_payload(schema):
                 if not request.json:
                     return jsonify({"message": "Missing JSON in request"}), 400
                 try:
-                    # Pre-process boolean strings to actual booleans for validation
+                    # Pre-process boolean strings to actual booleans and numeric strings to numbers for validation
                     def convert_bools(obj):
                         if isinstance(obj, dict):
                             return {k: convert_bools(v) for k, v in obj.items()}
                         elif isinstance(obj, list):
                             return [convert_bools(item) for item in obj]
-                        elif isinstance(obj, str) and obj.lower() in ['true', 'false']:
-                            return obj.lower() == 'true'
+                        elif isinstance(obj, str):
+                            # Convert boolean strings
+                            if obj.lower() in ['true', 'false']:
+                                return obj.lower() == 'true'
+                            # Convert numeric strings to float or int
+                            try:
+                                # Try float first (handles both int and float)
+                                if '.' in obj or 'e' in obj.lower():
+                                    return float(obj)
+                                else:
+                                    # Check if it can be parsed as int, but still return float for consistency
+                                    int(obj)  # Test if it's a valid integer
+                                    return float(obj)  # Return as float for JSON schema number validation
+                            except ValueError:
+                                # Not a valid number, return as string
+                                pass
                         return obj
 
                     data = convert_bools(request.json)
                     jsonschema.validate(instance=data, schema=schema)
                     # Store converted data in a custom attribute that the route can access
                     setattr(request, '_validated_json', data)
-                except jsonschema.exceptions.ValidationError as validation_error:
+                except jsonschema.ValidationError as validation_error:
                     return jsonify({"message": f"Invalid payload: {validation_error.message}"}), 400
             else:
                 # We're in a worker context (no request context)

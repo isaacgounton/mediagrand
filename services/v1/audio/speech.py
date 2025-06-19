@@ -82,6 +82,19 @@ def list_voices() -> List[Dict]:
         logger.error(f"Error listing voices: {str(e)}")
         return []
 
+def list_voices_by_provider(provider: str) -> List[Dict]:
+    """List available voices for a specific TTS provider"""
+    try:
+        response = _make_request(f"voices/{provider}")
+        voices = response.get('voices', [])
+        # Add provider info to each voice
+        for voice in voices:
+            voice['provider'] = provider
+        return voices
+    except Exception as e:
+        logger.error(f"Error listing voices for provider {provider}: {str(e)}")
+        return []
+
 def generate_tts(
     tts: str,
     text: str,

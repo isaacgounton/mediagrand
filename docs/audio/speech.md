@@ -26,7 +26,7 @@ The request body must be a JSON object with the following properties:
 - `rate` (optional, string): Speech rate adjustment (e.g., "+50%", "-20%") - pattern: `^[+-]?\d+%?$|^\d*\.?\d+$`.
 - `volume` (optional, string): Volume adjustment (e.g., "+10%", "-5%") - pattern: `^[+-]?\d+%?$|^\d*\.?\d+$`.
 - `pitch` (optional, string): Pitch adjustment (e.g., "+50Hz", "-10Hz") - pattern: `^[+-]?\d+Hz?$|^\d*\.?\d+$`.
-- `speed` (optional, number): Speed multiplier between 0.5 and 2.0 (alternative to rate).
+- `speed` (optional, number): Speed multiplier between 0.5 and 2.0 (alternative to rate). Can be provided as a number (1.2) or string ("1.2").
 - `output_format` (optional, string): Audio output format - "mp3", "wav", or "ogg" (default: "mp3").
 - `subtitle_format` (optional, string): Subtitle format - "srt" or "vtt" (default: "srt").
 - `webhook_url` (optional, string, URI format): The URL to which the response should be sent as a webhook.
@@ -195,6 +195,8 @@ The main application context (`app.py`) also includes error handling for the tas
 - Exceeding the maximum queue length, which can lead to requests being rejected with a 429 Too Many Requests error.
 - Encountering unexpected errors during the speech generation process, which can result in a 500 Internal Server Error.
 
+**Note:** The API automatically converts string numbers to actual numbers for parameters like `speed`, so both `"speed": "1.2"` and `"speed": 1.2` are accepted and equivalent.
+
 ## 8. Best Practices
 
 - Validate text input to ensure it contains speakable content and is within reasonable length limits.
@@ -214,10 +216,26 @@ The main application context (`app.py`) also includes error handling for the tas
 
 Returns a list of available voices from all TTS providers.
 
-### List Available Engines
-**GET** `/v1/audio/speech/engines`
+**GET** `/v1/audio/speech/voices/{provider}`
 
-Returns a list of available TTS providers/engines.
+Returns a list of available voices for a specific TTS provider.
+
+**Supported providers:**
+- `kokoro` - Kokoro ONNX voices
+- `chatterbox` - Chatterbox TTS voices  
+- `openai-edge-tts` - OpenAI Edge TTS voices
+
+**Example:**
+```bash
+GET /v1/audio/speech/voices/kokoro
+GET /v1/audio/speech/voices/chatterbox
+GET /v1/audio/speech/voices/openai-edge-tts
+```
+
+### List Available Providers
+**GET** `/v1/audio/speech/providers`
+
+Returns a list of available TTS providers.
 
 ### Health Check
 **GET** `/v1/audio/speech/health`

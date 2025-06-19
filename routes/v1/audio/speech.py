@@ -19,7 +19,7 @@ from app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.authentication import authenticate
 from services.cloud_storage import upload_file
-from services.v1.audio.speech import generate_tts, list_voices, list_engines, check_tts_health
+from services.v1.audio.speech import generate_tts, list_voices, list_voices_by_provider, list_engines, check_tts_health
 import os
 
 v1_audio_speech_bp = Blueprint("v1_audio_speech", __name__)
@@ -115,6 +115,23 @@ def get_voices(job_id=None, data=None):
         logger.error(f"Error listing voices: {str(e)}")
         return str(e), "/v1/audio/speech/voices", 500
 
+@v1_audio_speech_bp.route("/v1/audio/speech/voices/<provider>", methods=["GET"])
+@queue_task_wrapper(bypass_queue=True)
+@authenticate
+def get_voices_by_provider(provider, job_id=None, data=None):
+    """List available voices for a specific TTS provider"""
+    try:
+        # Validate provider
+        valid_providers = ["kokoro", "chatterbox", "openai-edge-tts"]
+        if provider not in valid_providers:
+            return f"Invalid provider '{provider}'. Valid providers: {', '.join(valid_providers)}", "/v1/audio/speech/voices", 400
+        
+        voices = list_voices_by_provider(provider)
+        return {'voices': voices, 'provider': provider}, f"/v1/audio/speech/voices/{provider}", 200
+    except Exception as e:
+        logger.error(f"Error listing voices for provider {provider}: {str(e)}")
+        return str(e), f"/v1/audio/speech/voices/{provider}", 500
+
 @v1_audio_speech_bp.route("/v1/audio/speech/health", methods=["GET"])
 @queue_task_wrapper(bypass_queue=True)
 @authenticate
@@ -132,14 +149,14 @@ def health_check(job_id=None, data=None):
             'available': False
         }, "/v1/audio/speech/health", 500
 
-@v1_audio_speech_bp.route("/v1/audio/speech/engines", methods=["GET"])
+@v1_audio_speech_bp.route("/v1/audio/speech/providers", methods=["GET"])
 @queue_task_wrapper(bypass_queue=True)
 @authenticate
-def get_engines(job_id=None, data=None):
-    """List available TTS engines"""
+def get_providers(job_id=None, data=None):
+    """List available TTS providers"""
     try:
-        engines = list_engines()
-        return {'engines': engines}, "/v1/audio/speech/engines", 200
+        providers = list_engines()  # Keep using list_engines internally for now
+        return {'providers': providers}, "/v1/audio/speech/providers", 200
     except Exception as e:
-        logger.error(f"Error listing engines: {str(e)}")
-        return str(e), "/v1/audio/speech/engines", 500
+        logger.error(f"Error listing providers: {str(e)}")
+        return str(e), "/v1/audio/speech/providers", 500

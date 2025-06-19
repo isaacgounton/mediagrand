@@ -36,12 +36,20 @@ def upload_to_s3(file_path, s3_url, access_key, secret_key, bucket_name, region,
     client = session.client('s3', endpoint_url=s3_url)
 
     extra_args = {'ACL': 'public-read'}
+    
+    # If content_type is not provided, try to guess it from the file extension
+    if not content_type:
+        import mimetypes
+        content_type, _ = mimetypes.guess_type(file_path)
+    
+    # Set ContentType if we have one, otherwise use a sensible default
     if content_type:
         extra_args['ContentType'] = content_type
         logger.info(f"Uploading {file_path} to S3 with Content-Type: {content_type}")
     else:
-        logger.info(f"Uploading {file_path} to S3 (Content-Type not specified, S3 will guess or default)")
-
+        # Default fallback for unknown types
+        extra_args['ContentType'] = 'application/octet-stream'
+        logger.warning(f"Uploading {file_path} to S3 with default Content-Type: application/octet-stream")
 
     try:
         # Upload the file to the specified S3 bucket
