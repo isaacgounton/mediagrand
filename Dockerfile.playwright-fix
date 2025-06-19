@@ -1,4 +1,6 @@
 # ====================================================================
+# Alternative Dockerfile with Playwright Fix
+# ====================================================================
 # Stage 1: Python dependencies builder
 # ====================================================================
 FROM python:3.10-slim as python-builder
@@ -26,8 +28,7 @@ COPY requirements.txt .
 # Upgrade pip and install requirements with optimized flags
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt && \
-    playwright install chromium
+    pip install --no-cache-dir -r requirements.txt
 
 
 # ====================================================================
@@ -35,7 +36,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # ====================================================================
 FROM python:3.10-slim
 
-# Install runtime dependencies including FFmpeg and Playwright browser dependencies
+# Install runtime dependencies including FFmpeg and Playwright dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     # Core system libraries
@@ -66,19 +67,21 @@ RUN apt-get update && \
     libvdpau1 \
     # System utilities
     xdg-utils \
-    # Playwright browser dependencies (from working repo)
+    # Playwright browser dependencies
     libnss3 \
+    libnspr4 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libatspi2.0-0 \
     libxcomposite1 \
-    libxrandr2 \
     libxdamage1 \
+    libxrandr2 \
     libgbm1 \
+    libxss1 \
     libasound2 \
-    libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 \
-    libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove -y \
     && apt-get autoclean
@@ -90,8 +93,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Set working directory
 WORKDIR /app
 
-# Create appuser with minimal permissions (using -m flag like working repo)
-RUN useradd -m appuser
+# Create appuser with minimal permissions
+RUN useradd -r -s /bin/false -d /app appuser
 
 # Copy application code
 COPY . .
@@ -105,14 +108,16 @@ RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets && \
     chown -R appuser:appuser /app /tmp/assets /tmp/music && \
     chmod -R 777 /app/data
 
-# Install Playwright browsers as appuser to ensure proper permissions
+# Switch to appuser and install Playwright browsers
 USER appuser
-RUN playwright install --with-deps chromium
+
+# Install Playwright browsers as the app user
+RUN playwright install chromium
 
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
 
-# Create startup script for RQ workers and Gunicorn (simplified like working repo)
+# Create startup script for RQ workers and Gunicorn
 RUN echo '#!/bin/bash\n\
 \n\
 # Handle SIGTERM for graceful shutdown\n\
@@ -124,6 +129,15 @@ cleanup() {\n\
 }\n\
 \n\
 trap cleanup SIGTERM\n\
+\n\
+# Check Playwright browsers before starting services\n\
+echo "Checking Playwright browser installation..."\n\
+python3 scripts/check_playwright.py\n\
+if [ $? -ne 0 ]; then\n\
+    echo "Playwright browser check failed, attempting to install..."\n\
+    playwright install chromium\n\
+    echo "Playwright installation attempt completed."\n\
+fi\n\
 \n\
 # Array to store background process PIDs\n\
 declare -a pids\n\
@@ -153,7 +167,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEFAULT_BACKGROUND_VIDEO="/tmp/assets/placeholder.jpg" \
     DEFAULT_BACKGROUND_MUSIC="/tmp/music/default.wav" \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    PLAYWRIGHT_BROWSERS_PATH=/app/.cache/ms-playwright
 
 # Expose port
 EXPOSE 8080

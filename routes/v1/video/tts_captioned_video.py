@@ -68,6 +68,12 @@ logger = logging.getLogger(__name__)
             "maximum": 3.0,
             "description": "Speed of speech (default: 1.0)"
         },
+        "speech_speed": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 3.0,
+            "description": "Alias for speed parameter"
+        },
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
@@ -87,7 +93,8 @@ def generate_tts_captioned_video(job_id, data):
     height = int(data.get('height', 1920))
     provider = data.get('provider', 'openai-edge-tts')
     voice = data.get('voice', 'en-US-AriaNeural')
-    speed = data.get('speed', 1.0)
+    # Support both 'speed' and 'speech_speed' parameters
+    speed = data.get('speed') or data.get('speech_speed', 1.0)
     webhook_url = data.get('webhook_url')
     id = data.get('id')
 
@@ -175,6 +182,13 @@ def generate_tts_captioned_video_options():
                 "required": False,
                 "default": 1.0,
                 "description": "Speed of speech (0.1 to 3.0)",
+                "example": 1.2
+            },
+            "speech_speed": {
+                "type": "number",
+                "required": False,
+                "default": 1.0,
+                "description": "Alias for speed parameter (0.1 to 3.0)",
                 "example": 1.2
             },
             "webhook_url": {

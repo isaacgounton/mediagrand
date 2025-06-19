@@ -19,6 +19,17 @@ def check_playwright_browsers():
         # Try to import playwright
         from playwright.sync_api import sync_playwright
         
+        # Log current user and cache directory info
+        import os, pwd
+        current_user = pwd.getpwuid(os.getuid()).pw_name
+        home_dir = os.path.expanduser("~")
+        cache_dir = os.path.join(home_dir, ".cache", "ms-playwright")
+        
+        logger.info(f"Running as user: {current_user}")
+        logger.info(f"Home directory: {home_dir}")
+        logger.info(f"Playwright cache directory: {cache_dir}")
+        logger.info(f"Cache directory exists: {os.path.exists(cache_dir)}")
+        
         # Test if chromium is available
         with sync_playwright() as p:
             try:
@@ -28,6 +39,13 @@ def check_playwright_browsers():
                 return True
             except Exception as e:
                 logger.warning(f"Playwright Chromium browser test failed: {e}")
+                # List contents of cache directory for debugging
+                if os.path.exists(cache_dir):
+                    try:
+                        contents = os.listdir(cache_dir)
+                        logger.info(f"Playwright cache contents: {contents}")
+                    except Exception as list_err:
+                        logger.warning(f"Could not list cache directory: {list_err}")
                 return False
                 
     except ImportError as e:
