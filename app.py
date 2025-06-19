@@ -312,6 +312,8 @@ def create_app():
     from routes.v1.audio.speech import v1_audio_speech_bp
     from routes.v1.media.media_duration import v1_media_duration_bp
     from routes.v1.media.serve_files import v1_media_serve_files_bp
+    from routes.v1.image.convert.image_convert import v1_image_convert_bp
+    from routes.v1.audio.convert.audio_convert import v1_audio_convert_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -343,6 +345,8 @@ def create_app():
     app.register_blueprint(v1_audio_speech_bp)
     app.register_blueprint(v1_media_duration_bp)
     app.register_blueprint(v1_media_serve_files_bp)
+    app.register_blueprint(v1_image_convert_bp)
+    app.register_blueprint(v1_audio_convert_bp)
 
     # Add homepage route
     @app.route('/')
@@ -379,10 +383,12 @@ def create_app():
                     },
                     "audio": {
                         "concatenate": "/v1/audio/concatenate",
-                        "speech": "/v1/audio/speech"
+                        "speech": "/v1/audio/speech",
+                        "convert": "/v1/audio/convert"
                     },
                     "image": {
-                        "convert_to_video": "/v1/image/convert/video"
+                        "convert_to_video": "/v1/image/convert/video",
+                        "convert": "/v1/image/convert"
                     },
                     "toolkit": {
                         "test": "/v1/toolkit/test",
