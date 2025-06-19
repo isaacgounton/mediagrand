@@ -107,7 +107,7 @@ RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets && \
 
 # Install Playwright browsers as appuser to ensure proper permissions
 USER appuser
-RUN playwright install --with-deps chromium
+RUN playwright install chromium
 
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
