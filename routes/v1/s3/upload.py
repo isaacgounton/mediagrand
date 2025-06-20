@@ -42,7 +42,10 @@ def s3_upload_endpoint(job_id, data):
             
             logger.info(f"Job {job_id}: Starting S3 file upload for {file.filename}")
             
+            # Save current file position and reset after upload
+            current_pos = file.tell()
             result = stream_upload_to_s3(file, filename, make_public, is_url=False)
+            file.seek(current_pos)  # Reset file position
             
         # Check if a URL was provided in JSON data
         elif request.is_json and data.get('file_url'):

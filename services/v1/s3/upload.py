@@ -109,34 +109,79 @@ def stream_upload_to_s3(source, custom_filename=None, make_public=False, is_url=
         
         logger.info(f"Detected content type: {content_type} for file {filename}")
         
-        # Start a multipart upload
-        logger.info(f"Starting multipart upload for {filename} to bucket {bucket_name}")
-        acl = 'public-read' if make_public else 'private'
-        
-        multipart_upload = s3_client.create_multipart_upload(
-            Bucket=bucket_name,
-            Key=filename,
-            ACL=acl,
-            ContentType=content_type
-        )
-        
-        upload_id = multipart_upload['UploadId']
-        chunk_size = 5 * 1024 * 1024  # 5MB chunks (AWS minimum)
-        parts = []
-        part_number = 1
-        
+        # Check if content is empty (0 bytes)
+        is_empty = False
         if is_url:
-            # Stream from URL
-            response = requests.get(source, stream=True)
-            response.raise_for_status()
+            # For URLs, check Content-Length header
+            response = requests.head(source)
+            if int(response.headers.get('Content-Length', 1)) == 0:
+                is_empty = True
+        else:
+            # For files, check stream position
+            current_pos = source.tell()
+            source.seek(0, os.SEEK_END)
+            if source.tell() == 0:
+                is_empty = True
+            source.seek(current_pos)  # Reset position
+        
+        if is_empty:
+            # Handle empty content with simple put_object
+            logger.info(f"Uploading empty file {filename} with put_object")
+            s3_client.put_object(
+                Bucket=bucket_name,
+                Key=filename,
+                Body=b'',
+                ContentType=content_type,
+                ACL='public-read' if make_public else 'private'
+            )
+        else:
+            # Start a multipart upload for non-empty content
+            logger.info(f"Starting multipart upload for {filename} to bucket {bucket_name}")
+            acl = 'public-read' if make_public else 'private'
             
-            buffer = bytearray()
-            for chunk in response.iter_content(chunk_size=1024 * 1024):  # 1MB read chunks
-                buffer.extend(chunk)
+            multipart_upload = s3_client.create_multipart_upload(
+                Bucket=bucket_name,
+                Key=filename,
+                ACL=acl,
+                ContentType=content_type
+            )
+            
+            upload_id = multipart_upload['UploadId']
+            chunk_size = 5 * 1024 * 1024  # 5MB chunks (AWS minimum)
+            parts = []
+            part_number = 1
+            
+            if is_url:
+                # Stream from URL
+                response = requests.get(source, stream=True)
+                response.raise_for_status()
                 
-                # When we have enough data for a part, upload it
-                if len(buffer) >= chunk_size:
-                    logger.info(f"Uploading part {part_number}")
+                buffer = bytearray()
+                for chunk in response.iter_content(chunk_size=1024 * 1024):  # 1MB read chunks
+                    buffer.extend(chunk)
+                    
+                    # When we have enough data for a part, upload it
+                    if len(buffer) >= chunk_size:
+                        logger.info(f"Uploading part {part_number}")
+                        part = s3_client.upload_part(
+                            Bucket=bucket_name,
+                            Key=filename,
+                            PartNumber=part_number,
+                            UploadId=upload_id,
+                            Body=buffer
+                        )
+                        
+                        parts.append({
+                            'PartNumber': part_number,
+                            'ETag': part['ETag']
+                        })
+                        
+                        part_number += 1
+                        buffer = bytearray()
+                
+                # Upload any remaining data
+                if buffer:
+                    logger.info(f"Uploading final part {part_number}")
                     part = s3_client.upload_part(
                         Bucket=bucket_name,
                         Key=filename,
@@ -149,56 +194,37 @@ def stream_upload_to_s3(source, custom_filename=None, make_public=False, is_url=
                         'PartNumber': part_number,
                         'ETag': part['ETag']
                     })
+            else:
+                # Stream from file
+                while True:
+                    chunk = source.read(chunk_size)
+                    if not chunk:
+                        break
+                        
+                    logger.info(f"Uploading part {part_number}")
+                    part = s3_client.upload_part(
+                        Bucket=bucket_name,
+                        Key=filename,
+                        PartNumber=part_number,
+                        UploadId=upload_id,
+                        Body=chunk
+                    )
+                    
+                    parts.append({
+                        'PartNumber': part_number,
+                        'ETag': part['ETag']
+                    })
                     
                     part_number += 1
-                    buffer = bytearray()
             
-            # Upload any remaining data
-            if buffer:
-                logger.info(f"Uploading final part {part_number}")
-                part = s3_client.upload_part(
-                    Bucket=bucket_name,
-                    Key=filename,
-                    PartNumber=part_number,
-                    UploadId=upload_id,
-                    Body=buffer
-                )
-                
-                parts.append({
-                    'PartNumber': part_number,
-                    'ETag': part['ETag']
-                })
-        else:
-            # Stream from file
-            while True:
-                chunk = source.read(chunk_size)
-                if not chunk:
-                    break
-                    
-                logger.info(f"Uploading part {part_number}")
-                part = s3_client.upload_part(
-                    Bucket=bucket_name,
-                    Key=filename,
-                    PartNumber=part_number,
-                    UploadId=upload_id,
-                    Body=chunk
-                )
-                
-                parts.append({
-                    'PartNumber': part_number,
-                    'ETag': part['ETag']
-                })
-                
-                part_number += 1
-        
-        # Complete the multipart upload
-        logger.info("Completing multipart upload")
-        s3_client.complete_multipart_upload(
-            Bucket=bucket_name,
-            Key=filename,
-            UploadId=upload_id,
-            MultipartUpload={'Parts': parts}
-        )
+            # Complete the multipart upload
+            logger.info("Completing multipart upload")
+            s3_client.complete_multipart_upload(
+                Bucket=bucket_name,
+                Key=filename,
+                UploadId=upload_id,
+                MultipartUpload={'Parts': parts}
+            )
         
         # Generate the URL to the uploaded file
         if make_public:
