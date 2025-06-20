@@ -158,7 +158,8 @@ def download_media(job_id, data):
                     if any(msg in error_str.lower() for msg in [
                         "too many requests",
                         "sign in to confirm your age",
-                        "try signing in"
+                        "try signing in",
+                        "sign in to confirm you're not a bot"
                     ]):
                         cookies_path = data.get('cookies_path')
                         cookies_url = data.get('cookies_url')
