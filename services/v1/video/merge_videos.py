@@ -15,6 +15,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os
+# NOTE: This uses the ffmpeg-python package, which exposes ffmpeg.input, ffmpeg.output, etc.
+# Pylance may show errors, but these are valid for ffmpeg-python.
 import ffmpeg
 import logging
 from services.file_management import download_file
@@ -154,14 +156,26 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
         else:
             # Simple video merge without background music - same as concatenate
             logger.info(f"Job {job_id}: Merging videos without background music")
+            # Probe all input files to find the maximum duration
+            max_duration = 0
+            for input_file in input_files:
+                try:
+                    probe = ffmpeg.probe(input_file)
+                    duration = float(probe['format']['duration'])
+                    if duration > max_duration:
+                        max_duration = duration
+                except Exception as e:
+                    logger.warning(f"Could not probe duration for {input_file}: {e}")
+            # Merge videos and ensure output duration is at least the longest input
             (
                 ffmpeg.input(concat_file_path, format='concat', safe=0)
                 .output(output_path,
-                       vcodec='libx264',     # Re-encode video for smooth transitions
-                       acodec='aac',         # Re-encode audio for compatibility
-                       r=30,                 # Ensure consistent frame rate
-                       pix_fmt='yuv420p',    # Ensure consistent pixel format
-                       movflags='faststart'  # Optimize for streaming
+                        vcodec='libx264',
+                        acodec='aac',
+                        r=30,
+                        pix_fmt='yuv420p',
+                        movflags='faststart',
+                        t=max_duration  # Explicitly set output duration to max
                 ).run(overwrite_output=True)
             )
 
