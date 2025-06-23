@@ -51,7 +51,7 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
 
     try:
         # Only load the pre-downloaded model from cache (large-v3)
-        model_size = "large-v3"
+        model_size = "medium"
         model = whisper.load_model(model_size)
         logger.info(f"Using Whisper model: {model_size}")
 
