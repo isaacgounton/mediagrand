@@ -20,6 +20,7 @@ The `/v1/video/merge` endpoint is a part of the Video API and is responsible for
 The request body must be a JSON object with the following properties:
 
 - `video_urls` (required, array of strings): An array of video URLs to be merged. Each element must be a valid URI string.
+- `audio_url` (optional, string, URI format): The URL of a voice over audio file to overlay on the merged video.
 - `background_music_url` (optional, string, URI format): The URL of the background music file to be mixed with the merged video.
 - `background_music_volume` (optional, number): Volume level for background music between 0.0 and 1.0 (default: 0.5).
 - `webhook_url` (optional, string, URI format): The URL to which the response should be sent as a webhook.
@@ -40,8 +41,13 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
             "minItems": 1,
             "description": "List of video URLs to merge"
         },
+        "audio_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional voice over audio URL"
+        },
         "background_music_url": {
-            "type": "string", 
+            "type": "string",
             "format": "uri",
             "description": "Optional background music URL"
         },
@@ -69,6 +75,7 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
         "https://example.com/video2.mp4",
         "https://example.com/video3.mp4"
     ],
+    "audio_url": "https://example.com/voiceover.mp3",
     "background_music_url": "https://example.com/background.mp3",
     "background_music_volume": 0.3,
     "webhook_url": "https://example.com/webhook",
@@ -86,6 +93,7 @@ curl -X POST \
             "https://example.com/video2.mp4",
             "https://example.com/video3.mp4"
         ],
+        "audio_url": "https://example.com/voiceover.mp3",
         "background_music_url": "https://example.com/background.mp3",
         "background_music_volume": 0.3,
         "webhook_url": "https://example.com/webhook",
@@ -178,7 +186,8 @@ The main application context (`app.py`) also includes error handling for the tas
 - The video files to be merged must be accessible via the provided URLs.
 - The order of the video files in the `video_urls` array determines the order in which they will be merged.
 - All videos are normalized to match the dimensions and frame rate of the first video in the list.
-- Background music is mixed with the original audio tracks at the specified volume level.
+- Voice over audio (if provided) is overlaid on the merged video.
+- Background music is mixed with the original audio tracks and/or voice over at the specified volume level.
 - If the `webhook_url` parameter is provided, the response will be sent as a webhook to the specified URL.
 - The `id` parameter can be used to identify the request in the response.
 - Processing time depends on the number and size of videos being merged.

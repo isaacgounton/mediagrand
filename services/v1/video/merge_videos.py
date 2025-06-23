@@ -24,13 +24,20 @@ from config import LOCAL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 
-def process_video_merge(video_urls, background_music_url=None, background_music_volume=0.5, job_id=None):
+def process_video_merge(
+    video_urls,
+    audio_url=None,  # Optional voice over
+    background_music_url=None,
+    background_music_volume=0.5,
+    job_id=None
+):
     """
-    Merges multiple videos into one, optionally with background music.
+    Merges multiple videos into one, optionally with voice over and/or background music.
     Uses the same pattern as the working concatenate service.
     
     Args:
         video_urls: List of video URLs to merge
+        audio_url: Optional voice over audio URL
         background_music_url: Optional background music URL
         background_music_volume: Volume level for background music (0.0 to 1.0)
         job_id: Job identifier for tracking
@@ -59,6 +66,16 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                 input_files.append(input_filename)
                 downloaded_files.append(input_filename)
 
+        # Download voice over audio if provided
+        voice_file = None
+        if audio_url:
+            if os.path.isfile(audio_url):
+                voice_file = audio_url
+            else:
+                voice_file = download_file(audio_url, os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_voice"))
+                downloaded_files.append(voice_file)
+            logger.info(f"Job {job_id}: Voice over file: {voice_file}")
+
         # Download background music if provided
         music_file = None
         if background_music_url:
@@ -75,52 +92,64 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
             for input_file in input_files:
                 concat_file.write(f"file '{os.path.abspath(input_file)}'\n")
 
-        if music_file:
-            # Merge videos with background music
-            logger.info(f"Job {job_id}: Merging videos with background music")
-            
-            # First concatenate the videos
-            temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
-            
-            # Concatenate videos first - using same pattern as working concatenate service
-            (
-                ffmpeg.input(concat_file_path, format='concat', safe=0)
-                .output(temp_concat_path,
-                       vcodec='libx264',     # Re-encode video for smooth transitions
-                       acodec='aac',         # Re-encode audio for compatibility
-                       r=30,                 # Ensure consistent frame rate
-                       pix_fmt='yuv420p',    # Ensure consistent pixel format
-                       movflags='faststart'  # Optimize for streaming
-                ).run(overwrite_output=True)
-            )
-            
-            # Get video duration to ensure background music loops properly
-            try:
-                video_probe = ffmpeg.probe(temp_concat_path)
-                video_duration = float(video_probe['format']['duration'])
-                has_audio = any(stream['codec_type'] == 'audio' for stream in video_probe['streams'])
-            except:
-                has_audio = False
-                video_duration = None
-            
-            # Prepare video and music inputs
-            video_input = ffmpeg.input(temp_concat_path)
-            
-            # Loop the background music to match video duration
+        # Concatenate videos first
+        temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
+        (
+            ffmpeg.input(concat_file_path, format='concat', safe=0)
+            .output(temp_concat_path,
+                    vcodec='libx264',
+                    acodec='aac',
+                    r=30,
+                    pix_fmt='yuv420p',
+                    movflags='faststart'
+            ).run(overwrite_output=True)
+        )
+
+        # Get video duration for alignment
+        try:
+            video_probe = ffmpeg.probe(temp_concat_path)
+            video_duration = float(video_probe['format']['duration'])
+            has_audio = any(stream['codec_type'] == 'audio' for stream in video_probe['streams'])
+        except:
+            has_audio = False
+            video_duration = None
+
+        video_input = ffmpeg.input(temp_concat_path)
+
+        # Prepare audio streams
+        audio_streams = []
+        if has_audio:
+            audio_streams.append(video_input['a'])
+        if voice_file:
+            # Loop or trim voice over to match video duration
             if video_duration:
-                # Create looped music input that matches video duration
+                voice_input = ffmpeg.input(voice_file, t=video_duration)
+            else:
+                voice_input = ffmpeg.input(voice_file)
+            audio_streams.append(voice_input['a'])
+        if music_file:
+            if video_duration:
                 music_input = ffmpeg.input(music_file, stream_loop=-1, t=video_duration)
             else:
                 music_input = ffmpeg.input(music_file)
-            
-            if has_audio:
-                # Video has audio - mix it with background music
-                logger.info(f"Job {job_id}: Video has audio, mixing with background music (duration: {video_duration}s)")
+            audio_streams.append(music_input['a'])
+
+        # Mix audio streams if any, otherwise just use video
+        if audio_streams:
+            # If more than one audio stream, mix them
+            if len(audio_streams) > 1:
+                # Set weights: video/voice=1, music=background_music_volume
+                weights = []
+                for s in audio_streams:
+                    if music_file and s == audio_streams[-1]:
+                        weights.append(str(background_music_volume))
+                    else:
+                        weights.append("1")
+                mixed_audio = ffmpeg.filter(audio_streams, 'amix', inputs=len(audio_streams), duration='longest', weights=' '.join(weights))
                 (
                     ffmpeg.output(
                         video_input['v'],
-                        ffmpeg.filter([video_input['a'], music_input['a']], 'amix',
-                                     inputs=2, duration='longest', weights=f"1 {background_music_volume}"),
+                        mixed_audio,
                         output_path,
                         vcodec='libx264',
                         acodec='aac',
@@ -132,12 +161,11 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                     .run(overwrite_output=True)
                 )
             else:
-                # Video has no audio - just add background music as audio track
-                logger.info(f"Job {job_id}: Video has no audio, adding background music as audio track (duration: {video_duration}s)")
+                # Only one audio stream, just use it
                 (
                     ffmpeg.output(
                         video_input['v'],
-                        music_input['a'],
+                        audio_streams[0],
                         output_path,
                         vcodec='libx264',
                         acodec='aac',
@@ -148,36 +176,25 @@ def process_video_merge(video_urls, background_music_url=None, background_music_
                     )
                     .run(overwrite_output=True)
                 )
-            
-            # Clean up temp file
-            if os.path.exists(temp_concat_path):
-                os.remove(temp_concat_path)
-                
         else:
-            # Simple video merge without background music - same as concatenate
-            logger.info(f"Job {job_id}: Merging videos without background music")
-            # Probe all input files to find the maximum duration
-            max_duration = 0
-            for input_file in input_files:
-                try:
-                    probe = ffmpeg.probe(input_file)
-                    duration = float(probe['format']['duration'])
-                    if duration > max_duration:
-                        max_duration = duration
-                except Exception as e:
-                    logger.warning(f"Could not probe duration for {input_file}: {e}")
-            # Merge videos and ensure output duration is at least the longest input
+            # No audio, just output video
             (
-                ffmpeg.input(concat_file_path, format='concat', safe=0)
-                .output(output_path,
-                        vcodec='libx264',
-                        acodec='aac',
-                        r=30,
-                        pix_fmt='yuv420p',
-                        movflags='faststart',
-                        t=max_duration  # Explicitly set output duration to max
-                ).run(overwrite_output=True)
+                ffmpeg.output(
+                    video_input['v'],
+                    output_path,
+                    vcodec='libx264',
+                    acodec='aac',
+                    pix_fmt='yuv420p',
+                    preset='veryfast',
+                    crf=23,
+                    **{'b:a': '192k'}
+                )
+                .run(overwrite_output=True)
             )
+
+        # Clean up temp file
+        if os.path.exists(temp_concat_path):
+            os.remove(temp_concat_path)
 
         # Clean up downloaded files and concat list
         for f in downloaded_files:
