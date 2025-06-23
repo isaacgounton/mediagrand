@@ -50,23 +50,10 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
         should_cleanup_input = True  # We should clean up downloaded files
 
     try:
-        # Use larger model for better accuracy, especially for non-English languages
-        # Priority: large-v3 > large-v2 > large > medium > base
-        model_priorities = ["large-v3", "large-v2", "large", "medium", "base"]
-        model_size = "base"  # fallback
-        
-        for model_name in model_priorities:
-            try:
-                # Test if model is available
-                test_model = whisper.load_model(model_name)
-                model_size = model_name
-                logger.info(f"Using Whisper model: {model_size}")
-                break
-            except Exception as e:
-                logger.warning(f"Model {model_name} not available: {e}")
-                continue
-        
+        # Only load the pre-downloaded model from cache (large-v3)
+        model_size = "large-v3"
         model = whisper.load_model(model_size)
+        logger.info(f"Using Whisper model: {model_size}")
 
         # Enhanced options for better non-English accuracy
         options = {
@@ -83,9 +70,7 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
         if language:
             options["language"] = language
             logger.info(f"Language specified: {language}")
-        else:
-            # Auto-detect language but log the detection
-            logger.info("Auto-detecting language")
+        # No else needed, Whisper will auto-detect if not set
 
         # For larger models, use additional parameters for better quality
         if model_size in ["large", "large-v2", "large-v3"]:
