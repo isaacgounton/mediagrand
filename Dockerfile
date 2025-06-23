@@ -166,4 +166,6 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 CMD ["/app/run_services.sh"]
 
 # Pre-download the most accurate Whisper model (large-v3) at build time
-RUN python3 -c "import whisper; whisper.load_model('large-v3')"
+# Pre-download the most accurate Whisper model (large-v3) at build time using persistent Docker layers
+RUN --mount=type=cache,target=/root/.cache/whisper \
+    python3 -c "import whisper; whisper.load_model('large-v3')"
