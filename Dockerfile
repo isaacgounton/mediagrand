@@ -164,3 +164,6 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Run the application
 CMD ["/app/run_services.sh"]
+
+# Pre-download the most accurate Whisper model (large-v3) at build time
+RUN python3 -c "import whisper; whisper.load_model('large-v3')"
