@@ -28,18 +28,20 @@ def process_video_merge(
     video_urls,
     audio_url=None,  # Optional voice over
     background_music_url=None,
-    background_music_volume=0.5,
+    background_music_volume=0.3,  # Reduced default volume
+    crossfade_duration=0.5,  # Add crossfade parameter
     job_id=None
 ):
     """
     Merges multiple videos into one, optionally with voice over and/or background music.
-    Uses the same pattern as the working concatenate service.
+    Preserves original video audio and adds smooth transitions.
     
     Args:
         video_urls: List of video URLs to merge
         audio_url: Optional voice over audio URL
         background_music_url: Optional background music URL
         background_music_volume: Volume level for background music (0.0 to 1.0)
+        crossfade_duration: Duration of audio crossfade between videos (seconds)
         job_id: Job identifier for tracking
     
     Returns:
@@ -57,7 +59,7 @@ def process_video_merge(
     try:
         logger.info(f"Job {job_id}: Starting video merge for {len(video_urls)} videos")
 
-        # Download all video files - same pattern as concatenate
+        # Download all video files
         for i, video_url in enumerate(video_urls):
             if os.path.isfile(video_url):
                 input_files.append(video_url)
@@ -67,7 +69,9 @@ def process_video_merge(
                 downloaded_files.append(input_filename)
 
         # Verify all video files exist and get their durations
+        video_info = []
         total_video_duration = 0
+        
         for i, input_file in enumerate(input_files):
             if not os.path.exists(input_file):
                 raise FileNotFoundError(f"Input video file {i} does not exist: {input_file}")
@@ -75,10 +79,22 @@ def process_video_merge(
             try:
                 probe = ffmpeg.probe(input_file)
                 duration = float(probe['format']['duration'])
+                has_audio = any(stream['codec_type'] == 'audio' for stream in probe['streams'])
+                
+                video_info.append({
+                    'file': input_file,
+                    'duration': duration,
+                    'has_audio': has_audio
+                })
                 total_video_duration += duration
-                logger.info(f"Job {job_id}: Video {i} duration: {duration:.2f}s, file: {input_file}")
+                logger.info(f"Job {job_id}: Video {i} - Duration: {duration:.2f}s, Has audio: {has_audio}, File: {input_file}")
             except Exception as e:
-                logger.warning(f"Job {job_id}: Could not get duration for video {i}: {e}")
+                logger.warning(f"Job {job_id}: Could not get info for video {i}: {e}")
+                video_info.append({
+                    'file': input_file,
+                    'duration': 0,
+                    'has_audio': False
+                })
 
         logger.info(f"Job {job_id}: Total expected video duration: {total_video_duration:.2f}s")
 
@@ -112,41 +128,16 @@ def process_video_merge(
             else:
                 logger.info(f"Job {job_id}: Background music file: {music_file}")
 
-        # Create concat list file for video merging - use absolute paths and proper escaping
-        with open(concat_file_path, 'w', encoding='utf-8') as concat_file:
-            for input_file in input_files:
-                # Use absolute path and escape single quotes for FFmpeg
-                abs_path = os.path.abspath(input_file).replace("'", "'\"'\"'")
-                concat_file.write(f"file '{abs_path}'\n")
+        # Method 1: Create smooth concatenation with audio crossfades if multiple videos have audio
+        videos_with_audio = [v for v in video_info if v['has_audio']]
         
-        # Debug: Log concat file contents and input files
-        logger.info(f"Job {job_id}: Concat file created at {concat_file_path}")
-        with open(concat_file_path, 'r', encoding='utf-8') as f:
-            concat_lines = f.readlines()
-        logger.info(f"Job {job_id}: Concat file lines: {len(concat_lines)}; Input files: {len(input_files)}")
-        for idx, line in enumerate(concat_lines):
-            logger.info(f"Job {job_id}: Concat line {idx}: {line.strip()}")
-
-        # First, concatenate videos using concat demuxer with better options
-        temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
-        
-        logger.info(f"Job {job_id}: Starting video concatenation...")
-        try:
-            (
-                ffmpeg.input(concat_file_path, format='concat', safe=0)
-                .output(temp_concat_path,
-                        vcodec='libx264',
-                        acodec='aac',
-                        preset='medium',
-                        crf=23,
-                        pix_fmt='yuv420p',
-                        movflags='faststart',
-                        avoid_negative_ts='make_zero'
-                ).run(overwrite_output=True, quiet=False)
-            )
-        except ffmpeg.Error as e:
-            logger.error(f"Job {job_id}: FFmpeg concat error: {e.stderr.decode() if e.stderr else str(e)}")
-            raise
+        if len(videos_with_audio) > 1 and crossfade_duration > 0:
+            logger.info(f"Job {job_id}: Creating smooth audio transitions with {crossfade_duration}s crossfade")
+            temp_concat_path = create_smooth_concat(input_files, video_info, crossfade_duration, job_id)
+        else:
+            # Method 2: Standard concatenation
+            logger.info(f"Job {job_id}: Using standard concatenation")
+            temp_concat_path = create_standard_concat(input_files, concat_file_path, job_id)
 
         # Verify the concatenated video
         if not os.path.exists(temp_concat_path):
@@ -161,18 +152,18 @@ def process_video_merge(
         except Exception as e:
             logger.warning(f"Job {job_id}: Could not probe concatenated video: {e}")
             has_video_audio = False
-            video_duration = total_video_duration if total_video_duration > 0 else 60  # fallback
+            video_duration = total_video_duration if total_video_duration > 0 else 60
 
-        # Now handle audio mixing
+        # Now handle additional audio mixing (voice over and background music)
         video_input = ffmpeg.input(temp_concat_path)
-        
-        # Prepare all audio inputs with proper duration handling
         audio_inputs = []
         
-        # Add original video audio if it exists
+        # IMPORTANT: Always preserve original video audio if it exists
         if has_video_audio:
-            audio_inputs.append(video_input['a'])
-            logger.info(f"Job {job_id}: Added original video audio")
+            # Keep original video audio at full volume
+            original_audio = video_input['a']
+            audio_inputs.append(original_audio)
+            logger.info(f"Job {job_id}: Preserved original video audio")
 
         # Add voice over if provided
         if voice_file:
@@ -181,18 +172,15 @@ def process_video_merge(
                 voice_duration = float(voice_probe['format']['duration'])
                 logger.info(f"Job {job_id}: Voice duration: {voice_duration:.2f}s")
                 
-                # If voice is shorter than video, we might want to repeat it or pad it
                 if voice_duration < video_duration:
-                    # Option 1: Just use the voice as-is (it will end early)
                     voice_input = ffmpeg.input(voice_file)
-                    # Option 2: Loop the voice to match video duration
-                    # voice_input = ffmpeg.input(voice_file, stream_loop=-1, t=video_duration)
                 else:
-                    # Trim voice to match video duration
                     voice_input = ffmpeg.input(voice_file, t=video_duration)
                 
-                audio_inputs.append(voice_input['a'])
-                logger.info(f"Job {job_id}: Added voice over audio")
+                # Add voice at slightly reduced volume to not overpower original audio
+                voice_audio = ffmpeg.filter(voice_input['a'], 'volume', 0.8)
+                audio_inputs.append(voice_audio)
+                logger.info(f"Job {job_id}: Added voice over audio (volume: 0.8)")
             except Exception as e:
                 logger.error(f"Job {job_id}: Error processing voice file: {e}")
 
@@ -205,9 +193,14 @@ def process_video_merge(
                 
                 # Loop music to match video duration and apply volume
                 music_input = ffmpeg.input(music_file, stream_loop=-1, t=video_duration)
-                music_audio = ffmpeg.filter(music_input['a'], 'volume', background_music_volume)
+                # Add fade in/out to background music for smoother experience
+                music_audio = ffmpeg.filter(
+                    music_input['a'], 
+                    'volume', background_music_volume,
+                    eval='if(lt(t,2),t/2,if(gt(t,{}-2),({}-t)/2,1))'.format(video_duration, video_duration)
+                )
                 audio_inputs.append(music_audio)
-                logger.info(f"Job {job_id}: Added background music (volume: {background_music_volume})")
+                logger.info(f"Job {job_id}: Added background music with fade in/out (volume: {background_music_volume})")
             except Exception as e:
                 logger.error(f"Job {job_id}: Error processing music file: {e}")
 
@@ -215,14 +208,14 @@ def process_video_merge(
         logger.info(f"Job {job_id}: Creating final output with {len(audio_inputs)} audio streams...")
         
         if len(audio_inputs) == 0:
-            # No audio at all - just copy video
+            # No audio at all
             logger.info(f"Job {job_id}: No audio streams, copying video only")
             (
                 ffmpeg.output(
                     video_input['v'],
                     output_path,
-                    vcodec='copy',  # Copy video stream as-is since we just concatenated it
-                    an=None  # No audio
+                    vcodec='copy',
+                    an=None
                 )
                 .run(overwrite_output=True, quiet=False)
             )
@@ -234,21 +227,24 @@ def process_video_merge(
                     video_input['v'],
                     audio_inputs[0],
                     output_path,
-                    vcodec='copy',  # Copy video stream as-is
+                    vcodec='copy',
                     acodec='aac',
                     **{'b:a': '192k'}
                 )
                 .run(overwrite_output=True, quiet=False)
             )
         else:
-            # Multiple audio streams - mix them
+            # Multiple audio streams - mix them with proper weighting
             logger.info(f"Job {job_id}: Mixing {len(audio_inputs)} audio streams")
+            
+            # Use amix with custom weights to ensure original audio isn't drowned out
             mixed_audio = ffmpeg.filter(
                 audio_inputs, 
                 'amix', 
                 inputs=len(audio_inputs), 
                 duration='longest',
-                normalize=0  # Don't auto-normalize to prevent clipping
+                weights='1.0 0.7 0.3'[:len(audio_inputs)*4-1],  # Give more weight to original audio
+                normalize=0
             )
             
             (
@@ -256,9 +252,9 @@ def process_video_merge(
                     video_input['v'],
                     mixed_audio,
                     output_path,
-                    vcodec='copy',  # Copy video stream as-is
+                    vcodec='copy',
                     acodec='aac',
-                    **{'b:a': '192k'}
+                    **{'b:a': '256k'}  # Higher bitrate for better quality
                 )
                 .run(overwrite_output=True, quiet=False)
             )
@@ -276,28 +272,26 @@ def process_video_merge(
             final_probe = ffmpeg.probe(output_path)
             final_duration = float(final_probe['format']['duration'])
             final_has_audio = any(stream['codec_type'] == 'audio' for stream in final_probe['streams'])
-            logger.info(f"Job {job_id}: Final video duration: {final_duration:.2f}s, has audio: {final_has_audio}")
+            final_size = os.path.getsize(output_path) / (1024 * 1024)  # MB
+            logger.info(f"Job {job_id}: Final video - Duration: {final_duration:.2f}s, Has audio: {final_has_audio}, Size: {final_size:.1f}MB")
         except Exception as e:
             logger.warning(f"Job {job_id}: Could not probe final video: {e}")
 
         # Clean up downloaded files and concat list
-        for f in downloaded_files:
+        cleanup_files = downloaded_files + [concat_file_path]
+        for f in cleanup_files:
             if os.path.exists(f):
                 os.remove(f)
-        
-        if os.path.exists(concat_file_path):
-            os.remove(concat_file_path)
 
         logger.info(f"Job {job_id}: Video merge completed successfully: {output_path}")
         return output_path
 
     except ffmpeg.Error as e:
         # Clean up files on FFmpeg error
-        for f in downloaded_files:
+        cleanup_files = downloaded_files + [concat_file_path]
+        for f in cleanup_files:
             if os.path.exists(f):
                 os.remove(f)
-        if os.path.exists(concat_file_path):
-            os.remove(concat_file_path)
         
         error_message = f"FFmpeg error during merge: {e.stderr.decode() if e.stderr else str(e)}"
         logger.error(f"Job {job_id}: {error_message}")
@@ -305,11 +299,152 @@ def process_video_merge(
         
     except Exception as e:
         # Clean up files on general error
-        for f in downloaded_files:
+        cleanup_files = downloaded_files + [concat_file_path]
+        for f in cleanup_files:
             if os.path.exists(f):
                 os.remove(f)
-        if os.path.exists(concat_file_path):
-            os.remove(concat_file_path)
         
         logger.error(f"Job {job_id}: Video merge failed: {str(e)}")
         raise
+
+
+def create_smooth_concat(input_files, video_info, crossfade_duration, job_id):
+    """Create concatenated video with smooth audio crossfades between segments."""
+    temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
+    
+    try:
+        # Create complex filter for smooth audio transitions
+        inputs = [ffmpeg.input(f) for f in input_files]
+        
+        # Separate video and audio streams
+        video_streams = [inp['v'] for inp in inputs]
+        audio_streams = []
+        
+        current_time = 0
+        for i, (inp, info) in enumerate(zip(inputs, video_info)):
+            if info['has_audio']:
+                if i == 0:
+                    # First audio stream - no fade in needed
+                    if len(video_info) > 1 and crossfade_duration > 0:
+                        # Fade out at the end
+                        audio = ffmpeg.filter(
+                            inp['a'], 
+                            'afade', 
+                            type='out', 
+                            start_time=info['duration'] - crossfade_duration, 
+                            duration=crossfade_duration
+                        )
+                    else:
+                        audio = inp['a']
+                elif i == len(video_info) - 1:
+                    # Last audio stream - only fade in
+                    audio = ffmpeg.filter(
+                        inp['a'], 
+                        'afade', 
+                        type='in', 
+                        start_time=0, 
+                        duration=crossfade_duration
+                    )
+                else:
+                    # Middle audio streams - fade in and out
+                    audio = ffmpeg.filter(
+                        inp['a'], 
+                        'afade', 
+                        type='in', 
+                        start_time=0, 
+                        duration=crossfade_duration
+                    )
+                    audio = ffmpeg.filter(
+                        audio, 
+                        'afade', 
+                        type='out', 
+                        start_time=info['duration'] - crossfade_duration, 
+                        duration=crossfade_duration
+                    )
+                
+                # Add delay for proper synchronization
+                if current_time > 0:
+                    audio = ffmpeg.filter(audio, 'adelay', delays=f"{int(current_time * 1000)}")
+                
+                audio_streams.append(audio)
+            
+            current_time += info['duration']
+        
+        # Concatenate video streams
+        video_concat = ffmpeg.filter(video_streams, 'concat', n=len(video_streams), v=1, a=0)
+        
+        if audio_streams:
+            # Mix all audio streams
+            if len(audio_streams) == 1:
+                audio_concat = audio_streams[0]
+            else:
+                audio_concat = ffmpeg.filter(
+                    audio_streams, 
+                    'amix', 
+                    inputs=len(audio_streams), 
+                    duration='longest'
+                )
+            
+            # Output with both video and audio
+            (
+                ffmpeg.output(
+                    video_concat,
+                    audio_concat,
+                    temp_concat_path,
+                    vcodec='libx264',
+                    acodec='aac',
+                    preset='medium',
+                    crf=23,
+                    pix_fmt='yuv420p',
+                    movflags='faststart'
+                )
+                .run(overwrite_output=True, quiet=False)
+            )
+        else:
+            # Output video only
+            (
+                ffmpeg.output(
+                    video_concat,
+                    temp_concat_path,
+                    vcodec='libx264',
+                    preset='medium',
+                    crf=23,
+                    pix_fmt='yuv420p',
+                    movflags='faststart'
+                )
+                .run(overwrite_output=True, quiet=False)
+            )
+            
+        logger.info(f"Job {job_id}: Smooth concatenation completed")
+        return temp_concat_path
+        
+    except Exception as e:
+        logger.warning(f"Job {job_id}: Smooth concat failed, falling back to standard: {e}")
+        # Fall back to standard concatenation
+        concat_file_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_concat_list.txt")
+        return create_standard_concat(input_files, concat_file_path, job_id)
+
+
+def create_standard_concat(input_files, concat_file_path, job_id):
+    """Create concatenated video using standard concat demuxer."""
+    temp_concat_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_temp_concat.mp4")
+    
+    # Create concat list file - use absolute paths and proper escaping
+    with open(concat_file_path, 'w', encoding='utf-8') as concat_file:
+        for input_file in input_files:
+            abs_path = os.path.abspath(input_file).replace("'", "'\"'\"'")
+            concat_file.write(f"file '{abs_path}'\n")
+    
+    logger.info(f"Job {job_id}: Starting standard video concatenation...")
+    
+    # Use concat demuxer with stream copy to preserve quality and audio
+    (
+        ffmpeg.input(concat_file_path, format='concat', safe=0)
+        .output(temp_concat_path,
+                c='copy',  # Copy all streams without re-encoding
+                avoid_negative_ts='make_zero'
+        ).run(overwrite_output=True, quiet=False)
+    )
+    
+    logger.info(f"Job {job_id}: Standard concatenation completed")
+    return temp_concat_path
