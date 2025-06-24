@@ -26,19 +26,17 @@ logger = logging.getLogger(__name__)
 
 def process_video_merge(
     video_urls,
-    audio_url=None,  # Optional voice over
     background_music_url=None,
     background_music_volume=0.3,  # Reduced default volume
     crossfade_duration=0.5,  # Add crossfade parameter
     job_id=None
 ):
     """
-    Merges multiple videos into one, optionally with voice over and/or background music.
+    Merges multiple videos into one, optionally with background music.
     Preserves original video audio and adds smooth transitions.
     
     Args:
         video_urls: List of video URLs to merge
-        audio_url: Optional voice over audio URL
         background_music_url: Optional background music URL
         background_music_volume: Volume level for background music (0.0 to 1.0)
         crossfade_duration: Duration of audio crossfade between videos (seconds)
@@ -98,20 +96,6 @@ def process_video_merge(
 
         logger.info(f"Job {job_id}: Total expected video duration: {total_video_duration:.2f}s")
 
-        # Download voice over audio if provided
-        voice_file = None
-        if audio_url:
-            if os.path.isfile(audio_url):
-                voice_file = audio_url
-            else:
-                voice_file = download_file(audio_url, os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_voice"))
-                downloaded_files.append(voice_file)
-            
-            if not os.path.exists(voice_file):
-                logger.error(f"Job {job_id}: Voice file does not exist: {voice_file}")
-                voice_file = None
-            else:
-                logger.info(f"Job {job_id}: Voice over file: {voice_file}")
 
         # Download background music if provided
         music_file = None
@@ -165,24 +149,6 @@ def process_video_merge(
             audio_inputs.append(original_audio)
             logger.info(f"Job {job_id}: Preserved original video audio")
 
-        # Add voice over if provided
-        if voice_file:
-            try:
-                voice_probe = ffmpeg.probe(voice_file)
-                voice_duration = float(voice_probe['format']['duration'])
-                logger.info(f"Job {job_id}: Voice duration: {voice_duration:.2f}s")
-                
-                if voice_duration < video_duration:
-                    voice_input = ffmpeg.input(voice_file)
-                else:
-                    voice_input = ffmpeg.input(voice_file, t=video_duration)
-                
-                # Add voice at slightly reduced volume to not overpower original audio
-                voice_audio = ffmpeg.filter(voice_input['a'], 'volume', 0.8)
-                audio_inputs.append(voice_audio)
-                logger.info(f"Job {job_id}: Added voice over audio (volume: 0.8)")
-            except Exception as e:
-                logger.error(f"Job {job_id}: Error processing voice file: {e}")
 
         # Add background music if provided
         if music_file:

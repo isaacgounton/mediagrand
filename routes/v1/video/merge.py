@@ -38,11 +38,6 @@ logger = logging.getLogger(__name__)
             "minItems": 1,
             "description": "List of video URLs to merge"
         },
-        "audio_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "Optional voice over audio URL"
-        },
         "background_music_url": {
             "type": "string",
             "format": "uri",
