@@ -318,6 +318,7 @@ def create_app():
     from routes.v1.video.extract_frame import v1_video_extract_frame_bp
     from routes.v1.video.tts_captioned_video import v1_video_tts_captioned_bp
     from routes.v1.image.screenshot_webpage import v1_image_screenshot_webpage_bp
+    from routes.v1.video.merge_with_audio import v1_video_merge_with_audio_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -355,6 +356,7 @@ def create_app():
     app.register_blueprint(v1_video_extract_frame_bp)
     app.register_blueprint(v1_video_tts_captioned_bp)
     app.register_blueprint(v1_image_screenshot_webpage_bp)
+    app.register_blueprint(v1_video_merge_with_audio_bp)
 
     # Add homepage route
     @app.route('/')
