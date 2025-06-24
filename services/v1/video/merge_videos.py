@@ -194,10 +194,18 @@ def process_video_merge(
                 # Loop music to match video duration and apply volume
                 music_input = ffmpeg.input(music_file, stream_loop=-1, t=video_duration)
                 # Add fade in/out to background music for smoother experience
+                # Use afade for fade in/out instead of complex volume eval
                 music_audio = ffmpeg.filter(
-                    music_input['a'], 
-                    'volume', background_music_volume,
-                    eval='if(lt(t,2),t/2,if(gt(t,{}-2),({}-t)/2,1))'.format(video_duration, video_duration)
+                    music_input['a'],
+                    'afade', t='in', ss=0, d=2
+                )
+                music_audio = ffmpeg.filter(
+                    music_audio,
+                    'afade', t='out', st=max(0, video_duration-2), d=2
+                )
+                music_audio = ffmpeg.filter(
+                    music_audio,
+                    'volume', background_music_volume
                 )
                 audio_inputs.append(music_audio)
                 logger.info(f"Job {job_id}: Added background music with fade in/out (volume: {background_music_volume})")
