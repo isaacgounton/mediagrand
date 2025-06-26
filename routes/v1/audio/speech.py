@@ -58,6 +58,10 @@ def text_to_speech(job_id, data):
     model = data.get("model", "tts-1")
     voice = data.get("voice", "en-US-AvaNeural")  # Default voice if none provided
 
+    # Validate voice parameter
+    if not voice:
+        return "Missing required parameter: 'voice'", "/v1/audio/speech", 400
+
     # Handle both OpenAI 'response_format' and legacy 'output_format'
     output_format = data.get("response_format") or data.get("output_format", "mp3")
     subtitle_format = data.get("subtitle_format", "srt")
@@ -71,9 +75,14 @@ def text_to_speech(job_id, data):
 
     # Convert speed to rate if provided
     if speed and not rate:
-        rate_percent = int((speed - 1.0) * 100)
-        rate = f"{rate_percent:+d}%"
-        logger.info(f"Job {job_id}: Converted speed {speed} to rate {rate}")
+        try:
+            speed_float = float(speed)
+            rate_percent = int((speed_float - 1.0) * 100)
+            rate = f"{rate_percent:+d}%"
+            logger.info(f"Job {job_id}: Converted speed {speed} to rate {rate}")
+        except (ValueError, TypeError):
+            logger.warning(f"Job {job_id}: Invalid speed value {speed}, ignoring")
+            speed = None
 
     try:
         # Generate audio and subtitles using integrated edge-tts
@@ -115,7 +124,6 @@ def text_to_speech(job_id, data):
 def get_voices(job_id=None, data=None):
     """List available voices for text-to-speech with optional language filtering"""
     try:
-        from flask import request
         language = request.args.get('language')
         voices = list_voices_with_filter(language)
         return {'voices': voices}, "/v1/audio/speech/voices", 200
