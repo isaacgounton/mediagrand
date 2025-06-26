@@ -268,24 +268,21 @@ The main application context (`app.py`) also includes error handling for the tas
 
 This endpoint integrates with the `/v1/audio/speech` API for text-to-speech generation:
 
-- **Provider Compatibility**: Uses the same provider system (`kokoro`, `chatterbox`, `openai-edge-tts`)
-- **Voice Selection**: Supports the same voice IDs as the speech API
-- **Parameter Alignment**: `provider`, `voice`, and `speed` parameters work identically
-- **Voice Discovery**: Use `/v1/audio/speech/voices/{provider}` to discover available voices
+- **Provider Compatibility**: Uses the integrated edge-tts service
+- **Voice Selection**: Supports the same voice IDs as the speech API (both edge-tts and OpenAI-compatible names)
+- **Parameter Alignment**: `voice`, `rate`, and `speed` parameters work identically
+- **Voice Discovery**: Use `/v1/audio/speech/voices` to discover available voices
 
 ## 11. Related Endpoints
 
-### List Available Voices by Provider
-**GET** `/v1/audio/speech/voices/{provider}`
+### List Available Voices
 
-Returns available voices for a specific TTS provider.
+**GET** `/v1/audio/speech/voices`
+
+Returns available voices from the integrated edge-tts service.
 
 ### Speech Generation
+
 **POST** `/v1/audio/speech`
 
 Generate audio-only speech without video components.
-
-### List TTS Providers
-**GET** `/v1/audio/speech/providers`
-
-Returns available TTS providers and their capabilities.

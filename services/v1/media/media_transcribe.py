@@ -50,8 +50,8 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
         should_cleanup_input = True  # We should clean up downloaded files
 
     try:
-        # Only load the pre-downloaded model from cache (large-v3)
-        model_size = "medium"
+        # Use base model as preferred
+        model_size = "base"
         model = whisper.load_model(model_size)
         logger.info(f"Using Whisper model: {model_size}")
 
@@ -82,6 +82,8 @@ def process_transcribe_media(media_source, task, include_text, include_srt, incl
                 "suppress_tokens": "-1",  # Suppress less likely tokens
             })
             logger.info("Using enhanced accuracy settings for large model")
+        else:
+            logger.info("Using base model with standard settings")
 
         result = model.transcribe(input_filename, **options)
         

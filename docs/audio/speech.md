@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The `/v1/audio/speech` endpoint is a part of the Audio API and is responsible for converting text to speech using various TTS providers. This endpoint fits into the overall API structure as a part of the version 1 (v1) routes, specifically under the `/v1/audio` namespace. It integrates with the Awesome-TTS API gateway to support multiple TTS providers including Kokoro ONNX, Chatterbox TTS, and OpenAI Edge TTS.
+The `/v1/audio/speech` endpoint is a part of the Audio API and is responsible for converting text to speech using Microsoft Edge TTS. This endpoint fits into the overall API structure as a part of the version 1 (v1) routes, specifically under the `/v1/audio` namespace. It uses an integrated edge-tts implementation that provides high-quality text-to-speech generation with support for multiple languages and voices, including OpenAI-compatible voice names.
 
 ## 2. Endpoint
 
@@ -19,13 +19,18 @@ The `/v1/audio/speech` endpoint is a part of the Audio API and is responsible fo
 
 The request body must be a JSON object with the following properties:
 
-- `text` (required, string): The text to convert to speech.
-- `tts` (optional, string): TTS provider to use (alias for `provider`, kept for backward compatibility).
-- `provider` (optional, string): TTS provider to use: "kokoro", "chatterbox", or "openai-edge-tts" (default: "kokoro").
-- `voice` (optional, string): Voice ID to use (provider-specific).
-- `rate` (optional, string): Speech rate adjustment (e.g., "+50%", "-20%") - pattern: `^[+-]?\d+%?$|^\d*\.?\d+$`.
-- `volume` (optional, string): Volume adjustment (e.g., "+10%", "-5%") - pattern: `^[+-]?\d+%?$|^\d*\.?\d+$`.
-- `pitch` (optional, string): Pitch adjustment (e.g., "+50Hz", "-10Hz") - pattern: `^[+-]?\d+Hz?$|^\d*\.?\d+$`.
+- `model` (optional, string): The TTS model to use. Options: "tts-1" (standard quality) or "tts-1-hd" (high definition). Default: "tts-1".
+- `input` (required, string): The text to convert to speech (OpenAI standard parameter).
+- `voice` (required, string): Voice ID to use. Supports both edge-tts voice names (e.g., "en-US-AvaNeural") and OpenAI-compatible names (e.g., "alloy", "echo", "fable", "onyx", "nova", "shimmer").
+- `response_format` (optional, string): The audio format. Options: "mp3", "opus", "aac", "flac", "wav", "pcm". Default: "mp3".
+- `speed` (optional, number): Speech speed multiplier (0.5 to 2.0). Default: 1.0.
+
+**Legacy Parameters (for backward compatibility):**
+- `text` (string): Alternative to `input` parameter.
+- `output_format` (string): Alternative to `response_format` parameter.
+- `rate` (string): Speech rate adjustment (e.g., "+50%", "-20%").
+- `volume` (string): Volume adjustment (not supported by edge-tts, parameter ignored).
+- `pitch` (string): Pitch adjustment (not supported by edge-tts, parameter ignored).
 - `speed` (optional, number): Speed multiplier between 0.5 and 2.0 (alternative to rate). Can be provided as a number (1.2) or string ("1.2").
 - `output_format` (optional, string): Audio output format - "mp3", "wav", or "ogg" (default: "mp3").
 - `subtitle_format` (optional, string): Subtitle format - "srt" or "vtt" (default: "srt").
@@ -38,36 +43,59 @@ The `validate_payload` decorator in the routes file enforces the following JSON 
 {
     "type": "object",
     "properties": {
-        "tts": {"type": "string"},
-        "provider": {"type": "string"},
+        "model": {"type": "string", "enum": ["tts-1", "tts-1-hd"], "default": "tts-1"},
+        "input": {"type": "string"},
         "text": {"type": "string"},
         "voice": {"type": "string"},
+        "response_format": {"type": "string", "enum": ["mp3", "opus", "aac", "flac", "wav", "pcm"], "default": "mp3"},
+        "speed": {"type": "number", "minimum": 0.5, "maximum": 2.0, "default": 1.0},
         "rate": {"type": "string", "pattern": "^[+-]?\\d+%?$|^\\d*\\.?\\d+$"},
         "volume": {"type": "string", "pattern": "^[+-]?\\d+%?$|^\\d*\\.?\\d+$"},
         "pitch": {"type": "string", "pattern": "^[+-]?\\d+Hz?$|^\\d*\\.?\\d+$"},
-        "speed": {"type": "number", "minimum": 0.5, "maximum": 2.0},
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"},
         "output_format": {"type": "string", "enum": ["mp3", "wav", "ogg"], "default": "mp3"},
         "subtitle_format": {"type": "string", "enum": ["srt", "vtt"], "default": "srt"}
     },
-    "required": ["text"],
+    "required": [],
     "additionalProperties": false
 }
 ```
 
 ### Example Request
 
+**OpenAI-Compatible Request:**
 ```json
 {
-    "text": "Hello, this is a sample text for speech generation using Awesome-TTS.",
-    "provider": "kokoro",
-    "voice": "af_heart",
-    "speed": 1.2,
-    "output_format": "mp3",
-    "subtitle_format": "srt",
+    "model": "tts-1",
+    "input": "Hello, this is a sample text for speech generation.",
+    "voice": "alloy",
+    "response_format": "mp3",
+    "speed": 1.2
+}
+```
+
+**Using Edge-TTS Voice:**
+```json
+{
+    "model": "tts-1-hd",
+    "input": "Hello, this is a sample text for speech generation using integrated edge-tts.",
+    "voice": "en-US-AvaNeural",
+    "response_format": "wav",
+    "speed": 1.0,
     "webhook_url": "https://example.com/webhook",
     "id": "speech-request-123"
+}
+```
+
+**Legacy Format (backward compatibility):**
+```json
+{
+    "text": "Hello, this is a sample text for speech generation.",
+    "voice": "alloy",
+    "rate": "+20%",
+    "output_format": "wav",
+    "id": "speech-request-456"
 }
 ```
 
@@ -76,14 +104,11 @@ curl -X POST \
      -H "x-api-key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{
-        "text": "Hello, this is a sample text for speech generation using Awesome-TTS.",
-        "provider": "kokoro",
-        "voice": "af_heart",
-        "speed": 1.2,
-        "output_format": "mp3",
-        "subtitle_format": "srt",
-        "webhook_url": "https://example.com/webhook",
-        "id": "speech-request-123"
+        "model": "tts-1",
+        "input": "Hello, this is a sample text for speech generation.",
+        "voice": "alloy",
+        "response_format": "mp3",
+        "speed": 1.2
      }' \
      https://your-api-endpoint.com/v1/audio/speech
 ```
@@ -103,16 +128,15 @@ The success response follows the general response format defined in the `app.py`
     "response": {
         "audio_url": "https://cloud-storage.example.com/generated-speech.mp3",
         "subtitle_url": "https://cloud-storage.example.com/generated-subtitles.srt",
-        "engine": "kokoro",
-        "provider": "kokoro",
-        "voice": "af_heart",
+        "model": "tts-1",
+        "voice": "alloy",
         "format": "mp3"
     },
     "message": "success",
     "pid": 12345,
-    "run_time": 8.234,
-    "queue_time": 1.345,
-    "total_time": 9.579,
+    "run_time": 3.456,
+    "queue_time": 0.789,
+    "total_time": 4.245,
     "queue_length": 0,
     "build_number": "1.0.0"
 }
@@ -211,51 +235,84 @@ The main application context (`app.py`) also includes error handling for the tas
 
 ## 9. Related Endpoints
 
-### List Available Voices
-**GET** `/v1/audio/speech/voices`
+### List Available Models
 
-Returns a list of available voices from all TTS providers.
+**GET** `/v1/models`
 
-**GET** `/v1/audio/speech/voices/{provider}`
+Returns a list of available TTS models.
 
-Returns a list of available voices for a specific TTS provider.
-
-**Supported providers:**
-- `kokoro` - Kokoro ONNX voices
-- `chatterbox` - Chatterbox TTS voices  
-- `openai-edge-tts` - OpenAI Edge TTS voices
-
-**Example:**
-```bash
-GET /v1/audio/speech/voices/kokoro
-GET /v1/audio/speech/voices/chatterbox
-GET /v1/audio/speech/voices/openai-edge-tts
+**Example Response:**
+```json
+{
+    "data": [
+        {"id": "tts-1", "name": "Text-to-speech v1", "description": "Standard quality text-to-speech"},
+        {"id": "tts-1-hd", "name": "Text-to-speech v1 HD", "description": "High definition text-to-speech"}
+    ]
+}
 ```
 
-### List Available Providers
-**GET** `/v1/audio/speech/providers`
+### List Available Voices
 
-Returns a list of available TTS providers.
+**GET** `/v1/audio/speech/voices`
+
+Returns a list of available voices. Supports optional language filtering via query parameter.
+
+**Query Parameters:**
+- `language` (optional): Filter voices by language code (e.g., "en-US", "fr-FR", "es-ES")
+
+**GET** `/v1/audio/speech/voices/all`
+
+Returns all available voices without any filtering.
+
+**Examples:**
+```bash
+# Get all voices
+GET /v1/audio/speech/voices
+
+# Get voices for specific language
+GET /v1/audio/speech/voices?language=en-US
+
+# Get all voices (explicit)
+GET /v1/audio/speech/voices/all
+```
 
 ### Health Check
+
 **GET** `/v1/audio/speech/health`
 
-Checks the health status of the TTS service and returns availability information.
+Checks the health status of the integrated TTS service and returns availability information.
 
-## 10. Supported Providers
+## 10. Supported Voices
 
-| Provider | Description | Features |
-|----------|-------------|----------|
-| `kokoro` | Kokoro ONNX | High-quality neural TTS with multi-language support |
-| `chatterbox` | Chatterbox TTS | Voice cloning capabilities with reference audio |
-| `openai-edge-tts` | OpenAI Edge TTS | Microsoft Edge TTS backend with extensive voice catalog |
+The integrated edge-tts service supports a wide variety of voices across multiple languages. You can use either:
+
+### Edge-TTS Voice Names
+Direct voice IDs from Microsoft Edge TTS (e.g., "en-US-AvaNeural", "en-GB-SoniaNeural", "fr-FR-DeniseNeural")
+
+### OpenAI-Compatible Voice Names
+Simplified voice names that map to popular edge-tts voices:
+
+| OpenAI Name | Edge-TTS Voice | Description |
+|-------------|----------------|-------------|
+| `alloy` | en-US-AvaNeural | Clear, neutral American English voice |
+| `echo` | en-US-AndrewNeural | Deep, resonant American English voice |
+| `fable` | en-GB-SoniaNeural | British English voice with clear articulation |
+| `onyx` | en-US-EricNeural | Strong, confident American English voice |
+| `nova` | en-US-SteffanNeural | Warm, friendly American English voice |
+| `shimmer` | en-US-EmmaNeural | Bright, energetic American English voice |
 
 ## 11. Configuration
 
-The endpoint requires the following environment configuration:
+The endpoint uses an integrated edge-tts implementation and supports the following optional environment variables:
 
 ```env
-TTS_SERVER_URL=https://your-awesome-tts-server.com
+# TTS Configuration (all optional)
+TTS_DEFAULT_VOICE=en-US-AvaNeural
+TTS_DEFAULT_FORMAT=mp3
+TTS_DEFAULT_SPEED=1.0
+TTS_DEFAULT_LANGUAGE=en-US
+TTS_REMOVE_FILTER=false
+TTS_DETAILED_LOGGING=true
 ```
 
-This should point to your Awesome-TTS API gateway instance that provides the actual TTS functionality.
+No external TTS server configuration is required as the service is fully integrated.
