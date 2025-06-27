@@ -18,7 +18,7 @@ from .utils.transcriber import Transcriber
 from services.s3_toolkit import upload_to_s3 # Import S3 upload function
 
 
-def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str):
+def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, cookies_content: Optional[str] = None, cookies_url: Optional[str] = None):
     if gemma_api_key:
         print("GEMMA 7B API key found. Continuing execution...")
     else:
@@ -48,7 +48,7 @@ def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str):
 
         try:
             print("Downloading audio and video...")
-            downloads = Downloader(f"{url}")
+            downloads = Downloader(f"{url}", cookies_content, cookies_url)
             downloads.audio()
             downloads.video()
 

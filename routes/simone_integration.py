@@ -15,17 +15,19 @@ TESSERACT_CMD_PATH = os.environ.get("TESSERACT_CMD_PATH", "/usr/bin/tesseract")
 def process_video_endpoint(job_id, data):
     try:
         video_url = data.get('video_url')
+        cookies_content = data.get('cookies_content')
+        cookies_url = data.get('cookies_url')
         gemma_api_key = os.environ.get('GEMMA_API_KEY')
 
         if not video_url:
             return "Missing 'video_url' in request data", 400, "/v1/simone/process_video"
-        
+
         if not gemma_api_key:
             return "GEMMA_API_KEY not configured on server.", 500, "/v1/simone/process_video"
 
         logging.info(f"Processing video {video_url} for job {job_id}")
-        
-        result = process_video_to_blog(video_url, TESSERACT_CMD_PATH, gemma_api_key)
+
+        result = process_video_to_blog(video_url, TESSERACT_CMD_PATH, gemma_api_key, cookies_content, cookies_url)
 
         return jsonify(result), 200, "/v1/simone/process_video"
 

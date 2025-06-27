@@ -9,6 +9,7 @@ import uuid
 from services.cloud_storage import upload_file
 from services.authentication import authenticate
 from services.file_management import download_file
+from services.youtube_auth import YouTubeAuthenticator
 from urllib.parse import quote, urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import JSONFormatter
@@ -41,46 +42,42 @@ def validate_cookies_content(cookies_content):
     found_count = sum(1 for cookie in essential_cookies if cookie in cookies_content)
     return found_count >= 2
 
-def get_enhanced_ydl_opts(temp_dir, cookies_path=None, is_youtube=False):
-    """Get enhanced yt-dlp options with better bot detection avoidance"""
-    
-    # Base options with enhanced anti-detection
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
-        'quiet': True,
-        'no_warnings': True,
-        'nocheckcertificate': True,
-        'geo_bypass': True,
-        'extractor_retries': 5,  # Increased retries
-        'socket_timeout': 60,    # Longer timeout
-        'sleep_interval': 1,     # Sleep between requests
-        'max_sleep_interval': 5, # Max sleep interval
-    }
-    
+def get_enhanced_ydl_opts(temp_dir, cookies_path=None, is_youtube=False, auth_method='auto', cookies_content=None, cookies_url=None):
+    """Get enhanced yt-dlp options with better bot detection avoidance and authentication"""
+
     if is_youtube:
-        # YouTube-specific anti-detection measures
-        ydl_opts.update({
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Accept-Encoding': 'gzip,deflate',
-                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-            },
-            'sleep_interval_requests': 1,
-            'sleep_interval_subtitles': 1,
-        })
-    
-    if cookies_path and os.path.exists(cookies_path):
-        ydl_opts['cookiefile'] = cookies_path
-        
-    return ydl_opts
+        # Use the new YouTube authenticator for YouTube videos
+        auth = YouTubeAuthenticator()
+        ydl_opts = auth.get_enhanced_ydl_opts(temp_dir, auth_method, cookies_content, cookies_url)
+
+        # Override output template to match expected format
+        ydl_opts['outtmpl'] = os.path.join(temp_dir, '%(title)s.%(ext)s')
+
+        return ydl_opts
+    else:
+        # For non-YouTube videos, use the original logic
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'extractor_retries': 5,
+            'socket_timeout': 60,
+            'sleep_interval': 1,
+            'max_sleep_interval': 5,
+        }
+
+        if cookies_path and os.path.exists(cookies_path):
+            ydl_opts['cookiefile'] = cookies_path
+
+        return ydl_opts
 
 v1_media_download_bp = Blueprint('v1_media_download', __name__)
 logger = logging.getLogger(__name__)
+
+
 
 @v1_media_download_bp.route('/v1/BETA/media/download', methods=['POST'])
 @authenticate
@@ -90,9 +87,20 @@ logger = logging.getLogger(__name__)
         "media_url": {"type": "string", "format": "uri"},
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"},
-        "cookie": {
+        "cookies_content": {
             "type": "string",
-            "description": "Path to cookie file, URL to cookie file, or cookie string in Netscape format"
+            "description": "Raw cookie content in Netscape format"
+        },
+        "cookies_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to download cookies from"
+        },
+        "auth_method": {
+            "type": "string",
+            "enum": ["auto", "oauth2", "cookies_content", "cookies_url", "cookies_file"],
+            "default": "auto",
+            "description": "Authentication method to use for YouTube videos"
         },
         "cloud_upload": {
             "type": "boolean",
@@ -176,85 +184,18 @@ def download_media(job_id, data):
     subtitle_options = data.get('subtitles', {})
     download_options = data.get('download', {})
     transcript_options = data.get('transcript', {})
+    cookies_content = data.get('cookies_content')
+    cookies_url = data.get('cookies_url')
+    auth_method = data.get('auth_method', 'auto')
 
     is_youtube = video_id is not None
     logger.info(f"Job {job_id}: Received download request for {'YouTube video' if is_youtube else 'media'} {media_url}")
 
     transcript_data = None
-    cookies_path = None
-    
+
     try:
         # Create a temporary directory for downloads
         with tempfile.TemporaryDirectory() as temp_dir:
-            
-            # Handle cookie input (file path, URL, or direct string)
-            cookie_input = data.get('cookie')
-            if cookie_input:
-                # Case 1: Direct cookie string
-                if '\n' in cookie_input or '\t' in cookie_input:  # Netscape format indicators
-                    cookies_filename = f"cookies_{job_id}.txt"
-                    cookies_path = os.path.join(temp_dir, cookies_filename)
-                    with open(cookies_path, 'w') as f:
-                        f.write(cookie_input)
-                    
-                    # Validate cookies
-                    if not validate_cookies_content(cookie_input):
-                        logger.warning(f"Job {job_id}: Provided cookies may be insufficient for authentication")
-                
-                # Case 2: URL to cookie file
-                elif urlparse(cookie_input).scheme in ('http', 'https'):
-                    try:
-                        logger.info(f"Job {job_id}: Downloading cookies from URL {cookie_input}")
-                        
-                        # Download cookies with proper headers
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                        }
-                        response = requests.get(cookie_input, headers=headers, timeout=30)
-                        response.raise_for_status()
-                        
-                        # Save cookies to temp file
-                        cookies_filename = f"cookies_{job_id}.txt"
-                        cookies_path = os.path.join(temp_dir, cookies_filename)
-                        
-                        with open(cookies_path, 'w') as f:
-                            f.write(response.text)
-                            
-                        # Validate cookies
-                        if not validate_cookies_content(response.text):
-                            logger.warning(f"Job {job_id}: Downloaded cookies may be insufficient for authentication")
-                        
-                        logger.info(f"Job {job_id}: Successfully downloaded and saved cookies to {cookies_path}")
-                        
-                    except Exception as e:
-                        logger.error(f"Job {job_id}: Failed to download cookies from URL: {str(e)}")
-                        return {
-                            "error": f"Failed to download cookies from URL: {str(e)}",
-                            "solution": "Ensure the cookie URL is accessible and contains valid cookies"
-                        }, "/v1/media/download", 400
-                
-                # Case 3: File path
-                elif os.path.isfile(cookie_input):
-                    cookies_path = cookie_input
-                    try:
-                        # Validate cookies
-                        with open(cookies_path, 'r') as f:
-                            content = f.read()
-                        if not validate_cookies_content(content):
-                            logger.warning(f"Job {job_id}: Cookies file may be insufficient for authentication")
-                    except Exception as e:
-                        logger.error(f"Job {job_id}: Error reading cookies file: {str(e)}")
-                        return {
-                            "error": f"Error reading cookies file: {str(e)}",
-                            "solution": "Check the cookies file path and permissions"
-                        }, "/v1/media/download", 400
-                else:
-                    logger.warning(f"Job {job_id}: Invalid cookie input format: {cookie_input}")
-                    return {
-                        "error": "Invalid cookie input format",
-                        "solution": "Provide cookie as Netscape format string, URL, or file path"
-                    }, "/v1/media/download", 400
-
             # Handle transcript request for YouTube videos
             if is_youtube and transcript_options:
                 try:
@@ -319,30 +260,46 @@ def download_media(job_id, data):
             # Multiple download attempts with different strategies
             download_success = False
             last_error = None
-            
-            strategies = [
-                ("basic", False),  # Try without cookies first
-                ("with_cookies", True),  # Then with cookies
-                ("fallback", True)  # Final attempt with different options
-            ]
-            
-            for strategy_name, use_cookies in strategies:
+
+            # Enhanced strategies with authentication methods for YouTube
+            if is_youtube:
+                # Use user-specified auth method or fallback strategies
+                if auth_method != 'auto':
+                    strategies = [(auth_method, auth_method)]
+                else:
+                    # Auto mode: try methods based on what's available
+                    strategies = []
+                    if cookies_content:
+                        strategies.append(("cookies_content", 'cookies_content'))
+                    if cookies_url:
+                        strategies.append(("cookies_url", 'cookies_url'))
+                    strategies.extend([
+                        ("oauth2", 'oauth2'),
+                        ("cookies_file", 'cookies_file'),
+                        ("basic", None)  # Fallback without auth
+                    ])
+            else:
+                strategies = [
+                    ("basic", None),  # Non-YouTube videos
+                ]
+
+            for strategy_name, strategy_auth_method in strategies:
                 if download_success:
                     break
-                    
+
                 logger.info(f"Job {job_id}: Attempting download with strategy: {strategy_name}")
-                
+
                 try:
                     # Add random delay between attempts
                     if strategy_name != "basic":
                         time.sleep(random.uniform(2, 5))
-                    
-                    # Get enhanced options
-                    ydl_opts = get_enhanced_ydl_opts(
-                        temp_dir, 
-                        cookies_path if use_cookies and cookies_path else None,
-                        is_youtube
-                    )
+
+                    # Get enhanced options with authentication
+                    if is_youtube and strategy_auth_method:
+                        ydl_opts = get_enhanced_ydl_opts(temp_dir, None, is_youtube, strategy_auth_method, cookies_content, cookies_url)
+                    else:
+                        # For non-YouTube or basic strategy
+                        ydl_opts = get_enhanced_ydl_opts(temp_dir, None, is_youtube)
                     
                     # Apply format options
                     if format_options:

@@ -13,7 +13,7 @@ Downloads media from URLs with support for YouTube-specific features like transc
 ```json
 {
     "media_url": "https://www.youtube.com/watch?v=...",
-    "cookies_path": "/path/to/cookies.txt",  // Optional: Local path to cookies file for age-restricted videos
+    "cookies_content": "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t...",  // Optional: Netscape format cookies for age-restricted videos
     "cookies_url": "https://example.com/cookies.txt",  // Optional: URL to cookies file for age-restricted videos
     "transcript": {  // Optional: For YouTube videos only
         "languages": ["en", "es"],  // Language preference order
@@ -108,12 +108,68 @@ Downloads media from URLs with support for YouTube-specific features like transc
 }
 ```
 
+---
+
+### Media Download Endpoint
+
+The media download endpoint now supports multiple authentication methods:
+
+```bash
+# With authentication method selection
+curl -X POST https://your-domain.com/v1/BETA/media/download \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: YOUR_API_KEY' \
+  -d '{
+    "media_url": "https://www.youtube.com/watch?v=VIDEO_ID",
+    "auth_method": "oauth2"
+  }'
+
+# With cookies content
+curl -X POST https://your-domain.com/v1/BETA/media/download \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: YOUR_API_KEY' \
+  -d '{
+    "media_url": "https://www.youtube.com/watch?v=VIDEO_ID",
+    "cookies_content": "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t..."
+  }'
+
+# With cookies URL
+curl -X POST https://your-domain.com/v1/BETA/media/download \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: YOUR_API_KEY' \
+  -d '{
+    "media_url": "https://www.youtube.com/watch?v=VIDEO_ID",
+    "cookies_url": "https://your-secure-url.com/youtube_cookies.txt"
+  }'
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Sign in to confirm you're not a bot"**
+   - Solution: Use OAuth2 authentication
+   - Fallback: Export fresh cookies from browser
+
+2. **OAuth2 plugin not found**
+   - Ensure `yt-dlp-youtube-oauth2` is in requirements.txt
+   - Run the installation script manually
+
+3. **Cookies not working**
+   - Ensure cookies are in Netscape format
+   - Check that cookies contain essential YouTube authentication cookies
+   - Try exporting fresh cookies from browser
+
+### Logs
+
+(See <attachments> above for file contents. You may not need to search or read the file again.)
+
 ## Cookie Authentication
 
 For age-restricted or private videos, the endpoint will first try to access the content without authentication. If that fails, it will use the provided cookies file.
 
 You can provide cookies in two ways:
-1. `cookies_path`: A local path to a cookies file
+1. `cookies_content`: Netscape format cookies for age-restricted videos
 2. `cookies_url`: A URL to a cookies file that will be downloaded automatically
 
 You can obtain YouTube cookies using:
@@ -135,7 +191,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "Age-restricted or private video requires authentication",
-    "solution": "Please provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
+    "solution": "Please provide a cookies_content parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
 }
 ```
 
@@ -143,7 +199,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "YouTube is requesting verification",
-    "solution": "Please provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
+    "solution": "Please provide a cookies_content parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file..."
 }
 ```
 
@@ -151,7 +207,7 @@ The API handles various errors with clear messages:
 ```json
 {
     "error": "This is a private video",
-    "solution": "If you have access to this video, provide a cookies_path parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file."
+    "solution": "If you have access to this video, provide a cookies_content parameter with valid YouTube cookies or a cookies_url parameter with a URL to a valid cookies file."
 }
 ```
 
