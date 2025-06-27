@@ -13,6 +13,8 @@ RUN apt-get update && \
     libssl-dev \
     libffi-dev \
     ffmpeg \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up virtual environment for better dependency isolation
@@ -79,6 +81,8 @@ RUN apt-get update && \
     libpangocairo-1.0-0 \
     libpangoft2-1.0-0 \
     libgtk-3-0 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get autoremove -y \
     && apt-get autoclean
