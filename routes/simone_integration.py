@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.simone.processor import process_video_to_blog
+from services.simone.processor import process_video_to_blog
 from app import task_queue, queue_task
 import os
 import logging
