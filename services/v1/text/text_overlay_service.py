@@ -151,7 +151,7 @@ class TextOverlayService:
             f"boxborderw=35:"
             f"line_spacing=14:"
             f"{position_coords}:"
-            f"enable='lt(t,{duration})'"
+            f"enable=lt(t,{duration})" # Removed single quotes around the expression
         )
         
         # Generate unique ID for output file
