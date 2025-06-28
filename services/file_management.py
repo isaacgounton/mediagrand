@@ -106,21 +106,44 @@ def validate_cookie_file(file_path):
 
 def download_file(url, storage_path="/tmp/", is_cookie=False):
     """Download a file from URL to local storage."""
+    logger = logging.getLogger(__name__)
+    logger.info(f"Downloading file from URL: {url}")
+
     # Create storage directory if it doesn't exist
     os.makedirs(storage_path, exist_ok=True)
-    
+
     file_id = str(uuid.uuid4())
     extension = get_extension_from_url(url, is_cookie)
     local_filename = os.path.join(storage_path, f"{file_id}{extension}")
+    logger.info(f"Target local filename: {local_filename}")
 
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
 
+        # Track file size for validation
+        total_size = 0
         with open(local_filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
+                    total_size += len(chunk)
+
+        # Validate file size - if it's very small, it might be an error response
+        logger.info(f"Downloaded file size: {total_size} bytes")
+        if total_size < 1024 and not is_cookie:  # Less than 1KB for non-cookie files
+            logger.warning(f"Downloaded file is very small ({total_size} bytes), checking for error content")
+            # Read the content to check if it's an error message
+            try:
+                with open(local_filename, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    logger.debug(f"Small file content: {content}")
+                    if any(error_word in content.lower() for error_word in ['error', 'not found', 'forbidden', 'unauthorized']):
+                        os.remove(local_filename)
+                        raise Exception(f"Download failed - received error response ({total_size} bytes): {content}")
+            except UnicodeDecodeError:
+                logger.debug("Small file is binary, assuming it's valid")
+                pass  # If it's not text, it might be a valid small binary file
 
         # Validate cookie file format if it's supposed to be a cookie file
         if is_cookie:
@@ -143,6 +166,7 @@ def download_file(url, storage_path="/tmp/", is_cookie=False):
             else:
                 logger.info(f"Valid cookie file format confirmed: {local_filename}")
 
+        logger.info(f"File download completed successfully: {local_filename}")
         return local_filename
     except Exception as e:
         if os.path.exists(local_filename):

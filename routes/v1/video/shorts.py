@@ -150,7 +150,10 @@ def create_shorts(job_id, data):
         # Call the advanced download function
         # The queue_task_wrapper returns (result, status_code) when called directly
         result = download_media(f"{job_id}_download", download_data)
-        
+
+        # Debug: Log the raw result
+        logger.debug(f"Job {job_id}: Raw download_media result: {result}")
+
         # Unpack the result based on its length
         if len(result) == 3:
             download_result, _, status_code = result
@@ -159,18 +162,60 @@ def create_shorts(job_id, data):
         else:
             raise Exception(f"Unexpected result format from download_media: {result}")
 
+        # Debug: Log the unpacked result
+        logger.info(f"Job {job_id}: Download result status: {status_code}, result type: {type(download_result)}")
+
         if status_code != 200:
             # download_result is a dictionary when there's an error
             error_msg = download_result.get('error', 'Unknown error') if isinstance(download_result, dict) else str(download_result)
             raise Exception(f"Video download failed: {error_msg}")
 
+        # Handle the response structure - download_result might be wrapped in array format
+        actual_response = download_result
+        if isinstance(download_result, list) and len(download_result) > 0:
+            # Response is in array format like the example
+            actual_response = download_result[0].get("response", {})
+            logger.info(f"Job {job_id}: Extracted response from array format")
+        elif isinstance(download_result, dict) and "response" in download_result:
+            # Response might be wrapped in a response key
+            actual_response = download_result["response"]
+            logger.info(f"Job {job_id}: Extracted response from response key")
+
+        # Validate the response structure
+        if not isinstance(actual_response, dict):
+            logger.error(f"Job {job_id}: Invalid response format. Full result: {download_result}")
+            raise Exception(f"Video download failed: Invalid response format - expected dict, got {type(actual_response)}")
+
+        if "media" not in actual_response:
+            logger.error(f"Job {job_id}: Download response missing 'media' key. Response: {actual_response}")
+            raise Exception(f"Video download failed: Response missing 'media' key")
+
+        if "media_url" not in actual_response["media"]:
+            logger.error(f"Job {job_id}: Download response missing 'media_url' key. Media object: {actual_response['media']}")
+            raise Exception(f"Video download failed: Response missing 'media_url' key")
+
         # Extract the downloaded video URL from cloud storage
-        downloaded_video_url = download_result["media"]["media_url"]
+        downloaded_video_url = actual_response["media"]["media_url"]
         logger.info(f"Job {job_id}: Video downloaded and uploaded to cloud storage: {downloaded_video_url}")
+
+        # Validate the cloud storage URL before attempting download
+        if not downloaded_video_url or not downloaded_video_url.startswith(('http://', 'https://')):
+            raise Exception(f"Invalid cloud storage URL: {downloaded_video_url}")
+
+        # Test the cloud storage URL accessibility
+        import requests
+        try:
+            head_response = requests.head(downloaded_video_url, timeout=10)
+            logger.info(f"Job {job_id}: Cloud storage URL HEAD response: {head_response.status_code}, Content-Length: {head_response.headers.get('Content-Length', 'Unknown')}")
+            if head_response.status_code != 200:
+                raise Exception(f"Cloud storage URL not accessible: HTTP {head_response.status_code}")
+        except Exception as e:
+            logger.error(f"Job {job_id}: Failed to access cloud storage URL: {e}")
+            raise Exception(f"Cloud storage URL validation failed: {e}")
 
         # Download the video locally for processing
         from services.file_management import download_file
-        downloaded_video_path = download_file(downloaded_video_url, os.path.join(temp_dir, f"{job_id}_video.mp4"))
+        downloaded_video_path = download_file(downloaded_video_url, temp_dir)
         logger.info(f"Job {job_id}: Video downloaded locally to {downloaded_video_path}")
 
         # Step 2: Generate script if not provided
@@ -215,8 +260,8 @@ def create_shorts(job_id, data):
 
             # Use video metadata as context if no context is provided
             user_context = data.get('context', '')
-            if not user_context and download_result.get("media"):
-                video_metadata = download_result["media"]
+            if not user_context and actual_response.get("media"):
+                video_metadata = actual_response["media"]
                 metadata_context = f"""Video Information:
 Title: {video_metadata.get('title', 'Unknown')}
 Uploader: {video_metadata.get('uploader', 'Unknown')}

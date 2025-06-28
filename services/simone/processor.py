@@ -65,6 +65,34 @@ def process_video_to_blog(url: str, tesseract_path: str, platform: Optional[str]
             if video_status != 200:
                 raise Exception(f"Video download failed: {video_result.get('error', 'Unknown error')}")
 
+            # Parse video result structure (handle array format)
+            if isinstance(video_result, list) and len(video_result) > 0:
+                video_response = video_result[0].get("response", {})
+            elif isinstance(video_result, dict) and "response" in video_result:
+                video_response = video_result["response"]
+            else:
+                video_response = video_result
+
+            if not isinstance(video_response, dict) or "media" not in video_response:
+                raise Exception(f"Invalid video download response structure: {video_result}")
+
+            video_media = video_response["media"]
+            if not isinstance(video_media, dict) or "media_url" not in video_media:
+                raise Exception(f"Invalid video media structure: {video_media}")
+
+            video_url = video_media["media_url"]
+            print(f"Video URL obtained: {video_url}")
+
+            # Download video file locally
+            import requests
+            print("Downloading video file locally...")
+            video_response_req = requests.get(video_url, stream=True)
+            video_response_req.raise_for_status()
+            with open("video.mp4", "wb") as f:
+                for chunk in video_response_req.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
             # Prepare download request data for audio
             audio_download_data = {
                 "media_url": url,
@@ -79,6 +107,33 @@ def process_video_to_blog(url: str, tesseract_path: str, platform: Optional[str]
             audio_result, audio_status = download_media("simone_audio", audio_download_data)
             if audio_status != 200:
                 raise Exception(f"Audio download failed: {audio_result.get('error', 'Unknown error')}")
+
+            # Parse audio result structure (handle array format)
+            if isinstance(audio_result, list) and len(audio_result) > 0:
+                audio_response = audio_result[0].get("response", {})
+            elif isinstance(audio_result, dict) and "response" in audio_result:
+                audio_response = audio_result["response"]
+            else:
+                audio_response = audio_result
+
+            if not isinstance(audio_response, dict) or "media" not in audio_response:
+                raise Exception(f"Invalid audio download response structure: {audio_result}")
+
+            audio_media = audio_response["media"]
+            if not isinstance(audio_media, dict) or "media_url" not in audio_media:
+                raise Exception(f"Invalid audio media structure: {audio_media}")
+
+            audio_url = audio_media["media_url"]
+            print(f"Audio URL obtained: {audio_url}")
+
+            # Download audio file locally
+            print("Downloading audio file locally...")
+            audio_response_req = requests.get(audio_url, stream=True)
+            audio_response_req.raise_for_status()
+            with open("audio.mp4", "wb") as f:
+                for chunk in audio_response_req.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
 
             print("Audio and video downloaded successfully using advanced download service")
 
