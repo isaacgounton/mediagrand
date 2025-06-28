@@ -11,6 +11,7 @@ This endpoint allows you to convert a YouTube video into a blog post with contex
 | Parameter     | Type   | Description                                   | Required |
 | :------------ | :----- | :-------------------------------------------- | :------- |
 | `video_url`   | `string` | The URL of the YouTube video to process.      | Yes      |
+| `platform`    | `string` | Optional. The social media platform for which to generate content. Supported: `linkedin`, `facebook`, `instagram`, `x`. | No      |
 
 ## Response
 
@@ -18,14 +19,28 @@ The response will be a JSON object containing the generated blog post content an
 
 ```json
 {
-  "blog_post": "...",
+  "blog_post_content": "...",
+  "blog_post_url": "...",
   "screenshots": [
     "/path/to/screenshot_0.png",
     "/path/to/screenshot_1.png",
     "...etc"
-  ]
+  ],
+  "social_media_post_content": "..."
 }
 ```
+
+## Social Media Content Generation
+
+In addition to the blog post, you can generate content tailored for various social media platforms by providing the `platform` parameter in the request.
+
+Supported platforms include:
+*   `linkedin`: Generates a professional post suitable for LinkedIn.
+*   `facebook`: Generates a conversational and engaging post for Facebook.
+*   `instagram`: Generates a concise and visually appealing caption for Instagram.
+*   `x`: Generates a concise and impactful tweet (X post).
+
+If no `platform` is specified, only the blog post and screenshots will be generated.
 
 ## Example Usage
 
@@ -34,7 +49,8 @@ curl -X POST \
   http://localhost:8080/v1/simone/process_video \
   -H 'Content-Type: application/json' \
   -d '{
-    "video_url": "YOUR_YOUTUBE_VIDEO_URL_HERE"
+    "video_url": "YOUR_YOUTUBE_VIDEO_URL_HERE",
+    "platform": "linkedin"
   }'
 ```
 
