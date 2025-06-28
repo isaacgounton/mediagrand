@@ -360,10 +360,10 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
                 job_id=segment_job_id
             )
 
-            # Download merged video locally for captioning
+            # Copy merged video locally for captioning
             merged_segment_local_path = os.path.join(temp_dir, f"{segment_job_id}_merged.mp4")
-            from services.file_management import download_file
-            download_file(merged_segment_path_from_service, merged_segment_local_path)
+            import shutil
+            shutil.copy2(merged_segment_path_from_service, merged_segment_local_path)
 
             # Step 5: Add captions to segment (if enabled)
             if add_captions and segment_subtitle_path:
