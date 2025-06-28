@@ -154,3 +154,34 @@ def merge_video_with_audio(video_path, audio_path, output_path):
     except Exception as e:
         print(f"Error merging video and audio: {str(e)}")
         raise
+
+def clip_video(input_path, output_path, start_time, end_time):
+    """
+    Extract a clip from a video file between start_time and end_time.
+
+    Args:
+        input_path (str): Path to the input video file
+        output_path (str): Path where the clipped video will be saved
+        start_time (float): Start time in seconds
+        end_time (float): End time in seconds
+
+    Returns:
+        str: Path to the clipped video file
+    """
+    try:
+        duration = end_time - start_time
+        (
+            ffmpeg
+            .input(input_path, ss=start_time, t=duration)
+            .output(output_path, c='copy')
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        print(f"Video clipped successfully from {start_time}s to {end_time}s: {output_path}")
+        return output_path
+    except ffmpeg.Error as e:
+        print(f"FFmpeg error clipping video: {e.stderr.decode('utf8')}")
+        raise
+    except Exception as e:
+        print(f"Error clipping video: {str(e)}")
+        raise

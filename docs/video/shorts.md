@@ -27,11 +27,15 @@ The request body must be a JSON object with the following properties:
 - `cookies_url` (string, optional): URL to download YouTube cookies from for authentication.
 - `auth_method` (string, optional): YouTube authentication method. Options: "auto", "oauth2", "cookies_content", "cookies_url", "cookies_file". Defaults to "auto".
 - `shorts_config` (object, optional): Advanced configuration for shorts generation:
-  - `num_shorts` (integer, 1-10): Number of shorts to generate from the video. Default: 1. (Note: Currently only 1 short is supported)
+  - `num_shorts` (integer, 1-10): Number of shorts to generate from the video. Default: 1. Uses AI-powered video analysis to identify the most interesting segments.
   - `short_duration` (integer, 15-180): Duration of each short in seconds. Default: 60.
   - `keep_original_voice` (boolean): Whether to keep the original audio instead of generating TTS. Default: false.
   - `add_captions` (boolean): Whether to add captions to the video. Default: true.
   - `segment_method` (string): How to segment long videos. Options: "auto", "equal_parts", "highlights", "chapters". Default: "auto".
+    - `"auto"`: Automatically chooses the best method based on video content and available transcription
+    - `"highlights"`: Uses AI analysis to detect interesting segments based on audio energy, transcription keywords, and scene changes
+    - `"equal_parts"`: Divides the video into equal time segments
+    - `"chapters"`: Uses video chapters if available (falls back to equal_parts)
   - `transition_effects` (boolean): Whether to add transition effects. Default: false. (Future feature)
   - `background_music` (boolean): Whether to add background music. Default: false. (Future feature)
 - `caption_settings` (object, optional): An object containing various styling options for the video captions. These settings are passed directly to the `/v1/video/caption` endpoint. See the [Video Captioning Endpoint documentation](caption_video.md) for available options and their schema.
@@ -70,7 +74,23 @@ This minimal request will download the video, generate a script using AI, create
 }
 ```
 
-#### Example 4: Advanced Configuration with Original Voice and YouTube Authentication
+#### Example 4: AI-Powered Multiple Shorts Generation
+```json
+{
+    "video_url": "https://www.youtube.com/watch?v=example",
+    "shorts_config": {
+        "num_shorts": 3,
+        "short_duration": 60,
+        "segment_method": "highlights",
+        "keep_original_voice": false,
+        "add_captions": true
+    },
+    "tts_voice": "en-US-AriaNeural",
+    "context": "Educational content about technology trends"
+}
+```
+
+#### Example 5: Advanced Configuration with Original Voice and YouTube Authentication
 ```json
 {
     "video_url": "https://www.youtube.com/watch?v=example",
@@ -147,7 +167,39 @@ The shorts endpoint uses the sophisticated `/v1/media/download` service, which p
 - **Cloud integration**: Seamless integration with cloud storage for temporary file handling
 - **Comprehensive logging**: Detailed logging for troubleshooting download issues
 
-## 5. AI Script Generation Features
+## 5. AI-Powered Video Analysis Features
+
+### Intelligent Segment Detection
+The shorts endpoint uses advanced AI analysis to automatically identify the most interesting parts of videos for shorts generation:
+
+#### Audio Energy Analysis
+- **RMS Energy Detection**: Analyzes audio energy levels to find exciting moments
+- **Spectral Centroid Analysis**: Detects brightness and tonal changes in audio
+- **Dynamic Range Scoring**: Identifies segments with high audio activity and engagement
+
+#### Transcription-Based Analysis
+- **Keyword Detection**: Scans transcriptions for engaging words and phrases that typically indicate interesting content
+- **Emotional Language**: Identifies excitement, surprise, controversy, and other engaging emotional markers
+- **Question and Answer Patterns**: Detects interactive content that performs well in short-form videos
+
+#### Visual Scene Analysis
+- **Scene Change Detection**: Uses computer vision to identify significant visual transitions
+- **Frame Difference Analysis**: Calculates visual changes between frames to find dynamic content
+- **Content Variety Scoring**: Prioritizes segments with visual diversity and movement
+
+#### Combined Scoring Algorithm
+- **Multi-factor Analysis**: Combines audio, transcription, and visual scores with weighted importance
+- **Temporal Optimization**: Ensures selected segments meet target duration requirements
+- **Overlap Resolution**: Intelligently merges overlapping high-scoring segments
+- **Quality Ranking**: Sorts all potential segments by combined engagement score
+
+### Segment Method Options
+- **"highlights"**: Uses full AI analysis pipeline to find the most engaging content
+- **"auto"**: Automatically chooses between highlights and equal_parts based on content availability
+- **"equal_parts"**: Divides video into equal time segments for consistent coverage
+- **"chapters"**: Uses video chapter markers when available (future enhancement)
+
+## 6. AI Script Generation Features
 
 ### Structured Script Generation
 When `script_text` is not provided, the endpoint uses an advanced AI system to generate structured scripts with two components:
@@ -172,7 +224,9 @@ Use the `context` parameter to provide additional information that helps the AI 
 
 ### Success Response
 
-The response will be a JSON object with the following properties:
+The response format depends on the number of shorts generated:
+
+#### Single Short Response (num_shorts = 1)
 
 - `short_url` (string): The cloud URL of the generated short video file.
 - `job_id` (string): A unique identifier for the job.
@@ -183,6 +237,48 @@ Example:
 {
     "short_url": "https://cloud.example.com/generated-short-video.mp4",
     "job_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+}
+```
+
+#### Multiple Shorts Response (num_shorts > 1)
+
+- `shorts` (array): Array of generated short video objects.
+- `job_id` (string): A unique identifier for the job.
+- `total_shorts` (integer): Total number of shorts generated.
+
+Each short object contains:
+- `short_url` (string): The cloud URL of the generated short video file.
+- `segment_info` (object): Information about the video segment used.
+- `segment_index` (integer): The index of this segment (1-based).
+
+Example:
+
+```json
+{
+    "shorts": [
+        {
+            "short_url": "https://cloud.example.com/short-1.mp4",
+            "segment_info": {
+                "start_time": 45.2,
+                "end_time": 105.2,
+                "score": 0.85,
+                "reason": "High audio energy and engaging keywords"
+            },
+            "segment_index": 1
+        },
+        {
+            "short_url": "https://cloud.example.com/short-2.mp4",
+            "segment_info": {
+                "start_time": 180.5,
+                "end_time": 240.5,
+                "score": 0.78,
+                "reason": "Scene change detected with keyword matches"
+            },
+            "segment_index": 2
+        }
+    ],
+    "job_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "total_shorts": 2
 }
 ```
 

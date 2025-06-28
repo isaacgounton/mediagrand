@@ -33,3 +33,5 @@ edge-tts>=6.1.0
 opencv-python
 pytesseract
 typer
+librosa>=0.10.0
+moviepy>=1.0.3
