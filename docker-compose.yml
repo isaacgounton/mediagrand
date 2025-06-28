@@ -23,8 +23,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    sysctls:
-      - vm.overcommit_memory=1
 
   api:
     build:
