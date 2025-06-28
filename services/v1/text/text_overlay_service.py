@@ -94,11 +94,15 @@ class TextOverlayService:
         text = text.replace(';', '\\;')
         return text
 
-    def add_text_overlay_to_video(self, video_url, text, webhook_url, options):
+    def add_text_overlay_to_video(self, video_url, text, webhook_url, options, request_id=None):
         """
         Add text overlay to a video using the FFmpeg compose API
         """
         
+        # If request_id is not provided, generate a new one
+        if request_id is None:
+            request_id = str(uuid.uuid4())
+
         duration = options.get('duration', 3)
         font_size = options.get('font_size', 60)
         font_color = options.get('font_color', 'black')
@@ -150,52 +154,8 @@ class TextOverlayService:
             f"enable='lt(t,{duration})'"
         )
         
-        request_id = str(uuid.uuid4())
-        
-        ffmpeg_payload = {
-            "inputs": [
-                {
-                    "file_url": video_url
-                }
-            ],
-            "filters": [
-                {
-                    "filter": drawtext_filter
-                }
-            ],
-            "outputs": [
-                {
-                    "options": [
-                        {
-                            "option": "-c:v",
-                            "argument": "libx264"
-                        },
-                        {
-                            "option": "-crf",
-                            "argument": 23
-                        },
-                        {
-                            "option": "-preset",
-                            "argument": "medium"
-                        }
-                    ]
-                }
-            ],
-            "global_options": [
-                {
-                    "option": "-y"
-                }
-            ],
-            "metadata": {
-                "duration": True,
-                "filesize": True
-            },
-            "webhook_url": webhook_url,
-            "id": request_id
-        }
-        
         # Generate unique ID for output file
-        output_id = str(uuid.uuid4())
+        output_id = request_id # Use the provided/generated request_id as output_id
         output_filename = os.path.join(LOCAL_STORAGE_PATH, f"{output_id}_output.mp4")
 
         # Download video locally
@@ -230,7 +190,8 @@ class TextOverlayService:
             "message": "FFmpeg process completed successfully locally."
         }
         
-        return response_data, output_id
+        # Return response_data, endpoint, status_code as expected by queue_task_wrapper
+        return response_data, "/v1/text/add-text-overlay", 200
 
     def get_available_presets(self):
         return self.presets
