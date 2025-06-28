@@ -142,7 +142,7 @@ def merge_video_with_audio(video_path, audio_path, output_path):
         (
             ffmpeg
             .input(video_path)
-            .output(ffmpeg.input(audio_path), output_path, map='0:v', map='1:a', c='copy', shortest=None)
+            .output(ffmpeg.input(audio_path), output_path, **{'map': ['0:v', '1:a']}, c='copy', shortest=None)
             .overwrite_output()
             .run(capture_stdout=True, capture_stderr=True)
         )

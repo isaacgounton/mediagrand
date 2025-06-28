@@ -21,8 +21,19 @@ The request body must be a JSON object with the following properties:
 
 - `video_url` (string, required): The URL of the source video from which the short will be generated.
 - `script_text` (string, optional): The script for the voiceover. If not provided, an AI model (OpenAI-compatible API) will automatically generate a structured script with hook and main content based on the video content. Supports UTF-8 and accent languages.
-- `context` (string, optional): Additional context to help the AI generate better scripts. This can include information about the video topic, target audience, or specific points to emphasize.
+- `context` (string, optional): Additional context to help the AI generate better scripts. This can include information about the video topic, target audience, or specific points to emphasize. If not provided, video metadata (title, description, uploader) will be used automatically.
 - `tts_voice` (string, optional): The voice to be used for the generated voiceover. This should be a valid voice identifier from the integrated Text-to-Speech service (e.g., "en-US-AvaNeural"). Defaults to "en-US-AvaNeural".
+- `cookies_content` (string, optional): YouTube cookies content for authentication when downloading restricted videos.
+- `cookies_url` (string, optional): URL to download YouTube cookies from for authentication.
+- `auth_method` (string, optional): YouTube authentication method. Options: "auto", "oauth2", "cookies_content", "cookies_url", "cookies_file". Defaults to "auto".
+- `shorts_config` (object, optional): Advanced configuration for shorts generation:
+  - `num_shorts` (integer, 1-10): Number of shorts to generate from the video. Default: 1. (Note: Currently only 1 short is supported)
+  - `short_duration` (integer, 15-180): Duration of each short in seconds. Default: 60.
+  - `keep_original_voice` (boolean): Whether to keep the original audio instead of generating TTS. Default: false.
+  - `add_captions` (boolean): Whether to add captions to the video. Default: true.
+  - `segment_method` (string): How to segment long videos. Options: "auto", "equal_parts", "highlights", "chapters". Default: "auto".
+  - `transition_effects` (boolean): Whether to add transition effects. Default: false. (Future feature)
+  - `background_music` (boolean): Whether to add background music. Default: false. (Future feature)
 - `caption_settings` (object, optional): An object containing various styling options for the video captions. These settings are passed directly to the `/v1/video/caption` endpoint. See the [Video Captioning Endpoint documentation](caption_video.md) for available options and their schema.
 - `webhook_url` (string, optional): A URL to receive a webhook notification when the shorts generation process is complete.
 - `id` (string, optional): An identifier for the request.
@@ -56,6 +67,26 @@ This minimal request will download the video, generate a script using AI, create
     "video_url": "https://example.com/my_podcast_clip.mp4",
     "script_text": "Welcome to my channel! In this short, we'll discuss the latest tech trends.",
     "tts_voice": "en-US-GuyNeural"
+}
+```
+
+#### Example 4: Advanced Configuration with Original Voice and YouTube Authentication
+```json
+{
+    "video_url": "https://www.youtube.com/watch?v=example",
+    "cookies_content": "your_youtube_cookies_here",
+    "auth_method": "cookies_content",
+    "shorts_config": {
+        "short_duration": 90,
+        "keep_original_voice": true,
+        "add_captions": true,
+        "segment_method": "highlights"
+    },
+    "caption_settings": {
+        "line_color": "#FFFFFF",
+        "word_color": "#FFFF00",
+        "font_size": 24
+    }
 }
 ```
 
