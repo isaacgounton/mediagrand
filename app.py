@@ -367,7 +367,7 @@ def create_app():
     app.register_blueprint(v1_image_screenshot_webpage_bp)
     app.register_blueprint(v1_video_merge_with_audio_bp)
     app.register_blueprint(shorts_bp) # Register the new shorts blueprint
-    app.register_blueprint(text_overlay_bp) # Register the new text overlay blueprint
+    app.register_blueprint(text_overlay_bp, url_prefix='/v1/text') # Register the new text overlay blueprint with prefix
     app.register_blueprint(simone_bp)
 
     # Add homepage route
