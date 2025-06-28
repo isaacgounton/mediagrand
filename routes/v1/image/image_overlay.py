@@ -1,7 +1,7 @@
 from flask import Blueprint
 from app_utils import *
 import logging
-from services.image.image_overlay import image_overlay
+from services.v1.image.image_overlay import image_overlay
 from services.authentication import authenticate
 from services.cloud_storage import upload_file
 
