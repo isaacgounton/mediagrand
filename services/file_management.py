@@ -100,7 +100,6 @@ def validate_cookie_file(file_path):
             return valid_cookie_lines > 0
     except Exception as e:
         # Log the specific error for debugging
-        import logging
         logging.warning(f"Cookie validation error: {str(e)}")
         return False
 
@@ -147,7 +146,6 @@ def download_file(url, storage_path="/tmp/", is_cookie=False):
 
         # Validate cookie file format if it's supposed to be a cookie file
         if is_cookie:
-            import logging
             logger = logging.getLogger(__name__)
             
             if not validate_cookie_file(local_filename):
