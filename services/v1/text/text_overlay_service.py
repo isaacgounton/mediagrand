@@ -108,6 +108,10 @@ class TextOverlayService:
 
     def escape_text_for_ffmpeg(self, text):
         """Escape special characters for FFmpeg drawtext filter"""
+        # Ensure text is properly encoded as UTF-8
+        if isinstance(text, str):
+            text = text.encode('utf-8').decode('utf-8')
+        
         # Escape characters that have special meaning in FFmpeg
         # Order matters: escape backslash first
         text = text.replace('\\', '\\\\')
@@ -117,9 +121,6 @@ class TextOverlayService:
         text = text.replace(']', '\\]')
         text = text.replace(',', '\\,')
         text = text.replace(';', '\\;')
-        # Escape characters for special characters in FFmpeg for drawtext filter
-        # text = text.replace('é', '\xe9') # Example for specific char, but should be handled by UTF-8
-        # text = text.replace('à', '\xe0')
         return text
 
     def add_text_overlay_to_video(self, video_url, text, webhook_url, options, request_id=None):
@@ -205,7 +206,7 @@ class TextOverlayService:
         ]
 
         try:
-            subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True)
+            subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             raise Exception(f"FFmpeg command failed: {e.stderr}")
         finally:

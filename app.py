@@ -326,6 +326,8 @@ def create_app():
     from routes.v1.image.screenshot_webpage import v1_image_screenshot_webpage_bp
     from routes.v1.video.merge_with_audio import v1_video_merge_with_audio_bp
     from routes.v1.video.shorts import shorts_bp # Import the new shorts blueprint
+    from routes.v1.video.viral_shorts import viral_shorts_bp # Import the viral shorts blueprint
+    from routes.v1.video.clips_generator import clips_generator_bp # Import the clips generator blueprint
     from routes.v1.text.text_overlay import text_overlay_bp # Import the new text overlay blueprint
     from routes.simone_integration import simone_bp
 
@@ -367,6 +369,8 @@ def create_app():
     app.register_blueprint(v1_image_screenshot_webpage_bp)
     app.register_blueprint(v1_video_merge_with_audio_bp)
     app.register_blueprint(shorts_bp) # Register the new shorts blueprint
+    app.register_blueprint(viral_shorts_bp) # Register the viral shorts blueprint
+    app.register_blueprint(clips_generator_bp) # Register the clips generator blueprint
     app.register_blueprint(text_overlay_bp, url_prefix='/v1/text') # Register the new text overlay blueprint with prefix
     app.register_blueprint(simone_bp)
 
@@ -406,6 +410,8 @@ def create_app():
                         "extract_frame": "/v1/video/extract-frame",
                         "tts_captioned": "/v1/video/tts-captioned",
                         "shorts": "/v1/video/shorts", # Add the new shorts endpoint
+                        "viral_shorts": "/v1/video/viral-shorts", # Add the viral shorts endpoint
+                        "generate_clips": "/v1/video/generate-clips", # Add the clips generator endpoint
                         "add_text_overlay": "/v1/text/add-text-overlay", # Add the new text overlay endpoint
                         "add_text_overlay_preset": "/v1/text/add-text-overlay/preset/<name>", # Add the new text overlay preset endpoint
                         "text_overlay_presets": "/v1/text/presets", # Add the new text overlay presets endpoint
