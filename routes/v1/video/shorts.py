@@ -11,7 +11,7 @@ from services.v1.audio.speech import generate_tts # For voiceover
 from services.v1.video.merge_videos_with_audio import process_video_merge_with_audio # For merging video and audio
 from services.v1.video.caption_video import process_captioning_v1 # For captioning
 from services.cloud_storage import upload_file # For uploading final short
-from app_utils import validate_payload, queue_task_wrapper # Correct import for validate_payload
+from app_utils import validate_payload, queue_task_wrapper, call_queued_task_directly
 from services.authentication import authenticate
 
 shorts_bp = Blueprint('shorts_bp', __name__)
@@ -148,8 +148,7 @@ def create_shorts(job_id, data):
         }
 
         # Call the advanced download function
-        # The queue_task_wrapper returns (result, status_code) when called directly
-        download_result, status_code = download_media(f"{job_id}_download", download_data)
+        download_result, _, status_code = call_queued_task_directly(download_media, f"{job_id}_download", download_data)
 
         if status_code != 200:
             # download_result is a dictionary when there's an error

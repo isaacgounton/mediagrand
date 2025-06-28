@@ -118,3 +118,18 @@ def queue_task_wrapper(bypass_queue=False):
                 return f(*args, **kwargs)
         return wrapper
     return decorator
+
+def call_queued_task_directly(func, *args, **kwargs):
+    """
+    Call a function decorated with @queue_task_wrapper directly,
+    bypassing the queue.
+    """
+    # Get the original undecorated function
+    if hasattr(func, '__wrapped__'):
+        original_func = func.__wrapped__
+    else:
+        # If it's not wrapped, just call it
+        return func(*args, **kwargs)
+
+    # Call the original function without the decorator
+    return original_func(*args, **kwargs)
