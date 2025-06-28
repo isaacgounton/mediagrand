@@ -3,6 +3,7 @@ import re
 import os
 import subprocess
 from services.file_management import download_file
+from services.cloud_storage import upload_file # Import upload_file
 from config import LOCAL_STORAGE_PATH
 
 class TextOverlayService:
@@ -183,15 +184,20 @@ class TextOverlayService:
                 os.remove(input_path)
         
         # In a real scenario, you would upload output_filename to cloud storage
-        # and send its URL via webhook. For now, we'll just return the local path
-        # and a dummy success response.
-        response_data = {
-            "output_file_path": output_filename,
-            "message": "FFmpeg process completed successfully locally."
-        }
-        
-        # Return response_data, endpoint, status_code as expected by queue_task_wrapper
-        return response_data, "/v1/text/add-text-overlay", 200
+            # Upload the processed video to cloud storage
+            cloud_url = upload_file(output_filename)
+            
+            # Clean up the local output file after upload
+            if os.path.exists(output_filename):
+                os.remove(output_filename)
+
+            response_data = {
+                "output_url": cloud_url,
+                "message": "FFmpeg process completed successfully and uploaded to cloud storage."
+            }
+            
+            # Return response_data, endpoint, status_code as expected by queue_task_wrapper
+            return response_data, "/v1/text/add-text-overlay", 200
 
     def get_available_presets(self):
         return self.presets
