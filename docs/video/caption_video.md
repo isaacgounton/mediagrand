@@ -297,7 +297,7 @@ Additionally, the main application context (`app.py`) includes error handling fo
   - If not provided, the endpoint will automatically transcribe the audio and generate captions
   - If provided as plain text, the text will be used as captions for the entire video
   - If provided as a URL to an SRT or ASS subtitle file, the system will use that file for captioning
-  - For SRT files, only 'classic' style is supported
+  - For SRT files, all styles are supported but advanced styles (karaoke, highlight, underline, word_by_word) will fallback to simpler behavior due to lack of word-level timestamps
   - For ASS files, the original styling will be preserved
 - The `settings` parameter allows for customization of the caption appearance and behavior:
   - `style` determines how captions are displayed, with options including:

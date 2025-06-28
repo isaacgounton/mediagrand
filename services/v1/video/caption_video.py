@@ -365,6 +365,7 @@ def handle_karaoke(transcription_result, style_options, replace_dict, video_reso
         video_height=video_resolution[1]
     )
     word_color = rgb_to_ass_color(style_options.get('word_color', '#FFFF00'))
+    line_color = rgb_to_ass_color(style_options.get('line_color', '#FFFFFF'))
 
     logger.info(f"[Karaoke] position={position_str}, alignment={alignment_str}, x={final_x}, y={final_y}, an_code={an_code}")
 
@@ -372,6 +373,16 @@ def handle_karaoke(transcription_result, style_options, replace_dict, video_reso
     for segment in transcription_result['segments']:
         words = segment.get('words', [])
         if not words:
+            # Fallback: treat as classic style when no word-level data available
+            text = segment['text'].strip().replace('\n', ' ')
+            lines = split_lines(text, max_words_per_line)
+            processed_text = '\\N'.join(process_subtitle_text(line, replace_dict, all_caps, 0) for line in lines)
+            start_time = format_ass_time(segment['start'])
+            end_time = format_ass_time(segment['end'])
+            position_tag = f"{{\\an{an_code}\\pos({final_x},{final_y})}}"
+            # Use word_color for the entire text as karaoke fallback
+            colored_text = f"{{\\c&H{word_color}&}}{processed_text}{{\\c&H{line_color}&}}"
+            events.append(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{position_tag}{colored_text}")
             continue
 
         if max_words_per_line > 0:
@@ -436,6 +447,16 @@ def handle_highlight(transcription_result, style_options, replace_dict, video_re
     for segment in transcription_result['segments']:
         words = segment.get('words', [])
         if not words:
+            # Fallback: treat as classic style when no word-level data available
+            text = segment['text'].strip().replace('\n', ' ')
+            lines = split_lines(text, max_words_per_line)
+            processed_text = '\\N'.join(process_subtitle_text(line, replace_dict, all_caps, 0) for line in lines)
+            start_time = format_ass_time(segment['start'])
+            end_time = format_ass_time(segment['end'])
+            position_tag = f"{{\\an{an_code}\\pos({final_x},{final_y})}}"
+            # Use word_color for the entire text as highlight fallback
+            colored_text = f"{{\\c&H{word_color}&}}{processed_text}{{\\c&H{line_color}&}}"
+            events.append(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{position_tag}{colored_text}")
             continue
 
         # Process all words in the segment
@@ -514,6 +535,16 @@ def handle_underline(transcription_result, style_options, replace_dict, video_re
     for segment in transcription_result['segments']:
         words = segment.get('words', [])
         if not words:
+            # Fallback: treat as classic style when no word-level data available
+            text = segment['text'].strip().replace('\n', ' ')
+            lines = split_lines(text, max_words_per_line)
+            processed_text = '\\N'.join(process_subtitle_text(line, replace_dict, all_caps, 0) for line in lines)
+            start_time = format_ass_time(segment['start'])
+            end_time = format_ass_time(segment['end'])
+            position_tag = f"{{\\an{an_code}\\pos({final_x},{final_y})}}"
+            # Use underline formatting for the entire text as underline fallback
+            underlined_text = f"{{\\u1}}{processed_text}{{\\u0}}"
+            events.append(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{position_tag}{underlined_text}")
             continue
         processed_words = []
         for w_info in words:
@@ -572,6 +603,16 @@ def handle_word_by_word(transcription_result, style_options, replace_dict, video
     for segment in transcription_result['segments']:
         words = segment.get('words', [])
         if not words:
+            # Fallback: treat as classic style when no word-level data available
+            text = segment['text'].strip().replace('\n', ' ')
+            lines = split_lines(text, max_words_per_line)
+            processed_text = '\\N'.join(process_subtitle_text(line, replace_dict, all_caps, 0) for line in lines)
+            start_time = format_ass_time(segment['start'])
+            end_time = format_ass_time(segment['end'])
+            position_tag = f"{{\\an{an_code}\\pos({final_x},{final_y})}}"
+            # Use word_color for the entire text as word-by-word fallback
+            colored_text = f"{{\\c&H{word_color}&}}{processed_text}"
+            events.append(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{position_tag}{colored_text}")
             continue
 
         if max_words_per_line > 0:
@@ -731,11 +772,7 @@ def process_captioning_v1(video_url, captions, settings, replace, job_id, langua
             else:
                 # Treat as SRT
                 logger.info(f"Job {job_id}: Detected SRT formatted captions.")
-                # Validate style for SRT
-                if style_type != 'classic':
-                    error_message = "Only 'classic' style is supported for SRT captions."
-                    logger.error(f"Job {job_id}: {error_message}")
-                    return {"error": error_message}
+                # Note: Advanced styles with SRT may have limited functionality due to lack of word-level timestamps
                 transcription_result = srt_to_transcription_result(captions_content)
                 # Generate ASS based on chosen style
                 subtitle_content = process_subtitle_events(transcription_result, style_type, style_options, replace_dict, video_resolution)
