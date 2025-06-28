@@ -18,6 +18,68 @@ from services.authentication import authenticate
 shorts_bp = Blueprint('shorts_bp', __name__)
 logger = logging.getLogger(__name__)
 
+def enhance_srt_with_hook_styling(srt_content, hook_text, hook_position):
+    """
+    Enhance SRT content by identifying hook text and applying different positioning
+    """
+    import re
+    
+    # Clean hook text for comparison
+    hook_clean = re.sub(r'[^\w\s]', '', hook_text.lower()).strip()
+    hook_words = hook_clean.split()[:5]  # First 5 words for matching
+    
+    lines = srt_content.strip().split('\n')
+    enhanced_lines = []
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        # Check if this is a subtitle number line
+        if line.isdigit():
+            enhanced_lines.append(line)
+            i += 1
+            
+            # Next should be timing line
+            if i < len(lines):
+                timing_line = lines[i].strip()
+                enhanced_lines.append(timing_line)
+                i += 1
+                
+                # Next should be text line(s)
+                text_lines = []
+                while i < len(lines) and lines[i].strip() and not lines[i].strip().isdigit():
+                    text_lines.append(lines[i].strip())
+                    i += 1
+                
+                # Check if this subtitle contains hook text
+                subtitle_text = ' '.join(text_lines).lower()
+                subtitle_clean = re.sub(r'[^\w\s]', '', subtitle_text)
+                
+                is_hook = False
+                if hook_words:
+                    # Check if most hook words are in this subtitle
+                    hook_word_matches = sum(1 for word in hook_words if word in subtitle_clean)
+                    is_hook = hook_word_matches >= min(3, len(hook_words) // 2)
+                
+                # Add positioning tag for hook
+                if is_hook and hook_position != 'middle_center':
+                    # Add subtitle positioning tag
+                    position_tag = f"{{\\an8}}" if hook_position.startswith('top') else "{{\\an2}}"
+                    if text_lines:
+                        text_lines[0] = position_tag + text_lines[0]
+                
+                enhanced_lines.extend(text_lines)
+                
+                # Add empty line after subtitle block
+                if i < len(lines):
+                    enhanced_lines.append('')
+        else:
+            enhanced_lines.append(line)
+        i += 1
+    
+    return '\n'.join(enhanced_lines)
+
 @shorts_bp.route('/v1/video/shorts', methods=['POST'])
 @authenticate
 @validate_payload({
@@ -58,6 +120,19 @@ logger = logging.getLogger(__name__)
                     "properties": {
                         "width": {"type": "integer", "minimum": 480, "maximum": 4096},
                         "height": {"type": "integer", "minimum": 480, "maximum": 4096}
+                    }
+                },
+                "hook_style": {
+                    "type": "object",
+                    "properties": {
+                        "position": {
+                            "type": "string",
+                            "enum": ["top_center", "top_left", "top_right", "middle_center", "bottom_center"],
+                            "default": "top_center"
+                        },
+                        "font_size_multiplier": {"type": "number", "minimum": 0.8, "maximum": 2.0, "default": 1.2},
+                        "background_opacity": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.3},
+                        "show_separately": {"type": "boolean", "default": False}
                     }
                 }
             }
@@ -151,6 +226,13 @@ def create_shorts(job_id, data):
             'square': (1080, 1080)      # 1:1
         }
         video_width, video_height = format_dimensions.get(video_format, (1080, 1920))
+    
+    # Extract hook styling options
+    hook_style = shorts_config.get('hook_style', {})
+    hook_position = hook_style.get('position', 'top_center')
+    hook_font_multiplier = hook_style.get('font_size_multiplier', 1.2)
+    hook_background_opacity = hook_style.get('background_opacity', 0.3)
+    hook_show_separately = hook_style.get('show_separately', False)
 
     # Generate a job_id if not provided by queue_task_wrapper
     if not job_id:
@@ -263,7 +345,7 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
             # Add language instruction to context
             language_names = {'en': 'English', 'fr': 'French', 'es': 'Spanish', 'de': 'German', 'it': 'Italian', 'pt': 'Portuguese'}
             language_name = language_names.get(voice_language, 'English')
-            language_context = f"{metadata_context}\n\nIMPORTANT: Generate the script in {language_name} language only. Do not include any JSON formatting text or explanations."
+            language_context = f"{metadata_context}\n\nIMPORTANT: Generate the script in {language_name} language only. Do not include any JSON formatting text, explanations, or prefixes like 'Hook:', 'Script:', or 'Title:'. Provide only the pure content for each field."
             
             script_data = summarizer.generate_structured_script(context=language_context)
 
@@ -276,6 +358,11 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
             script_text = re.sub(r'[Hh]ere is.*?[Jj][Ss][Oo][Nn].*?:', '', script_text)
             script_text = re.sub(r'[Cc]ode snippet\s*:', '', script_text)
             script_text = re.sub(r'Title\s*[—-]\s*', '', script_text)
+            # Remove Hook: and Script: prefixes that AI might add
+            script_text = re.sub(r'^[Hh]ook\s*[:—-]\s*', '', script_text)
+            script_text = re.sub(r'[Hh]ook\s*[:—-]\s*', '', script_text)
+            script_text = re.sub(r'[Ss]cript\s*[:—-]\s*', '', script_text)
+            script_text = re.sub(r'[Tt]itle\s*[:—-]\s*', '', script_text)
             # Remove any remaining curly braces or JSON-like formatting
             script_text = re.sub(r'[{}"]', '', script_text)
             # Clean up extra whitespace
@@ -422,12 +509,32 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
                 logger.info(f"Job {job_id}: Adding captions to segment...")
                 with open(segment_subtitle_path, 'r', encoding="utf-8") as f:
                     srt_content = f.read()
+                
+                # Enhance SRT with hook styling if configured
+                if hook_show_separately and not keep_original_voice:
+                    # Try to identify hook vs main content in the SRT
+                    hook_text = script_data.get('hook', '').strip()
+                    if hook_text:
+                        srt_content = enhance_srt_with_hook_styling(srt_content, hook_text, hook_position)
+                        logger.info(f"Job {job_id}: Enhanced SRT with separate hook styling")
+
+                # Apply hook styling preferences to caption settings
+                enhanced_caption_settings = caption_settings.copy()
+                if hook_position != 'top_center':
+                    enhanced_caption_settings['position'] = hook_position
+                if hook_font_multiplier != 1.2:
+                    current_font_size = enhanced_caption_settings.get('font_size', 24)
+                    enhanced_caption_settings['font_size'] = int(current_font_size * hook_font_multiplier)
+                if hook_background_opacity > 0:
+                    # Add semi-transparent background for better readability
+                    enhanced_caption_settings['outline_width'] = enhanced_caption_settings.get('outline_width', 2)
+                    enhanced_caption_settings['outline_color'] = enhanced_caption_settings.get('outline_color', '#000000')
 
                 temp_merged_segment_url = upload_file(merged_segment_local_path)
                 captioned_local_path = process_captioning_v1(
                     video_url=temp_merged_segment_url,
                     captions=srt_content,
-                    settings=caption_settings,
+                    settings=enhanced_caption_settings,
                     replace=[],
                     job_id=segment_job_id,
                     language=voice_language

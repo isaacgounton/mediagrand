@@ -42,6 +42,11 @@ The request body must be a JSON object with the following properties:
   - `resolution` (object, optional): Custom video resolution settings:
     - `width` (integer, 480-4096): Video width in pixels
     - `height` (integer, 480-4096): Video height in pixels
+  - `hook_style` (object, optional): Custom styling for hook presentation:
+    - `position` (string): Hook text position. Options: "top_center", "top_left", "top_right", "middle_center", "bottom_center". Default: "top_center".
+    - `font_size_multiplier` (number, 0.8-2.0): Size multiplier relative to main text. Default: 1.2.
+    - `background_opacity` (number, 0.0-1.0): Background opacity for better readability. Default: 0.3.
+    - `show_separately` (boolean): Whether to position hook differently from main content. Default: false.
 - `caption_settings` (object, optional): An object containing various styling options for the video captions. These settings are passed directly to the `/v1/video/caption` endpoint. See the [Video Captioning Endpoint documentation](caption_video.md) for available options and their schema.
 - `webhook_url` (string, optional): A URL to receive a webhook notification when the shorts generation process is complete.
 - `id` (string, optional): An identifier for the request.
@@ -124,7 +129,39 @@ This minimal request will download the video, generate a script using AI, create
             "width": 1080,
             "height": 1080
         },
-        "short_duration": 30
+        "short_duration": 30,
+        "hook_style": {
+            "position": "top_center",
+            "font_size_multiplier": 1.3,
+            "background_opacity": 0.4,
+            "show_separately": true
+        }
+    }
+}
+```
+
+#### Example 8: Enhanced Hook Presentation with Custom Styling
+```json
+{
+    "video_url": "https://example.com/engaging_content.mp4",
+    "tts_voice": "fr-CA-ThierryNeural",
+    "shorts_config": {
+        "video_format": "portrait",
+        "short_duration": 60,
+        "add_captions": true,
+        "hook_style": {
+            "position": "top_center",
+            "font_size_multiplier": 1.4,
+            "background_opacity": 0.5,
+            "show_separately": true
+        }
+    },
+    "caption_settings": {
+        "font_size": 26,
+        "line_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "position": "bottom_center"
     }
 }
 ```
@@ -251,6 +288,13 @@ The system automatically detects the target language from the `tts_voice` parame
 - **Localized Content Generation**: AI generates scripts in the target language based on the voice selection
 - **Clean Text Processing**: Advanced text cleaning removes JSON formatting artifacts and unwanted explanatory text
 
+### Enhanced Script Cleaning
+The system now intelligently removes unwanted AI-generated formatting:
+- **Prefix Removal**: Automatically removes "Hook:", "Script:", "Title:" prefixes that AI might add
+- **JSON Artifact Cleaning**: Removes phrases like "Here is a JSON object containing..."
+- **Format Cleaning**: Strips curly braces, extra quotes, and other formatting artifacts
+- **AI Instruction Enhancement**: Explicit instructions prevent AI from adding explanatory text
+
 ### UTF-8 and International Language Support
 The endpoint fully supports UTF-8 encoding and international characters, including:
 - Accented characters (é, ñ, ü, etc.)
@@ -296,6 +340,33 @@ The endpoint now supports multiple video orientations and aspect ratios:
 - **Portrait**: 1080x1920 (9:16 aspect ratio)
 - **Landscape**: 1920x1080 (16:9 aspect ratio) 
 - **Square**: 1080x1080 (1:1 aspect ratio)
+
+## 9. Advanced Hook Presentation
+
+### Hook Styling System
+The endpoint provides sophisticated control over how hook text appears in your videos:
+
+### Position Control
+- **Top Positioning**: Place hooks at the top to avoid blocking important video content
+- **Center Options**: Traditional center positioning for emphasis
+- **Bottom Placement**: Alternative positioning for specific design needs
+
+### Visual Enhancement
+- **Size Control**: Make hooks larger (up to 2x) or smaller (down to 0.8x) than main content
+- **Background Opacity**: Add semi-transparent backgrounds (0-100%) for better readability
+- **Smart Detection**: Automatically identifies hook content within generated scripts
+
+### Separate Hook Styling
+When `show_separately` is enabled:
+- **Intelligent Parsing**: Automatically detects hook text within the full script
+- **Position Override**: Hook appears at specified position while main content uses caption settings
+- **Enhanced Readability**: Different styling ensures hook stands out from main content
+
+### Best Practices for Hook Presentation
+- **Top Center**: Recommended for most content to avoid blocking important video elements
+- **Size Multiplier 1.3-1.4**: Optimal size increase for emphasis without overwhelming
+- **Background Opacity 0.3-0.5**: Sufficient transparency for readability while preserving video visibility
+- **Separate Styling**: Enable for professional-looking differentiation between hook and main content
 
 ## 6. Response
 
@@ -430,6 +501,8 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 - The `video_format` parameter controls the output orientation: use "landscape" for YouTube Shorts, "portrait" for TikTok/Instagram Reels, or "square" for Instagram posts.
 - Custom `resolution` settings override the default format dimensions if you need specific video sizes.
 - Caption timing is now properly synchronized - each sentence appears at the correct moment during playback.
+- Use `hook_style` to customize how hook text appears: position it at the top to avoid blocking video content, adjust size for emphasis, and add background opacity for better readability.
+- Set `show_separately: true` in hook_style to automatically position hooks differently from main content for professional-looking results.
 
 ## 10. Common Issues
 
@@ -456,3 +529,6 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
   - **Instagram Posts**: Use "square" format
 - When using non-English voices, the system will automatically generate content in the corresponding language.
 - Caption timing is now optimized - you no longer need to worry about text appearing all at once.
+- For engaging hook presentation, use `"position": "top_center"` with `"font_size_multiplier": 1.3-1.4` to make hooks stand out without overwhelming the video.
+- Enable `"show_separately": true` in hook_style for automatic hook detection and separate positioning from main content.
+- Use background opacity (0.3-0.5) when text readability is challenging due to video content complexity.
