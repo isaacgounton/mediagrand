@@ -15,6 +15,9 @@
 * [Video to Blog Post (Simone)](simone/index.md)
 * [Roadmap](video/roadmap.md)
 
+## 📝 Text Operations
+* [Text Overlay](text/text_overlay.md)
+
 ## 🔊 Audio Operations
 * [Audio Concatenation](audio/concatenate.md)
 * [Speech Processing](audio/speech.md)

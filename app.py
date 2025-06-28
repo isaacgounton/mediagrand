@@ -271,6 +271,8 @@ def create_app():
     from routes.caption_video import caption_bp 
     from routes.extract_keyframes import extract_keyframes_bp
     from routes.image_to_video import image_to_video_bp
+    from routes.v1.image.image_overlay import image_overlay_bp
+    from routes.v1.video.video_overlay import video_overlay_bp
     from routes.health import health_bp
     
 
@@ -284,6 +286,8 @@ def create_app():
     app.register_blueprint(caption_bp)
     app.register_blueprint(extract_keyframes_bp)
     app.register_blueprint(image_to_video_bp)
+    app.register_blueprint(image_overlay_bp)
+    app.register_blueprint(video_overlay_bp)
     app.register_blueprint(health_bp)
     
     
@@ -322,6 +326,7 @@ def create_app():
     from routes.v1.image.screenshot_webpage import v1_image_screenshot_webpage_bp
     from routes.v1.video.merge_with_audio import v1_video_merge_with_audio_bp
     from routes.v1.video.shorts import shorts_bp # Import the new shorts blueprint
+    from routes.v1.text.text_overlay import text_overlay_bp # Import the new text overlay blueprint
     from routes.simone_integration import simone_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
@@ -362,6 +367,7 @@ def create_app():
     app.register_blueprint(v1_image_screenshot_webpage_bp)
     app.register_blueprint(v1_video_merge_with_audio_bp)
     app.register_blueprint(shorts_bp) # Register the new shorts blueprint
+    app.register_blueprint(text_overlay_bp) # Register the new text overlay blueprint
     app.register_blueprint(simone_bp)
 
     # Add homepage route
@@ -400,6 +406,9 @@ def create_app():
                         "extract_frame": "/v1/video/extract-frame",
                         "tts_captioned": "/v1/video/tts-captioned",
                         "shorts": "/v1/video/shorts", # Add the new shorts endpoint
+                        "add_text_overlay": "/v1/text/add-text-overlay", # Add the new text overlay endpoint
+                        "add_text_overlay_preset": "/v1/text/add-text-overlay/preset/<name>", # Add the new text overlay preset endpoint
+                        "text_overlay_presets": "/v1/text/presets", # Add the new text overlay presets endpoint
                         "simone": "/v1/simone/process_video"
                     },
                     "audio": {
@@ -410,7 +419,9 @@ def create_app():
                     "image": {
                         "convert_to_video": "/v1/image/convert/video",
                         "convert": "/v1/image/convert",
-                        "screenshot_webpage": "/v1/image/screenshot/webpage"
+                        "screenshot_webpage": "/v1/image/screenshot/webpage",
+                        "add_overlay_image": "/v1/image/add-overlay-image",
+                        "add_video_overlay": "/v1/image/add-video-overlay"
                     },
                     "toolkit": {
                         "test": "/v1/toolkit/test",
