@@ -103,4 +103,54 @@ def process_video_combination(media_urls, job_id, webhook_url=None):
         return output_path
     except Exception as e:
         print(f"Video combination failed: {str(e)}")
-        raise 
+        raise
+
+def extract_audio_from_video(video_path, output_audio_path):
+    """
+    Extracts audio from a video file.
+
+    Args:
+        video_path (str): The path to the input video file.
+        output_audio_path (str): The path where the extracted audio file will be saved.
+
+    Returns:
+        str: The path to the extracted audio file.
+    """
+    try:
+        (
+            ffmpeg
+            .input(video_path)
+            .output(output_audio_path, acodec='libmp3lame', audio_bitrate='192k')
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        print(f"Audio extracted successfully from {video_path} to {output_audio_path}")
+        return output_audio_path
+    except ffmpeg.Error as e:
+        print(f"FFmpeg error extracting audio: {e.stderr.decode('utf8')}")
+        raise
+    except Exception as e:
+        print(f"Error extracting audio: {str(e)}")
+        raise
+
+def merge_video_with_audio(video_path, audio_path, output_path):
+    """
+    Merge a video file with an audio file.
+    The audio from the audio_path will be used, replacing any existing audio in the video.
+    """
+    try:
+        (
+            ffmpeg
+            .input(video_path)
+            .output(ffmpeg.input(audio_path), output_path, map='0:v', map='1:a', c='copy', shortest=None)
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        print(f"Video and audio merged successfully: {output_path}")
+        return output_path
+    except ffmpeg.Error as e:
+        print(f"FFmpeg error merging video and audio: {e.stderr.decode('utf8')}")
+        raise
+    except Exception as e:
+        print(f"Error merging video and audio: {str(e)}")
+        raise

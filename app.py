@@ -321,6 +321,7 @@ def create_app():
     from routes.v1.video.tts_captioned_video import v1_video_tts_captioned_bp
     from routes.v1.image.screenshot_webpage import v1_image_screenshot_webpage_bp
     from routes.v1.video.merge_with_audio import v1_video_merge_with_audio_bp
+    from routes.v1.video.shorts import shorts_bp # Import the new shorts blueprint
     from routes.simone_integration import simone_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
@@ -360,6 +361,7 @@ def create_app():
     app.register_blueprint(v1_video_tts_captioned_bp)
     app.register_blueprint(v1_image_screenshot_webpage_bp)
     app.register_blueprint(v1_video_merge_with_audio_bp)
+    app.register_blueprint(shorts_bp) # Register the new shorts blueprint
     app.register_blueprint(simone_bp)
 
     # Add homepage route
@@ -397,6 +399,7 @@ def create_app():
                         "merge": "/v1/video/merge",
                         "extract_frame": "/v1/video/extract-frame",
                         "tts_captioned": "/v1/video/tts-captioned",
+                        "shorts": "/v1/video/shorts", # Add the new shorts endpoint
                         "simone": "/v1/simone/process_video"
                     },
                     "audio": {

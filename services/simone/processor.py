@@ -9,7 +9,7 @@ import uuid
 import mimetypes # Import mimetypes for content type guessing
 
 from .utils.blogger import Blogger
-from .utils.downloader import Downloader
+from routes.v1.media.download import download_media
 from .utils.framer import Framer
 from .utils.saver import Saver
 from .utils.scorer import Scorer
@@ -19,11 +19,11 @@ from .utils.social_media_generator import SocialMediaGenerator
 from services.s3_toolkit import upload_to_s3 # Import S3 upload function
 
 
-def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, platform: Optional[str] = None, cookies_content: Optional[str] = None, cookies_url: Optional[str] = None):
-    if gemma_api_key:
-        print("GEMMA 7B API key found. Continuing execution...")
-    else:
-        raise ValueError("Error: GEMMA 7B API key not found. Please provide an API key.")
+def process_video_to_blog(url: str, tesseract_path: str, platform: Optional[str] = None, cookies_content: Optional[str] = None, cookies_url: Optional[str] = None):
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("Error: OPENAI_API_KEY environment variable not found. Please set the API key.")
+    print("OpenAI API key found via environment variable. Continuing execution...")
 
     # S3 Configuration
     s3_url = os.environ.get("S3_ENDPOINT_URL")
@@ -49,26 +49,55 @@ def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, pla
 
         try:
             print("Downloading audio and video...")
-            downloads = Downloader(f"{url}", cookies_content, cookies_url)
-            downloads.audio()
-            downloads.video()
+
+            # Prepare download request data for video
+            video_download_data = {
+                "media_url": url,
+                "cloud_upload": False,  # Don't upload to cloud, we need local files
+                "format": {"quality": "best"},
+                "cookies_content": cookies_content,
+                "cookies_url": cookies_url,
+                "auth_method": "auto"
+            }
+
+            # Download video
+            video_result, _, video_status = download_media("simone_video", video_download_data)
+            if video_status != 200:
+                raise Exception(f"Video download failed: {video_result.get('error', 'Unknown error')}")
+
+            # Prepare download request data for audio
+            audio_download_data = {
+                "media_url": url,
+                "cloud_upload": False,  # Don't upload to cloud, we need local files
+                "audio": {"extract": True, "format": "mp4"},  # Extract audio as mp4
+                "cookies_content": cookies_content,
+                "cookies_url": cookies_url,
+                "auth_method": "auto"
+            }
+
+            # Download audio
+            audio_result, _, audio_status = download_media("simone_audio", audio_download_data)
+            if audio_status != 200:
+                raise Exception(f"Audio download failed: {audio_result.get('error', 'Unknown error')}")
+
+            print("Audio and video downloaded successfully using advanced download service")
 
             print("Transcribing audio...")
             transcription_file = Transcriber("audio.mp4")
             transcription_file.transcribe()
 
             print("Generating keywords...")
-            keywords = Summarizer(gemma_api_key, "transcription.txt")
+            keywords = Summarizer(api_key=openai_api_key, transcription_filename="transcription.txt")
             keyword = keywords.generate_summary()
 
             print("Generating blog post...")
-            blogpost = Blogger(gemma_api_key, "transcription.txt", "generated_blogpost.txt")
+            blogpost = Blogger(openai_api_key, "transcription.txt", "generated_blogpost.txt")
             blogpost.generate_blogpost()
 
             social_media_post_content = ""
             if platform:
                 print(f"Generating social media post for {platform}...")
-                social_media_generator = SocialMediaGenerator(gemma_api_key, "transcription.txt")
+                social_media_generator = SocialMediaGenerator(openai_api_key, "transcription.txt")
                 social_media_post_content = social_media_generator.generate_post(platform)
                 print(f"Social media post for {platform} generated.")
 

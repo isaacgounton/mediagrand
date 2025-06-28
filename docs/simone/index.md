@@ -56,10 +56,12 @@ curl -X POST \
 
 ## Environment Variables
 
-The `GEMMA_API_KEY` environment variable must be set for this endpoint to function correctly. This key is used to access the OpenRouter.ai API for generating keywords and blog post content.
+The `OPENAI_API_KEY` environment variable must be set for this endpoint to function correctly. This key is used to access the OpenAI-compatible API (like OpenRouter.ai) for generating keywords and blog post content.
 
 ```
-GEMMA_API_KEY=your_gemma_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=google/gemma-3-12b-it:free
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
 ```
 
 ## Dependencies

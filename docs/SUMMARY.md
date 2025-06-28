@@ -6,6 +6,7 @@
 
 ### Basic Operations
 * [Caption Video](video/caption_video.md)
+* [Generate Shorts](video/shorts.md)
 * [Concatenate Videos](video/concatenate.md)
 * [Cut Video](video/cut.md)
 * [Split Video](video/split.md)

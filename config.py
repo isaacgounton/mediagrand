@@ -27,6 +27,11 @@ TTS_SERVER_URL = os.environ.get('TTS_SERVER_URL', 'https://tts.dahopevi.com/api'
 if not TTS_SERVER_URL.endswith('/'):
     TTS_SERVER_URL += '/'
 
+# AI Model configuration for Simone (OpenAI-compatible)
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'google/gemma-3-12b-it:free')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+OPENAI_BASE_URL = os.environ.get('OPENAI_BASE_URL', 'https://openrouter.ai/api/v1')
+
 # Storage path settings
 LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', '/app/data/tmp')
 

@@ -4,6 +4,7 @@ import json
 import logging # Added logging import
 
 import requests
+from config import OPENAI_MODEL, OPENAI_BASE_URL
 
 
 class Blogger:
@@ -13,15 +14,18 @@ class Blogger:
         self.output_filename = output_filename
 
     def generate_blogpost(self):
-        with open(self.transcription_filename, "r") as file:
+        with open(self.transcription_filename, "r", encoding="utf-8") as file:
             content = file.read()
 
         response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            url=f"{OPENAI_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json; charset=utf-8"
+            },
             data=json.dumps(
                 {
-                    "model": "google/gemma-3-12b-it:free", # Changed to match summarizer.py
+                    "model": OPENAI_MODEL,
                     "messages": [
                         {
                             "role": "system",
@@ -30,6 +34,7 @@ class Blogger:
                         {"role": "user", "content": content},
                     ],
                 },
+                ensure_ascii=False
             ),
         )
 
@@ -38,7 +43,7 @@ class Blogger:
             response_text = response.text
             response_dict = json.loads(response_text)
             blogpost = response_dict["choices"][0]["message"]["content"]
-            with open(self.output_filename, "w") as file:
+            with open(self.output_filename, "w", encoding="utf-8") as file:
                 file.write(blogpost)
         except requests.exceptions.HTTPError as http_err:
             logging.error(f"HTTP error occurred during blogpost generation: {http_err} - Response: {response.text}")

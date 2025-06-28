@@ -5,6 +5,7 @@ import logging
 import requests
 
 from services.simone.utils.prompts import get_social_media_prompt
+from config import OPENAI_MODEL, OPENAI_BASE_URL
 
 
 class SocialMediaGenerator:
@@ -13,22 +14,26 @@ class SocialMediaGenerator:
         self.transcription_filename = transcription_filename
 
     def generate_post(self, platform: str, **kwargs) -> str:
-        with open(self.transcription_filename, "r") as file:
+        with open(self.transcription_filename, "r", encoding="utf-8") as file:
             transcript_content = file.read()
 
         prompt = get_social_media_prompt(platform, transcript_content, **kwargs)
 
         response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            url=f"{OPENAI_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json; charset=utf-8"
+            },
             data=json.dumps(
                 {
-                    "model": "google/gemma-3-12b-it:free",  # Using the specified AI model
+                    "model": OPENAI_MODEL,
                     "messages": [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": prompt},
                     ],
                 },
+                ensure_ascii=False
             ),
         )
 
