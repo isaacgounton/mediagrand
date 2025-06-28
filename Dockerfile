@@ -29,6 +29,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt && \
+    playwright install-deps && \
     playwright install chromium
 
 
@@ -93,6 +94,9 @@ RUN apt-get update && \
 # Copy Python virtual environment
 COPY --from=python-builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Playwright system dependencies
+RUN playwright install-deps
 
 # Set working directory
 WORKDIR /app

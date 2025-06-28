@@ -104,6 +104,9 @@ def create_shorts(job_id, data):
     cookies_url = data.get('cookies_url')
     auth_method = data.get('auth_method', 'auto')
 
+    # Add diagnostic logging for authentication
+    logger.info(f"Job {job_id}: Using cookies_url: {cookies_url} with auth_method: {auth_method}")
+
     # Advanced shorts configuration
     shorts_config = data.get('shorts_config', {})
     num_shorts = shorts_config.get('num_shorts', 1)
@@ -147,9 +150,11 @@ def create_shorts(job_id, data):
             "auth_method": auth_method
         }
 
-        # Call the advanced download function
-        # The queue_task_wrapper returns (result, status_code) when called directly
-        result = download_media(f"{job_id}_download", download_data)
+        # Call the advanced download function directly, bypassing the queue wrapper.
+        # This is necessary because we are already in a worker context.
+        # We can ignore the Pylance linter error "Cannot access attribute '__wrapped__'"
+        # because __wrapped__ is a standard attribute for functions decorated with functools.wraps.
+        result = download_media.__wrapped__(f"{job_id}_download", download_data)
 
         # Debug: Log the raw result
         logger.debug(f"Job {job_id}: Raw download_media result: {result}")
