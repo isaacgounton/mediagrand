@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.simone.processor import process_video_to_blog
-from app import task_queue, queue_task
+from services.authentication import authenticate
+from app_utils import queue_task_wrapper
 import os
 import logging
 
@@ -11,7 +12,8 @@ simone_bp = Blueprint('simone_bp', __name__)
 TESSERACT_CMD_PATH = os.environ.get("TESSERACT_CMD_PATH", "/usr/bin/tesseract")
 
 @simone_bp.route('/v1/simone/process_video', methods=['POST'])
-@queue_task()
+@authenticate
+@queue_task_wrapper(bypass_queue=False)
 def process_video_endpoint(job_id, data):
     try:
         video_url = data.get('video_url')
@@ -21,17 +23,17 @@ def process_video_endpoint(job_id, data):
         gemma_api_key = os.environ.get('GEMMA_API_KEY')
 
         if not video_url:
-            return {"error": "Missing 'video_url' in request data"}, 400, "/v1/simone/process_video"
+            return {"error": "Missing 'video_url' in request data"}, "/v1/simone/process_video", 400
 
         if not gemma_api_key:
-            return {"error": "GEMMA_API_KEY not configured on server."}, 500, "/v1/simone/process_video"
+            return {"error": "GEMMA_API_KEY not configured on server."}, "/v1/simone/process_video", 500
 
         logging.info(f"Processing video {video_url} for job {job_id}")
 
         result = process_video_to_blog(video_url, TESSERACT_CMD_PATH, gemma_api_key, platform, cookies_content, cookies_url)
 
-        return result, 200, "/v1/simone/process_video"
+        return result, "/v1/simone/process_video", 200
 
     except Exception as e:
         logging.error(f"Error processing video for job {job_id}: {str(e)}", exc_info=True)
-        return {"error": str(e)}, 500, "/v1/simone/process_video"
+        return {"error": str(e)}, "/v1/simone/process_video", 500
