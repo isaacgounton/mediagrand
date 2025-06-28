@@ -8,6 +8,8 @@ import logging
 import tempfile
 import requests
 from typing import Optional, Dict, Any
+import requests
+from typing import Optional, Dict, Any
 import yt_dlp
 
 logger = logging.getLogger(__name__)
@@ -16,11 +18,10 @@ class YouTubeAuthenticator:
     """Handles various YouTube authentication methods for yt-dlp"""
     
     def __init__(self):
-        self.oauth_cache_dir = os.environ.get('YOUTUBE_OAUTH_CACHE_DIR', '/tmp/youtube_oauth')
+        # OAuth cache directory is no longer needed as OAuth is removed
         self.cookies_dir = os.environ.get('YOUTUBE_COOKIES_DIR', '/tmp/youtube_cookies')
         
         # Create directories if they don't exist
-        os.makedirs(self.oauth_cache_dir, exist_ok=True)
         os.makedirs(self.cookies_dir, exist_ok=True)
     
     def get_enhanced_ydl_opts(self, temp_dir: str, auth_method: str = 'auto', cookies_content: Optional[str] = None, cookies_url: Optional[str] = None) -> Dict[str, Any]:
@@ -29,7 +30,7 @@ class YouTubeAuthenticator:
 
         Args:
             temp_dir: Temporary directory for downloads
-            auth_method: Authentication method ('oauth2', 'cookies_content', 'cookies_url', 'cookies_file', 'auto')
+            auth_method: Authentication method ('cookies_content', 'cookies_url', 'cookies_file', 'auto')
             cookies_content: Raw cookie content as string
             cookies_url: URL to download cookies from
         """
@@ -62,8 +63,6 @@ class YouTubeAuthenticator:
         # Apply authentication method
         if auth_method == 'auto':
             self._apply_auto_auth(ydl_opts, cookies_content, cookies_url)
-        elif auth_method == 'oauth2':
-            self._apply_oauth2_auth(ydl_opts)
         elif auth_method == 'cookies_content' and cookies_content:
             self._apply_cookies_content_auth(ydl_opts, cookies_content)
         elif auth_method == 'cookies_url' and cookies_url:
@@ -75,11 +74,6 @@ class YouTubeAuthenticator:
     
     def _apply_auto_auth(self, ydl_opts: Dict[str, Any], cookies_content: Optional[str] = None, cookies_url: Optional[str] = None) -> None:
         """Apply authentication methods in order of preference"""
-
-        # Try OAuth2 first (most reliable)
-        if self._apply_oauth2_auth(ydl_opts):
-            logger.info("Using OAuth2 authentication")
-            return
 
         # Try cookies content if provided
         if cookies_content and self._apply_cookies_content_auth(ydl_opts, cookies_content):
@@ -97,32 +91,6 @@ class YouTubeAuthenticator:
             return
 
         logger.warning("No authentication method available, proceeding without auth")
-    
-    def _apply_oauth2_auth(self, ydl_opts: Dict[str, Any]) -> bool:
-        """Apply OAuth2 authentication using yt-dlp-youtube-oauth2 plugin"""
-        try:
-            # Check if OAuth2 plugin is available
-            import yt_dlp_youtube_oauth2
-            
-            # Configure OAuth2 cache directory
-            ydl_opts['cachedir'] = self.oauth_cache_dir
-            
-            # Enable OAuth2 authentication
-            ydl_opts['username'] = 'oauth2'
-            ydl_opts['password'] = ''
-            
-            # OAuth2 specific options
-            ydl_opts['youtube_include_dash_manifest'] = False
-            
-            logger.info("OAuth2 authentication configured")
-            return True
-            
-        except ImportError:
-            logger.warning("yt-dlp-youtube-oauth2 plugin not available")
-            return False
-        except Exception as e:
-            logger.warning(f"Failed to configure OAuth2 authentication: {e}")
-            return False
     
     def _apply_cookies_content_auth(self, ydl_opts: Dict[str, Any], cookies_content: str) -> bool:
         """Apply authentication using cookies content passed as parameter"""
@@ -226,5 +194,3 @@ class YouTubeAuthenticator:
         except Exception as e:
             logger.warning(f"Failed to validate cookies file {cookies_path}: {e}")
             return False
-    
-

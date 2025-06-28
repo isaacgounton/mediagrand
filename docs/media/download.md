@@ -121,7 +121,6 @@ curl -X POST https://your-domain.com/v1/BETA/media/download \
   -H 'x-api-key: YOUR_API_KEY' \
   -d '{
     "media_url": "https://www.youtube.com/watch?v=VIDEO_ID",
-    "auth_method": "oauth2"
   }'
 
 # With cookies content
@@ -148,12 +147,8 @@ curl -X POST https://your-domain.com/v1/BETA/media/download \
 ### Common Issues
 
 1. **"Sign in to confirm you're not a bot"**
-   - Solution: Use OAuth2 authentication
-   - Fallback: Export fresh cookies from browser
+   - Solution: Export fresh cookies from browser (see [yt-dlp documentation](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies) for details)
 
-2. **OAuth2 plugin not found**
-   - Ensure `yt-dlp-youtube-oauth2` is in requirements.txt
-   - Run the installation script manually
 
 3. **Cookies not working**
    - Ensure cookies are in Netscape format

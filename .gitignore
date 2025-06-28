@@ -1,7 +1,68 @@
-.env_variables.json
-.DS_Store
-.env_shell.json
-.env
-__pycache__
-*.pyc
+# Python
+__pycache__/
+*.py[cod]
 *.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Environment & Secrets
+.env
+.env.*
+.env_variables.json
+.env_shell.json
+secrets.json
+*.secret
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+.code-workspace
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Cache & Logs
+.cache_ggshield
+.cache/
+*.log
+*.tmp
+*.bak
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Node
+node_modules/
+
+# Docker
+*.pid
+*.pid.lock
+
+# Misc
+*.swp
+*.swo
+*.orig
+
+# Fonts & Media (optional, uncomment if needed)
+# fonts/
+# media/
+
+# Ignore build artifacts
+build/
+dist/
+*.egg
+*.whl
+
+# Ignore cookies and auth
+cookies.txt
+/app/cookies/
+/tmp/youtube_oauth/
+/tmp/youtube_cookies/
+
+# Ignore docs build
+/docs/_build/

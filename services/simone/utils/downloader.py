@@ -37,7 +37,7 @@ class Downloader:
             auth_methods.append('cookies_content')
         if self.cookies_url:
             auth_methods.append('cookies_url')
-        auth_methods.extend(['oauth2', 'cookies_file', 'auto'])
+        auth_methods.extend(['cookies_file', 'auto']) # Removed 'oauth2' as it's no longer supported for YouTube
 
         format_strategies = [
             ('bestaudio[ext=m4a]', 'audio.m4a'),
@@ -84,7 +84,7 @@ class Downloader:
             auth_methods.append('cookies_content')
         if self.cookies_url:
             auth_methods.append('cookies_url')
-        auth_methods.extend(['oauth2', 'cookies_file', 'auto'])
+        auth_methods.extend(['cookies_file', 'auto']) # Removed 'oauth2' as it's no longer supported for YouTube
 
         format_strategies = [
             ('best[height<=720][ext=mp4]', 'video.mp4'),
