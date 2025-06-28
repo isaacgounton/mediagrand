@@ -372,7 +372,7 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
                     srt_content = f.read()
 
                 temp_merged_segment_url = upload_file(merged_segment_local_path)
-                final_segment_url = process_captioning_v1(
+                captioned_local_path = process_captioning_v1(
                     video_url=temp_merged_segment_url,
                     captions=srt_content,
                     settings=caption_settings,
@@ -380,6 +380,19 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
                     job_id=segment_job_id,
                     language="en"
                 )
+                
+                # Upload the captioned video to cloud storage
+                if isinstance(captioned_local_path, dict) and 'error' in captioned_local_path:
+                    raise Exception(f"Captioning failed: {captioned_local_path['error']}")
+                
+                final_segment_url = upload_file(captioned_local_path)
+                
+                # Clean up local captioned file
+                try:
+                    os.remove(captioned_local_path)
+                    logger.info(f"Job {job_id}: Cleaned up captioned file: {captioned_local_path}")
+                except Exception as e:
+                    logger.warning(f"Job {job_id}: Failed to clean up captioned file {captioned_local_path}: {e}")
             else:
                 # No captions, just upload the merged video
                 final_segment_url = upload_file(merged_segment_local_path)
