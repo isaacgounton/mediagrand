@@ -52,23 +52,23 @@ def add_text_overlay_route(job_id, data):
         )
         
         # queue_task_wrapper expects a tuple (response_data, endpoint, status_code)
-        return jsonify({
+        return {
             "success": True,
             "message": "Video overlay processing started",
             "request_id": request_id_to_use,
             "webhook_url": webhook_url,
             "ffmpeg_api_response": response_data
-        }), endpoint, status_code
+        }, endpoint, status_code
             
     except requests.exceptions.RequestException as e:
         status_code = e.response.status_code if e.response else 500
-        return jsonify({
+        return {
             "error": "Failed to communicate with FFmpeg API",
             "details": str(e),
             "status_code": status_code
-        }), "/v1/text/add-text-overlay", status_code # Include endpoint
+        }, "/v1/text/add-text-overlay", status_code # Include endpoint
     except Exception as e:
-        return jsonify({"error": str(e)}), "/v1/text/add-text-overlay", 500 # Include endpoint
+        return {"error": str(e)}, "/v1/text/add-text-overlay", 500 # Include endpoint
 
 @text_overlay_bp.route('/presets', methods=['GET'])
 def get_presets_route():
@@ -98,7 +98,7 @@ def add_text_overlay_preset_route(preset_name):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": "No JSON data provided"}), 400, {} # Return empty dict for headers
+            return {"error": "No JSON data provided"}, 400, {} # Return empty dict for headers
         
         # Add preset options to the request data
         preset_options = presets[preset_name]['options']
@@ -113,10 +113,10 @@ def add_text_overlay_preset_route(preset_name):
             
     except requests.exceptions.RequestException as e:
         status_code = e.response.status_code if e.response else 500
-        return jsonify({
+        return {
             "error": "Failed to communicate with FFmpeg API",
             "details": str(e),
             "status_code": status_code
-        }), "/v1/text/add-text-overlay/preset", status_code # Include endpoint
+        }, "/v1/text/add-text-overlay/preset", status_code # Include endpoint
     except Exception as e:
-        return jsonify({"error": str(e)}), "/v1/text/add-text-overlay/preset", 500 # Include endpoint
+        return {"error": str(e)}, "/v1/text/add-text-overlay/preset", 500 # Include endpoint
