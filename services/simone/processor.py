@@ -61,7 +61,7 @@ def process_video_to_blog(url: str, tesseract_path: str, platform: Optional[str]
             }
 
             # Download video
-            video_result, _, video_status = download_media("simone_video", video_download_data)
+            video_result, video_status = download_media("simone_video", video_download_data)
             if video_status != 200:
                 raise Exception(f"Video download failed: {video_result.get('error', 'Unknown error')}")
 
@@ -76,7 +76,7 @@ def process_video_to_blog(url: str, tesseract_path: str, platform: Optional[str]
             }
 
             # Download audio
-            audio_result, _, audio_status = download_media("simone_audio", audio_download_data)
+            audio_result, audio_status = download_media("simone_audio", audio_download_data)
             if audio_status != 200:
                 raise Exception(f"Audio download failed: {audio_result.get('error', 'Unknown error')}")
 

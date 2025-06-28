@@ -154,7 +154,8 @@ def create_shorts(job_id, data):
         }
 
         # Call the advanced download function
-        download_result, _, status_code = download_media(f"{job_id}_download", download_data)
+        # The queue_task_wrapper returns (result, status_code) when called directly
+        download_result, status_code = download_media(f"{job_id}_download", download_data)
 
         if status_code != 200:
             raise Exception(f"Video download failed: {download_result.get('error', 'Unknown error')}")
