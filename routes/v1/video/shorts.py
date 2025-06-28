@@ -5,7 +5,8 @@ import tempfile
 import shutil
 import uuid
 
-from routes.v1.media.download import download_media
+import yt_dlp
+from services.simone.utils.downloader import Downloader
 from services.simone.utils.summarizer import Summarizer # For script generation
 from services.v1.audio.speech import generate_tts # For voiceover
 from services.v1.video.merge_videos_with_audio import process_video_merge_with_audio # For merging video and audio
@@ -136,92 +137,39 @@ def create_shorts(job_id, data):
         downloaded_video_path = None
         transcription_text = None  # Initialize transcription_text
 
-        # Step 1: Download video using advanced media download service
-        logger.info(f"Job {job_id}: Downloading video from {video_url}...")
+        # Step 1: Download video using Simone Downloader
+        logger.info(f"Job {job_id}: Downloading video from {video_url} using Simone Downloader...")
 
-        # Prepare download request data
-        download_data = {
-            "media_url": video_url,
-            "cloud_upload": True,  # Upload to cloud storage
-            "format": {"quality": "best"},  # Get best quality
-            "audio": {"extract": False},  # We need video, not just audio
-            "cookies_content": cookies_content,
-            "cookies_url": cookies_url,
-            "auth_method": auth_method
-        }
+        # Step 1a: Fetch metadata first without downloading
+        logger.info(f"Job {job_id}: Fetching video metadata...")
+        from services.youtube_auth import YouTubeAuthenticator
+        auth = YouTubeAuthenticator()
+        ydl_opts = auth.get_enhanced_ydl_opts(temp_dir, auth_method, cookies_content, cookies_url)
+        ydl_opts['quiet'] = True
+        ydl_opts['no_warnings'] = True
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            try:
+                info_dict = ydl.extract_info(video_url, download=False)
+                # Wrap it to resemble the old response structure for compatibility
+                actual_response = {"media": info_dict}
+                logger.info(f"Job {job_id}: Successfully fetched metadata for '{info_dict.get('title')}'")
+            except Exception as e:
+                logger.error(f"Job {job_id}: Failed to extract video metadata: {e}")
+                raise Exception(f"Failed to extract video metadata: {e}")
 
-        # Call the advanced download function directly, bypassing the queue wrapper.
-        # This is necessary because we are already in a worker context.
-        # We can ignore the Pylance linter error "Cannot access attribute '__wrapped__'"
-        # because __wrapped__ is a standard attribute for functions decorated with functools.wraps.
-        result = download_media.__wrapped__(f"{job_id}_download", download_data)
-
-        # Debug: Log the raw result
-        logger.debug(f"Job {job_id}: Raw download_media result: {result}")
-
-        # Unpack the result based on its length
-        if len(result) == 3:
-            download_result, _, status_code = result
-        elif len(result) == 2:
-            download_result, status_code = result
-        else:
-            raise Exception(f"Unexpected result format from download_media: {result}")
-
-        # Debug: Log the unpacked result
-        logger.info(f"Job {job_id}: Download result status: {status_code}, result type: {type(download_result)}")
-
-        if status_code != 200:
-            # download_result is a dictionary when there's an error
-            error_msg = download_result.get('error', 'Unknown error') if isinstance(download_result, dict) else str(download_result)
-            raise Exception(f"Video download failed: {error_msg}")
-
-        # Handle the response structure - download_result might be wrapped in array format
-        actual_response = download_result
-        if isinstance(download_result, list) and len(download_result) > 0:
-            # Response is in array format like the example
-            actual_response = download_result[0].get("response", {})
-            logger.info(f"Job {job_id}: Extracted response from array format")
-        elif isinstance(download_result, dict) and "response" in download_result:
-            # Response might be wrapped in a response key
-            actual_response = download_result["response"]
-            logger.info(f"Job {job_id}: Extracted response from response key")
-
-        # Validate the response structure
-        if not isinstance(actual_response, dict):
-            logger.error(f"Job {job_id}: Invalid response format. Full result: {download_result}")
-            raise Exception(f"Video download failed: Invalid response format - expected dict, got {type(actual_response)}")
-
-        if "media" not in actual_response:
-            logger.error(f"Job {job_id}: Download response missing 'media' key. Response: {actual_response}")
-            raise Exception(f"Video download failed: Response missing 'media' key")
-
-        if "media_url" not in actual_response["media"]:
-            logger.error(f"Job {job_id}: Download response missing 'media_url' key. Media object: {actual_response['media']}")
-            raise Exception(f"Video download failed: Response missing 'media_url' key")
-
-        # Extract the downloaded video URL from cloud storage
-        downloaded_video_url = actual_response["media"]["media_url"]
-        logger.info(f"Job {job_id}: Video downloaded and uploaded to cloud storage: {downloaded_video_url}")
-
-        # Validate the cloud storage URL before attempting download
-        if not downloaded_video_url or not downloaded_video_url.startswith(('http://', 'https://')):
-            raise Exception(f"Invalid cloud storage URL: {downloaded_video_url}")
-
-        # Test the cloud storage URL accessibility
-        import requests
+        # Step 1b: Download the actual video file
+        logger.info(f"Job {job_id}: Downloading video file...")
         try:
-            head_response = requests.head(downloaded_video_url, timeout=10)
-            logger.info(f"Job {job_id}: Cloud storage URL HEAD response: {head_response.status_code}, Content-Length: {head_response.headers.get('Content-Length', 'Unknown')}")
-            if head_response.status_code != 200:
-                raise Exception(f"Cloud storage URL not accessible: HTTP {head_response.status_code}")
+            downloader = Downloader(url=video_url, cookies_content=cookies_content, cookies_url=cookies_url)
+            downloader.video() # This downloads the file as 'video.mp4' in the current dir
+            downloaded_video_path = os.path.join(temp_dir, 'video.mp4')
+            if not os.path.exists(downloaded_video_path):
+                raise Exception("Simone Downloader finished but 'video.mp4' not found.")
+            logger.info(f"Job {job_id}: Video downloaded locally to {downloaded_video_path}")
         except Exception as e:
-            logger.error(f"Job {job_id}: Failed to access cloud storage URL: {e}")
-            raise Exception(f"Cloud storage URL validation failed: {e}")
-
-        # Download the video locally for processing
-        from services.file_management import download_file
-        downloaded_video_path = download_file(downloaded_video_url, temp_dir)
-        logger.info(f"Job {job_id}: Video downloaded locally to {downloaded_video_path}")
+            logger.error(f"Job {job_id}: Simone Downloader failed: {e}")
+            raise Exception(f"Video download failed: {e}")
 
         # Step 2: Generate script if not provided
         if not script_text:
