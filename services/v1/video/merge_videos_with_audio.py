@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 def process_video_merge_with_audio(
     video_urls,
     audio_url,
-    job_id=None
+    job_id=None,
+    target_width=None,
+    target_height=None
 ):
     """
     Merges multiple videos into one, overlays the provided audio (speech), and repeats the last video segment until the audio ends.
@@ -109,11 +111,23 @@ def process_video_merge_with_audio(
         final_duration = speech_duration + 0.2
         video_input = ffmpeg.input(temp_concat_path)
         audio_input = ffmpeg.input(speech_file)
-        output_args = {
-            'vcodec': 'copy',
-            'acodec': 'aac',
-            'shortest': None
-        }
+        
+        # Apply video scaling if target dimensions are provided
+        if target_width and target_height:
+            # Scale and pad to maintain aspect ratio
+            scale_filter = f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black"
+            output_args = {
+                'vf': scale_filter,
+                'acodec': 'aac',
+                'shortest': None
+            }
+        else:
+            output_args = {
+                'vcodec': 'copy',
+                'acodec': 'aac',
+                'shortest': None
+            }
+            
         (
             ffmpeg
             .output(

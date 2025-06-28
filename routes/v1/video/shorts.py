@@ -47,7 +47,19 @@ logger = logging.getLogger(__name__)
                     "default": "auto"
                 },
                 "transition_effects": {"type": "boolean", "default": False},
-                "background_music": {"type": "boolean", "default": False}
+                "background_music": {"type": "boolean", "default": False},
+                "video_format": {
+                    "type": "string",
+                    "enum": ["portrait", "landscape", "square"],
+                    "default": "portrait"
+                },
+                "resolution": {
+                    "type": "object",
+                    "properties": {
+                        "width": {"type": "integer", "minimum": 480, "maximum": 4096},
+                        "height": {"type": "integer", "minimum": 480, "maximum": 4096}
+                    }
+                }
             }
         }, # Optional: advanced shorts configuration
         "caption_settings": { # Optional: settings for video captioning
@@ -101,6 +113,14 @@ def create_shorts(job_id, data):
     script_text = data.get('script_text')
     tts_voice = data.get('tts_voice', 'en-US-AvaNeural') # Default voice
     caption_settings = data.get('caption_settings', {})
+    
+    # Extract language from TTS voice (e.g., 'fr-CA-ThierryNeural' -> 'fr')
+    def extract_language_from_voice(voice_name):
+        if '-' in voice_name:
+            return voice_name.split('-')[0]
+        return 'en'
+    
+    voice_language = extract_language_from_voice(tts_voice)
     cookies_content = data.get('cookies_content')
     cookies_url = data.get('cookies_url')
     auth_method = data.get('auth_method', 'auto')
@@ -117,6 +137,20 @@ def create_shorts(job_id, data):
     segment_method = shorts_config.get('segment_method', 'auto')
     transition_effects = shorts_config.get('transition_effects', False)
     background_music = shorts_config.get('background_music', False)
+    video_format = shorts_config.get('video_format', 'portrait')
+    custom_resolution = shorts_config.get('resolution', {})
+    
+    # Set video dimensions based on format
+    if custom_resolution:
+        video_width = custom_resolution.get('width', 1080)
+        video_height = custom_resolution.get('height', 1920)
+    else:
+        format_dimensions = {
+            'portrait': (1080, 1920),   # 9:16
+            'landscape': (1920, 1080),  # 16:9
+            'square': (1080, 1080)      # 1:1
+        }
+        video_width, video_height = format_dimensions.get(video_format, (1080, 1920))
 
     # Generate a job_id if not provided by queue_task_wrapper
     if not job_id:
@@ -226,10 +260,26 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
             else:
                 metadata_context = user_context
 
-            script_data = summarizer.generate_structured_script(context=metadata_context)
+            # Add language instruction to context
+            language_names = {'en': 'English', 'fr': 'French', 'es': 'Spanish', 'de': 'German', 'it': 'Italian', 'pt': 'Portuguese'}
+            language_name = language_names.get(voice_language, 'English')
+            language_context = f"{metadata_context}\n\nIMPORTANT: Generate the script in {language_name} language only. Do not include any JSON formatting text or explanations."
+            
+            script_data = summarizer.generate_structured_script(context=language_context)
 
             # Combine hook and script for TTS
             script_text = f"{script_data['hook']} {script_data['script']}"
+            
+            # Clean script text for TTS - remove any unwanted formatting or explanatory text
+            import re
+            # Remove JSON formatting artifacts
+            script_text = re.sub(r'[Hh]ere is.*?[Jj][Ss][Oo][Nn].*?:', '', script_text)
+            script_text = re.sub(r'[Cc]ode snippet\s*:', '', script_text)
+            script_text = re.sub(r'Title\s*[—-]\s*', '', script_text)
+            # Remove any remaining curly braces or JSON-like formatting
+            script_text = re.sub(r'[{}"]', '', script_text)
+            # Clean up extra whitespace
+            script_text = re.sub(r'\s+', ' ', script_text).strip()
             logger.info(f"Job {job_id}: Structured script generated - Hook: {script_data['hook'][:50]}...")
             logger.info(f"Job {job_id}: Script: {script_data['script'][:100]}...")
 
@@ -357,7 +407,9 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
             merged_segment_path_from_service = process_video_merge_with_audio(
                 video_urls=[temp_segment_video_url],
                 audio_url=temp_segment_audio_url,
-                job_id=segment_job_id
+                job_id=segment_job_id,
+                target_width=video_width,
+                target_height=video_height
             )
 
             # Copy merged video locally for captioning
@@ -378,7 +430,7 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
                     settings=caption_settings,
                     replace=[],
                     job_id=segment_job_id,
-                    language="en"
+                    language=voice_language
                 )
                 
                 # Upload the captioned video to cloud storage

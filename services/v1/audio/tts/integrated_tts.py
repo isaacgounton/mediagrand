@@ -176,30 +176,67 @@ class IntegratedTTSService:
             return self.default_speed
     
     def _generate_subtitle_file(self, text: str, job_id: str, subtitle_format: str) -> str:
-        """Generate a simple subtitle file"""
+        """Generate subtitles with proper timing segments"""
         subtitle_path = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.{subtitle_format}")
         
-        # Estimate duration (rough approximation: 150 words per minute)
-        words = len(text.split())
-        duration_seconds = max(1.0, words / 2.5)  # 150 words/min = 2.5 words/sec
+        # Split text into sentences for better caption timing
+        import re
+        sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        # Estimate total duration (150 words per minute)
+        total_words = len(text.split())
+        total_duration = max(1.0, total_words / 2.5)  # 150 words/min = 2.5 words/sec
         
         with open(subtitle_path, 'w', encoding='utf-8') as f:
             if subtitle_format == 'srt':
-                f.write("1\n")
-                f.write("00:00:00,000 --> ")
-                minutes = int(duration_seconds // 60)
-                seconds = int(duration_seconds % 60)
-                milliseconds = int((duration_seconds % 1) * 1000)
-                f.write(f"{minutes:02d}:{seconds:02d},{milliseconds:03d}\n")
-                f.write(f"{text}\n")
+                current_time = 0.0
+                for i, sentence in enumerate(sentences, 1):
+                    # Calculate duration for this sentence based on word count
+                    sentence_words = len(sentence.split())
+                    sentence_duration = max(1.0, sentence_words / 2.5)
+                    
+                    # Write SRT entry
+                    f.write(f"{i}\n")
+                    
+                    # Start time
+                    start_min = int(current_time // 60)
+                    start_sec = int(current_time % 60)
+                    start_ms = int((current_time % 1) * 1000)
+                    f.write(f"{start_min:02d}:{start_sec:02d},{start_ms:03d} --> ")
+                    
+                    # End time
+                    end_time = current_time + sentence_duration
+                    end_min = int(end_time // 60)
+                    end_sec = int(end_time % 60)
+                    end_ms = int((end_time % 1) * 1000)
+                    f.write(f"{end_min:02d}:{end_sec:02d},{end_ms:03d}\n")
+                    
+                    f.write(f"{sentence}\n\n")
+                    current_time = end_time
+                    
             else:  # vtt format
                 f.write("WEBVTT\n\n")
-                f.write("00:00:00.000 --> ")
-                minutes = int(duration_seconds // 60)
-                seconds = int(duration_seconds % 60)
-                milliseconds = int((duration_seconds % 1) * 1000)
-                f.write(f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}\n")
-                f.write(f"{text}\n")
+                current_time = 0.0
+                for sentence in sentences:
+                    sentence_words = len(sentence.split())
+                    sentence_duration = max(1.0, sentence_words / 2.5)
+                    
+                    # Start time
+                    start_min = int(current_time // 60)
+                    start_sec = int(current_time % 60)
+                    start_ms = int((current_time % 1) * 1000)
+                    f.write(f"{start_min:02d}:{start_sec:02d}.{start_ms:03d} --> ")
+                    
+                    # End time
+                    end_time = current_time + sentence_duration
+                    end_min = int(end_time // 60)
+                    end_sec = int(end_time % 60)
+                    end_ms = int((end_time % 1) * 1000)
+                    f.write(f"{end_min:02d}:{end_sec:02d}.{end_ms:03d}\n")
+                    
+                    f.write(f"{sentence}\n\n")
+                    current_time = end_time
         
         return subtitle_path
 
