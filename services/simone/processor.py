@@ -15,10 +15,11 @@ from .utils.saver import Saver
 from .utils.scorer import Scorer
 from .utils.summarizer import Summarizer
 from .utils.transcriber import Transcriber
+from .utils.social_media_generator import SocialMediaGenerator
 from services.s3_toolkit import upload_to_s3 # Import S3 upload function
 
 
-def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, cookies_content: Optional[str] = None, cookies_url: Optional[str] = None):
+def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, platform: Optional[str] = None, cookies_content: Optional[str] = None, cookies_url: Optional[str] = None):
     if gemma_api_key:
         print("GEMMA 7B API key found. Continuing execution...")
     else:
@@ -63,6 +64,13 @@ def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, coo
             print("Generating blog post...")
             blogpost = Blogger(gemma_api_key, "transcription.txt", "generated_blogpost.txt")
             blogpost.generate_blogpost()
+
+            social_media_post_content = ""
+            if platform:
+                print(f"Generating social media post for {platform}...")
+                social_media_generator = SocialMediaGenerator(gemma_api_key, "transcription.txt")
+                social_media_post_content = social_media_generator.generate_post(platform)
+                print(f"Social media post for {platform} generated.")
 
             print("Scoring frames...")
             frames = Framer("video.mp4")
@@ -139,7 +147,8 @@ def process_video_to_blog(url: str, tesseract_path: str, gemma_api_key: str, coo
             return {
                 "blog_post_content": blog_post_content, # Still return content directly
                 "blog_post_url": output_blog_post_url,
-                "screenshots": output_screenshot_urls
+                "screenshots": output_screenshot_urls,
+                "social_media_post_content": social_media_post_content
             }
 
         finally:

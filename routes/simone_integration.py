@@ -17,6 +17,7 @@ def process_video_endpoint(job_id, data):
         video_url = data.get('video_url')
         cookies_content = data.get('cookies_content')
         cookies_url = data.get('cookies_url')
+        platform = data.get('platform') # Get the new platform parameter
         gemma_api_key = os.environ.get('GEMMA_API_KEY')
 
         if not video_url:
@@ -27,7 +28,7 @@ def process_video_endpoint(job_id, data):
 
         logging.info(f"Processing video {video_url} for job {job_id}")
 
-        result = process_video_to_blog(video_url, TESSERACT_CMD_PATH, gemma_api_key, cookies_content, cookies_url)
+        result = process_video_to_blog(video_url, TESSERACT_CMD_PATH, gemma_api_key, platform, cookies_content, cookies_url)
 
         return jsonify(result), 200, "/v1/simone/process_video"
 
