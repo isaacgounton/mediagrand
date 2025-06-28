@@ -58,11 +58,7 @@ RUN apt-get update && \
     libtheora0 \
     # Additional audio processing libraries for librosa
     libsndfile1 \
-    libflac8 \
     libogg0 \
-    # Additional video processing libraries for moviepy
-    libx264-160 \
-    libx265-199 \
     # Graphics libraries
     libfreetype6 \
     libfontconfig1 \
