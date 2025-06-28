@@ -14,7 +14,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from flask import Flask, request
+from flask import Flask, request, Response as FlaskResponse
 from flask_cors import CORS
 from redis import Redis
 from rq import Queue, Worker
@@ -105,13 +105,23 @@ def process_task(task_wrapper_instance, start_time):
         run_time = time.time() - run_start_time
         total_time = time.time() - start_time
 
+        # Ensure response[0] is a dictionary if it's a Flask Response object
+        # This handles cases where jsonify might have been implicitly called
+        actual_response_data = response[0]
+        if isinstance(actual_response_data, FlaskResponse): # Use FlaskResponse from flask
+            try:
+                actual_response_data = actual_response_data.get_json()
+            except Exception:
+                # Fallback if get_json() fails (e.g., non-JSON response), decode as string
+                actual_response_data = actual_response_data.data.decode('utf-8')
+
         response_data = {
             "endpoint": response[1],
             "code": response[2],
             "id": task_wrapper_instance.data.get("id"),
             "job_id": task_wrapper_instance.job_id,
-            "response": response[0] if response[2] == 200 else None,
-            "message": "success" if response[2] == 200 else response[0],
+            "response": actual_response_data if response[2] == 200 else None,
+            "message": "success" if response[2] == 200 else actual_response_data,
             "pid": worker_pid,
             "run_time": round(run_time, 3),
             "queue_time": round(queue_time, 3),
@@ -119,16 +129,8 @@ def process_task(task_wrapper_instance, start_time):
             "queue_length": len(task_queue), # Uses global task_queue
             "build_number": BUILD_NUMBER
         }
-        
-        log_job_status(task_wrapper_instance.job_id, {
-            "job_status": "done",
-            "job_id": task_wrapper_instance.job_id,
-            "process_id": worker_pid,
-            "response": response_data
-        })
 
-        if task_wrapper_instance.data.get("webhook_url"):
-            send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
+        send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
 
         return response_data
         
