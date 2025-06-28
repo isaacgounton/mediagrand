@@ -148,8 +148,8 @@ def create_shorts(job_id, data):
         }
 
         # Call the advanced download function
-        # The queue_task_wrapper returns (result, endpoint, status_code) when called directly
-        download_result, endpoint, status_code = download_media(f"{job_id}_download", download_data)
+        # The queue_task_wrapper returns (result, status_code) when called directly
+        download_result, status_code = download_media(f"{job_id}_download", download_data)
 
         if status_code != 200:
             # download_result is a dictionary when there's an error
