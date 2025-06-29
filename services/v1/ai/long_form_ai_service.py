@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import Dict, Optional, Any, List
-import google.generativeai as genai
+from google import genai
 
 logger = logging.getLogger(__name__)
 
