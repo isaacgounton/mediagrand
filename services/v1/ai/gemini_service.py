@@ -17,7 +17,7 @@ class GeminiService:
         self.client = genai.Client()
         
         # Model name for viral script generation
-        self.model_name = "gemini-2.5-flash"
+        self.model_name = "gemini-2.0-flash"
         
         # Viral-focused system instruction (copied from viral-shorts-creator)
         self.system_instruction = (
