@@ -222,7 +222,7 @@ class TextOverlayService:
         ]
 
         try:
-            subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
             raise Exception(f"FFmpeg command failed: {e.stderr}")
         finally:
@@ -230,21 +230,20 @@ class TextOverlayService:
             if os.path.exists(input_path):
                 os.remove(input_path)
         
-        # In a real scenario, you would upload output_filename to cloud storage
-            # Upload the processed video to cloud storage
-            cloud_url = upload_file(output_filename)
-            
-            # Clean up the local output file after upload
-            if os.path.exists(output_filename):
-                os.remove(output_filename)
+        # Upload the processed video to cloud storage
+        cloud_url = upload_file(output_filename)
+        
+        # Clean up the local output file after upload
+        if os.path.exists(output_filename):
+            os.remove(output_filename)
 
-            response_data = {
-                "output_url": cloud_url,
-                "message": "FFmpeg process completed successfully and uploaded to cloud storage."
-            }
-            
-            # Return response_data, endpoint, status_code as expected by queue_task_wrapper
-            return response_data, "/v1/text/add-text-overlay", 200
+        response_data = {
+            "output_url": cloud_url,
+            "message": "FFmpeg process completed successfully and uploaded to cloud storage."
+        }
+        
+        # Return response_data, endpoint, status_code as expected by queue_task_wrapper
+        return response_data, "/v1/text/add-text-overlay", 200
 
     def get_available_presets(self):
         return self.presets
