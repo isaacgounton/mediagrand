@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 from typing import Dict, Optional, Any
 from google import genai
 
@@ -19,18 +20,23 @@ class GeminiService:
         # Model name for viral script generation
         self.model_name = "gemini-2.0-flash"
         
-        # Viral-focused system instruction (copied from viral-shorts-creator)
+        # Viral-focused system instruction for clean narration text
         self.system_instruction = (
-            "You are a creative and detail-oriented scriptwriter. Your task is to analyze the provided video (or its transcript) "
-            "and generate an engaging, concise summary that captures the unique and bizarre elements of the video. "
-            "Your output will serve as a script for video shorts, so focus on the following:\n\n"
-            "• **Overview:** Provide a clear description of the main actions and events.\n"
-            "• **Highlights:** Emphasize any unusual, surprising, or humorous moments.\n"
-            "• **Tone:** Keep the language energetic, engaging, and suitable for short-form content.\n"
-            "• **Brevity:** Be concise while ensuring the viewer understands what makes the video interesting.\n"
-            "• **Audience Hook:** Include a captivating hook at the beginning to grab the viewer's attention.\n\n"
-            "Make sure your script clearly outlines what is happening in the video and why it's worth watching.\n\n"
-            "Return your response as JSON with exactly these fields: {\"hook\": \"your engaging hook\", \"script\": \"your main script content\"}"
+            "You are a voice-over scriptwriter creating narration text for viral short videos. "
+            "Your task is to analyze the provided video (or its transcript) and generate clean, "
+            "spoken narration that will be read by a text-to-speech system.\n\n"
+            "IMPORTANT REQUIREMENTS:\n"
+            "• Generate ONLY spoken text - no video directions, cuts, or production notes\n"
+            "• No [brackets], **bold text**, or formatting - just clean narration\n"
+            "• Write as if you're speaking directly to the viewer\n"
+            "• Keep it conversational, engaging, and energetic\n"
+            "• Focus on the most interesting/shocking elements\n"
+            "• Use natural speech patterns with appropriate pauses\n"
+            "• Include relevant hashtags only at the very end\n\n"
+            "STRUCTURE:\n"
+            "• Hook: 1-2 sentences that grab attention immediately\n"
+            "• Script: Main narration (60-90 seconds of speaking time)\n\n"
+            "Return your response as JSON: {\"hook\": \"spoken hook text\", \"script\": \"clean spoken narration\"}"
         )
     
     def _clean_json_response(self, response_text: str) -> str:
@@ -53,8 +59,29 @@ class GeminiService:
         try:
             logger.info(f"Uploading video to Gemini: {video_path}")
             uploaded_file = self.client.files.upload(file=video_path)
-            logger.info(f"Video uploaded successfully with new API")
-            return uploaded_file
+            logger.info(f"Video uploaded successfully with new API: {uploaded_file.uri}")
+            
+            # Wait for file to become ACTIVE
+            logger.info("Waiting for file to become ACTIVE...")
+            max_wait_time = 60  # Maximum wait time in seconds
+            wait_interval = 2   # Check every 2 seconds
+            elapsed_time = 0
+            
+            while elapsed_time < max_wait_time:
+                file_info = self.client.files.get(uploaded_file.name)
+                logger.info(f"File state: {file_info.state}")
+                
+                if file_info.state == 'ACTIVE':
+                    logger.info("File is now ACTIVE and ready for use")
+                    return uploaded_file
+                elif file_info.state == 'FAILED':
+                    raise Exception(f"File upload failed with state: {file_info.state}")
+                
+                time.sleep(wait_interval)
+                elapsed_time += wait_interval
+            
+            raise Exception(f"File did not become ACTIVE within {max_wait_time} seconds")
+            
         except Exception as e:
             logger.error(f"Failed to upload video to Gemini: {e}")
             raise Exception(f"Failed to upload video to Gemini: {e}")

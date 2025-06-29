@@ -329,6 +329,8 @@ def create_viral_short(job_id, data):
                 logger.info(f"Job {job_id}: Generated SRT content preview: {srt_content[:200]}...")  # Log first 200 chars
                 
                 # Apply captions with viral-optimized settings
+                # Note: Using 'classic' instead of 'word_by_word' because TTS generates sentence-level timing
+                # word_by_word requires word-level timestamps which TTS doesn't provide
                 caption_settings = {
                     "font_size": 28,
                     "line_color": "#FFFFFF",
@@ -337,7 +339,7 @@ def create_viral_short(job_id, data):
                     "position": "bottom_center",
                     "bold": True,
                     "all_caps": True,
-                    "style": "word_by_word",
+                    "style": "classic",
                     "font_family": "Arial"  # Explicitly set Arial font which should be available
                 }
                 
