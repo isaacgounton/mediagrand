@@ -388,37 +388,54 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
         except ImportError as e:
             logger.warning(f"Job {job_id}: Video analysis dependencies missing: {str(e)}")
             logger.info(f"Job {job_id}: Falling back to equal parts segmentation")
-            # Fallback to simple equal parts segmentation
+            # Fallback to simple equal parts segmentation using FFmpeg
             try:
-                from moviepy.editor import VideoFileClip
-                with VideoFileClip(downloaded_video_path) as video_clip:
-                    video_duration = video_clip.duration
-                    if num_shorts == 1:
-                        start_time = max(0, (video_duration - short_duration) / 2)
+                # Get video duration using FFprobe
+                import subprocess
+                ffprobe_command = [
+                    "ffprobe",
+                    "-v", "quiet",
+                    "-show_entries", "format=duration",
+                    "-of", "csv=p=0",
+                    downloaded_video_path
+                ]
+                
+                result = subprocess.run(
+                    ffprobe_command,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                video_duration = float(result.stdout.strip())
+                logger.info(f"Job {job_id}: Video duration: {video_duration}s")
+                
+                if num_shorts == 1:
+                    start_time = max(0, (video_duration - short_duration) / 2)
+                    end_time = min(video_duration, start_time + short_duration)
+                    video_segments = [{
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "score": 1.0,
+                        "reason": "Fallback: middle segment"
+                    }]
+                else:
+                    segment_size = video_duration / num_shorts
+                    video_segments = []
+                    for i in range(num_shorts):
+                        start_time = i * segment_size
                         end_time = min(video_duration, start_time + short_duration)
-                        video_segments = [{
+                        if end_time - start_time < short_duration * 0.5:
+                            start_time = max(0, end_time - short_duration)
+                        video_segments.append({
                             "start_time": start_time,
                             "end_time": end_time,
                             "score": 1.0,
-                            "reason": "Fallback: middle segment"
-                        }]
-                    else:
-                        segment_size = video_duration / num_shorts
-                        video_segments = []
-                        for i in range(num_shorts):
-                            start_time = i * segment_size
-                            end_time = min(video_duration, start_time + short_duration)
-                            if end_time - start_time < short_duration * 0.5:
-                                start_time = max(0, end_time - short_duration)
-                            video_segments.append({
-                                "start_time": start_time,
-                                "end_time": end_time,
-                                "score": 1.0,
-                                "reason": f"Fallback: equal part {i+1}/{num_shorts}"
-                            })
-            except ImportError:
-                # Ultimate fallback if even MoviePy is not available
-                logger.warning(f"Job {job_id}: MoviePy not available, using basic segmentation")
+                            "reason": f"Fallback: equal part {i+1}/{num_shorts}"
+                        })
+            except Exception as ffmpeg_error:
+                # Ultimate fallback if even FFprobe fails
+                logger.warning(f"Job {job_id}: FFprobe not available, using basic segmentation")
                 video_segments = [{
                     "start_time": 0,
                     "end_time": short_duration,

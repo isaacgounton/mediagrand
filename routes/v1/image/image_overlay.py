@@ -54,7 +54,7 @@ def add_overlay_image(job_id, data):
         cloud_url = upload_file(output_filename)
 
         # Log the successful upload
-        logger.info(f"Job {job_id}: Converted video uploaded to cloud storage: {cloud_url}")
+        logger.info(f"Job {job_id}: Converted image uploaded to cloud storage: {cloud_url}")
 
         # Return the cloud URL for the uploaded file
         return cloud_url, "/add-overlay-image", 200

@@ -161,40 +161,56 @@ def generate_clips(job_id, data):
             logger.warning(f"Job {job_id}: Intelligent segmentation failed: {e}")
             logger.info(f"Job {job_id}: Falling back to equal parts segmentation")
             
-            # Fallback to simple equal parts segmentation
+            # Fallback to simple equal parts segmentation using FFmpeg
             try:
-                from moviepy.editor import VideoFileClip
-                with VideoFileClip(downloaded_video_path) as video_clip:
-                    video_duration = video_clip.duration
-                    
-                    if num_clips == 1:
-                        # Single clip from middle of video
-                        start_time = max(0, (video_duration - clip_duration) / 2)
+                # Get video duration using FFprobe
+                import subprocess
+                ffprobe_command = [
+                    "ffprobe",
+                    "-v", "quiet",
+                    "-show_entries", "format=duration",
+                    "-of", "csv=p=0",
+                    downloaded_video_path
+                ]
+                
+                result = subprocess.run(
+                    ffprobe_command,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                video_duration = float(result.stdout.strip())
+                logger.info(f"Job {job_id}: Video duration: {video_duration}s")
+                
+                if num_clips == 1:
+                    # Single clip from middle of video
+                    start_time = max(0, (video_duration - clip_duration) / 2)
+                    end_time = min(video_duration, start_time + clip_duration)
+                    video_segments = [{
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "score": 1.0,
+                        "reason": "Middle segment"
+                    }]
+                else:
+                    # Multiple clips spread across video
+                    segment_size = video_duration / num_clips
+                    video_segments = []
+                    for i in range(num_clips):
+                        start_time = i * segment_size
                         end_time = min(video_duration, start_time + clip_duration)
-                        video_segments = [{
+                        
+                        # Ensure minimum clip duration
+                        if end_time - start_time < clip_duration * 0.5:
+                            start_time = max(0, end_time - clip_duration)
+                        
+                        video_segments.append({
                             "start_time": start_time,
                             "end_time": end_time,
                             "score": 1.0,
-                            "reason": "Middle segment"
-                        }]
-                    else:
-                        # Multiple clips spread across video
-                        segment_size = video_duration / num_clips
-                        video_segments = []
-                        for i in range(num_clips):
-                            start_time = i * segment_size
-                            end_time = min(video_duration, start_time + clip_duration)
-                            
-                            # Ensure minimum clip duration
-                            if end_time - start_time < clip_duration * 0.5:
-                                start_time = max(0, end_time - clip_duration)
-                            
-                            video_segments.append({
-                                "start_time": start_time,
-                                "end_time": end_time,
-                                "score": 1.0,
-                                "reason": f"Equal part {i+1}/{num_clips}"
-                            })
+                            "reason": f"Equal part {i+1}/{num_clips}"
+                        })
             except Exception as fallback_error:
                 logger.error(f"Job {job_id}: Even fallback segmentation failed: {fallback_error}")
                 raise Exception(f"Video segmentation failed: {fallback_error}")

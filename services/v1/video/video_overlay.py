@@ -10,7 +10,6 @@ import subprocess
 import time
 
 from services.s3_toolkit import upload_to_s3
-import os
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -38,3 +38,4 @@ pytesseract
 typer
 librosa>=0.10.0
 moviepy>=1.0.3
+imageio[ffmpeg]>=2.25.0
