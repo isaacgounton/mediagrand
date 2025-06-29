@@ -21,7 +21,10 @@ The request body must be a JSON object with the following properties:
 
 - `video_url` (string, required): The URL of the source video from which the viral short will be generated.
 - `context` (string, optional): Additional context to help the AI generate better viral scripts. This can include information about the video topic, target audience, or specific viral angles to emphasize.
-- `tts_voice` (string, optional): The voice to be used for the generated commentary voiceover. This should be a valid voice identifier from the Text-to-Speech service (e.g., "en-US-AvaNeural"). Defaults to "en-US-AvaNeural".
+- `tts_voice` (string, optional): The voice to be used for the generated commentary voiceover. This determines both the voice and the language for script generation (e.g., "fr-CA-ThierryNeural" will generate French scripts). Defaults to "en-US-AvaNeural".
+- `short_duration` (integer, optional): Duration of the viral short in seconds. Range: 15-180. Default: 60. The system will find the best segment from the source video.
+- `video_format` (string, optional): Output video format and aspect ratio. Options: "portrait" (9:16), "landscape" (16:9), "square" (1:1). Default: "portrait".
+- `add_captions` (boolean, optional): Whether to automatically add viral-style captions to the video. Default: true.
 - `cookies_content` (string, optional): YouTube cookies content for authentication when downloading restricted videos.
 - `cookies_url` (string, optional): URL to download YouTube cookies from for authentication.
 - `auth_method` (string, optional): YouTube authentication method. Options: "auto", "oauth2", "cookies_content", "cookies_url", "cookies_file". Defaults to "auto".
@@ -38,25 +41,42 @@ The request body must be a JSON object with the following properties:
 ```
 This minimal request will download the video, analyze it visually with AI, generate a viral script, create commentary voiceover, and intelligently mix it with the original audio.
 
-#### Example 2: Viral Short with Context
+#### Example 2: Viral Short with Custom Duration and Format
 ```json
 {
     "video_url": "https://example.com/interesting_content.mp4",
     "context": "This video shows an amazing life hack that everyone needs to know about",
-    "tts_voice": "en-US-GuyNeural"
+    "tts_voice": "en-US-GuyNeural",
+    "short_duration": 90,
+    "video_format": "square"
 }
 ```
 
-#### Example 3: French Viral Short with Custom Voice
+#### Example 3: French Viral Short with Portrait Format
 ```json
 {
     "video_url": "https://example.com/french_content.mp4",
     "context": "Contenu viral français sur les nouvelles technologies",
-    "tts_voice": "fr-CA-ThierryNeural"
+    "tts_voice": "fr-CA-ThierryNeural",
+    "short_duration": 60,
+    "video_format": "portrait",
+    "add_captions": true
 }
 ```
 
-#### Example 4: Viral Short with YouTube Authentication
+#### Example 4: Landscape Viral Short without Captions
+```json
+{
+    "video_url": "https://example.com/tutorial.mp4",
+    "context": "Quick tutorial breakdown for viral content",
+    "tts_voice": "en-US-AriaNeural",
+    "short_duration": 45,
+    "video_format": "landscape",
+    "add_captions": false
+}
+```
+
+#### Example 5: Viral Short with YouTube Authentication
 ```json
 {
     "video_url": "https://www.youtube.com/watch?v=restricted_video",
@@ -79,7 +99,61 @@ curl -X POST \
     https://your-api-endpoint.com/v1/video/viral-shorts
 ```
 
-## 4. Advanced AI Analysis Features
+## 4. Intelligent Video Clipping Features
+
+### Automatic Segment Detection
+The viral shorts endpoint automatically finds the best segments from long videos:
+
+#### AI-Powered Highlights Detection
+- **Audio Energy Analysis**: Identifies moments with high engagement based on volume and frequency changes
+- **Transcription Keywords**: Scans for viral-worthy words and phrases that indicate interesting content
+- **Scene Change Detection**: Uses visual analysis to find dynamic moments with significant changes
+- **Engagement Scoring**: Combines multiple factors to rank segments by viral potential
+
+#### Smart Duration Matching
+- **Precise Clipping**: Extracts exact duration specified (15-180 seconds)
+- **Natural Boundaries**: Respects sentence/phrase boundaries when possible
+- **Content Optimization**: Selects segments with complete thoughts and engaging hooks
+- **Fallback Strategy**: Uses beginning of video if analysis fails
+
+### Video Format Conversion
+
+#### Automatic Format Optimization
+The endpoint converts videos to optimal formats for different platforms:
+
+#### Portrait Format (9:16) - Default
+- **Resolution**: 1080x1920 pixels
+- **Optimized for**: TikTok, Instagram Reels, YouTube Shorts
+- **Padding**: Adds black bars to maintain aspect ratio
+- **Quality**: Preserves video quality during conversion
+
+#### Landscape Format (16:9)
+- **Resolution**: 1920x1080 pixels  
+- **Optimized for**: YouTube, desktop viewing
+- **Professional**: Standard broadcast format
+- **Compatibility**: Works across all platforms
+
+#### Square Format (1:1)
+- **Resolution**: 1080x1080 pixels
+- **Optimized for**: Instagram posts, social media
+- **Versatile**: Works on both mobile and desktop
+- **Consistent**: Uniform appearance across devices
+
+### Automatic Captions System
+
+#### Viral-Optimized Caption Style
+- **Word-by-word highlighting**: Each word appears as spoken for maximum engagement
+- **Bold, all-caps text**: High-impact visual style for viral content
+- **Strong contrast**: White text with black outline for visibility
+- **Bottom positioning**: Doesn't block important visual content
+
+#### Caption Features
+- **Automatic generation**: Created from TTS timing for perfect synchronization
+- **Language matching**: Captions match the script language automatically
+- **Mobile optimized**: Large, readable text for mobile viewing
+- **Platform ready**: Style optimized for viral short-form platforms
+
+## 5. Advanced AI Analysis Features
 
 ### Visual Content Analysis with Gemini AI
 The viral shorts endpoint uses Google's Gemini 2.0 AI for comprehensive video analysis:
@@ -160,6 +234,11 @@ Unlike traditional voiceover replacement, the viral shorts endpoint uses sophist
 - `short_url` (string): The cloud URL of the generated viral short video file.
 - `job_id` (string): A unique identifier for the job.
 - `script_data` (object): The AI-generated script data with hook and main content.
+- `segment_info` (object): Information about the video segment selected for the short.
+- `video_format` (string): The output video format applied.
+- `duration` (integer): The duration of the generated short in seconds.
+- `language` (string): The language used for script generation (detected from TTS voice).
+- `captions_added` (boolean): Whether captions were added to the video.
 - `message` (string): Success confirmation message.
 
 Example:
@@ -172,6 +251,16 @@ Example:
         "hook": "You won't believe what happens next in this viral moment!",
         "script": "This incredible footage shows exactly why this technique is taking social media by storm. The way they execute this move is absolutely mind-blowing and explains why everyone is talking about it."
     },
+    "segment_info": {
+        "start_time": 45.2,
+        "end_time": 105.2,
+        "score": 0.85,
+        "reason": "High audio energy and engaging keywords"
+    },
+    "video_format": "portrait",
+    "duration": 60,
+    "language": "en",
+    "captions_added": true,
     "message": "Viral short created successfully"
 }
 ```
@@ -249,11 +338,15 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 
 - The `video_url` must be a valid and accessible URL pointing to a video file.
 - Ensure that the `GEMINI_API_KEY` environment variable is correctly configured for AI analysis.
-- The `tts_voice` parameter determines both the voice and the language for script generation.
+- The `tts_voice` parameter determines both the voice and the language for script generation (e.g., "fr-CA-ThierryNeural" will generate French scripts).
+- The `short_duration` parameter controls the length of the final viral short - the system will find the best segment of this duration.
 - Visual AI analysis provides better results than audio-only analysis for viral content.
 - The intelligent audio mixing preserves original video atmosphere while adding engaging commentary.
+- Video format conversion happens automatically - specify "portrait" for TikTok/Instagram, "landscape" for YouTube, or "square" for Instagram posts.
+- Captions are added by default with viral-optimized styling (word-by-word, bold, high contrast).
 - All text content supports UTF-8 encoding including international characters and emojis.
 - Use the `context` parameter to guide the AI toward specific viral angles or topics.
+- Longer source videos provide more opportunities for finding engaging segments.
 
 ## 11. Common Issues
 

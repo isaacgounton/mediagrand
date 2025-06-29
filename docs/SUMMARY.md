@@ -8,6 +8,7 @@
 * [Caption Video](video/caption_video.md)
 * [Generate Shorts](video/shorts.md)
 * [Viral Shorts Generation](video/viral_shorts.md)
+* [Long-Form Video Generation](video/long_form.md)
 * [Clips Generator](video/clips_generator.md)
 * [Concatenate Videos](video/concatenate.md)
 * [Cut Video](video/cut.md)
