@@ -287,7 +287,7 @@ def generate_clips(job_id, data):
         
         logger.info(f"Job {job_id}: Successfully generated {len(generated_clips)}/{num_clips} clips")
         
-        return jsonify({
+        return {
             "clips": generated_clips,
             "job_id": job_id,
             "total_clips": len(generated_clips),
@@ -296,11 +296,11 @@ def generate_clips(job_id, data):
             "segment_method": segment_method,
             "video_format": video_format,
             "message": f"Successfully generated {len(generated_clips)} clips"
-        }), 200
+        }, "/v1/video/generate-clips", 200
         
     except Exception as e:
         logger.error(f"Job {job_id}: Error generating clips: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}, "/v1/video/generate-clips", 500
     
     finally:
         # Cleanup

@@ -347,7 +347,7 @@ def create_long_form_video(job_id, data):
         
         logger.info(f"Job {job_id}: Long-form video completed: {final_video_url}")
         
-        return jsonify({
+        return {
             "video_url": final_video_url,
             "job_id": job_id,
             "script_data": script_data,
@@ -359,11 +359,11 @@ def create_long_form_video(job_id, data):
             "language": voice_language,
             "captions_added": add_captions,
             "message": "Long-form video created successfully"
-        }), 200
+        }, "/v1/video/long-form", 200
         
     except Exception as e:
         logger.error(f"Job {job_id}: Error creating long-form video: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}, "/v1/video/long-form", 500
     
     finally:
         # Cleanup

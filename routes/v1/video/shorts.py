@@ -585,21 +585,21 @@ Upload Date: {video_metadata.get('upload_date', 'Unknown')}"""
         # Return results based on number of shorts generated
         if len(generated_shorts) == 1:
             # Single short - return the original format for backward compatibility
-            return jsonify({
+            return {
                 "short_url": generated_shorts[0]["short_url"],
                 "job_id": job_id
-            }), 200
+            }, "/v1/video/shorts", 200
         else:
             # Multiple shorts - return array with segment information
-            return jsonify({
+            return {
                 "shorts": generated_shorts,
                 "job_id": job_id,
                 "total_shorts": len(generated_shorts)
-            }), 200
+            }, "/v1/video/shorts", 200
 
     except Exception as e:
         logger.error(f"Job {job_id}: Error creating shorts: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}, "/v1/video/shorts", 500
     finally:
         os.chdir(original_cwd) # Change back to original working directory
         if temp_dir and os.path.exists(temp_dir):

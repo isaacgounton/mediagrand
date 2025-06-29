@@ -364,7 +364,7 @@ def create_viral_short(job_id, data):
         
         logger.info(f"Job {job_id}: Viral short completed: {final_short_url}")
         
-        return jsonify({
+        return {
             "short_url": final_short_url,
             "job_id": job_id,
             "script_data": script_data,
@@ -374,11 +374,11 @@ def create_viral_short(job_id, data):
             "language": voice_language,
             "captions_added": add_captions,
             "message": "Viral short created successfully"
-        }), 200
+        }, "/v1/video/viral-shorts", 200
         
     except Exception as e:
         logger.error(f"Job {job_id}: Error creating viral short: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}, "/v1/video/viral-shorts", 500
     
     finally:
         # Cleanup
