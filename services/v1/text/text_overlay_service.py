@@ -77,29 +77,24 @@ class TextOverlayService:
         }
 
     def wrap_text(self, text, max_width=60):
-        """Simple text wrapping function"""
+        """Improved text wrapping function with proper spacing"""
         words = text.split()
         lines = []
         current_line = []
         current_length = 0
         
         for word in words:
-            # Check if adding the current word (plus a space) exceeds max_width
-            # The +1 is for the space after the word if it's not the last word on the line
-            if current_length + len(word) + (1 if current_line else 0) > max_width:
-                if current_line: # If there's content in current_line, finalize it
-                    lines.append(' '.join(current_line))
-                else: # Word itself is longer than max_width, force it on a new line
-                    lines.append(word)
-                    current_line = []
-                    current_length = 0
-                    continue # Move to next word, current_line is empty
-
+            # Calculate space needed (word length + space if not first word)
+            space_needed = len(word) + (1 if current_line else 0)
+            
+            if current_length + space_needed > max_width and current_line:
+                # Finalize current line and start new one
+                lines.append(' '.join(current_line))
                 current_line = [word]
                 current_length = len(word)
             else:
                 current_line.append(word)
-                current_length += len(word)
+                current_length += len(word) + (1 if current_line else 0)
         
         if current_line:
             lines.append(' '.join(current_line))
@@ -107,7 +102,7 @@ class TextOverlayService:
         return '\\n'.join(lines)
 
     def escape_text_for_ffmpeg(self, text):
-        """Escape special characters for FFmpeg drawtext filter"""
+        """Escape special characters for FFmpeg drawtext filter with proper UTF-8 support"""
         # Ensure text is properly encoded as UTF-8
         if isinstance(text, str):
             text = text.encode('utf-8').decode('utf-8')
@@ -121,6 +116,9 @@ class TextOverlayService:
         text = text.replace(']', '\\]')
         text = text.replace(',', '\\,')
         text = text.replace(';', '\\;')
+        text = text.replace('%', '\\%')
+        text = text.replace('{', '\\{')
+        text = text.replace('}', '\\}')
         return text
 
     def add_text_overlay_to_video(self, video_url, text, webhook_url, options, request_id=None):
@@ -173,15 +171,33 @@ class TextOverlayService:
             position_coords = position_coords.replace('y=(h-text_h)/2', f'y=(h-text_h)/2+{y_offset}')
 
 
+        # Use a font that supports Unicode/emojis
+        font_files = [
+            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/System/Library/Fonts/Arial.ttf"
+        ]
+        
+        font_file = None
+        for font in font_files:
+            if os.path.exists(font):
+                font_file = font
+                break
+        
+        if not font_file:
+            font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        
         drawtext_filter = (
-            f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:"
+            f"drawtext=fontfile={font_file}:"
             f"text='{text}':"
             f"fontcolor={font_color}:"
             f"fontsize={font_size}:"
             f"box=1:"
             f"boxcolor={box_color}@{box_opacity}:"
-            f"boxborderw={boxborderw}:" # Use the new default/option
-            f"line_spacing=14:"
+            f"boxborderw={boxborderw}:"
+            f"line_spacing=8:"
             f"{position_coords}:"
             f"enable=lt(t,{duration})"
         )
