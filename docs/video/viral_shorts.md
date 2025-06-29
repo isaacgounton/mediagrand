@@ -19,7 +19,10 @@ The `/v1/video/viral-shorts` endpoint is a streamlined video API designed specif
 
 The request body must be a JSON object with the following properties:
 
-- `video_url` (string, required): The URL of the source video from which the viral short will be generated.
+- `video_input` (string, required): The video source for generating the viral short. Can be:
+  - **YouTube URL**: Any YouTube video URL (youtube.com, youtu.be)
+  - **Direct Video URL**: Direct link to video files (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v)
+  - **Examples**: `https://youtube.com/watch?v=...`, `https://example.com/video.mp4`
 - `context` (string, optional): Additional context to help the AI generate better viral scripts. This can include information about the video topic, target audience, or specific viral angles to emphasize.
 - `tts_voice` (string, optional): The voice to be used for the generated commentary voiceover. This determines both the voice and the language for script generation (e.g., "fr-CA-ThierryNeural" will generate French scripts). Defaults to "en-US-AvaNeural".
 - `short_duration` (integer, optional): Duration of the viral short in seconds. Range: 15-180. Default: 60. The system will find the best segment from the source video.
@@ -33,18 +36,18 @@ The request body must be a JSON object with the following properties:
 
 ### Example Requests
 
-#### Example 1: Basic Viral Short Generation
+#### Example 1: Basic Viral Short Generation (YouTube)
 ```json
 {
-    "video_url": "https://www.youtube.com/watch?v=example"
+    "video_input": "https://www.youtube.com/watch?v=example"
 }
 ```
 This minimal request will download the video, analyze it visually with AI, generate a viral script, create commentary voiceover, and intelligently mix it with the original audio.
 
-#### Example 2: Viral Short with Custom Duration and Format
+#### Example 2: Direct Video URL with Custom Duration and Format
 ```json
 {
-    "video_url": "https://example.com/interesting_content.mp4",
+    "video_input": "https://example.com/interesting_content.mp4",
     "context": "This video shows an amazing life hack that everyone needs to know about",
     "tts_voice": "en-US-GuyNeural",
     "short_duration": 90,
@@ -52,10 +55,10 @@ This minimal request will download the video, analyze it visually with AI, gener
 }
 ```
 
-#### Example 3: French Viral Short with Portrait Format
+#### Example 3: French Viral Short with Direct Video URL
 ```json
 {
-    "video_url": "https://example.com/french_content.mp4",
+    "video_input": "https://example.com/french_content.mp4",
     "context": "Contenu viral français sur les nouvelles technologies",
     "tts_voice": "fr-CA-ThierryNeural",
     "short_duration": 60,
@@ -64,10 +67,10 @@ This minimal request will download the video, analyze it visually with AI, gener
 }
 ```
 
-#### Example 4: Landscape Viral Short without Captions
+#### Example 4: WebM Video with Landscape Format
 ```json
 {
-    "video_url": "https://example.com/tutorial.mp4",
+    "video_input": "https://example.com/tutorial.webm",
     "context": "Quick tutorial breakdown for viral content",
     "tts_voice": "en-US-AriaNeural",
     "short_duration": 45,
@@ -76,10 +79,10 @@ This minimal request will download the video, analyze it visually with AI, gener
 }
 ```
 
-#### Example 5: Viral Short with YouTube Authentication
+#### Example 5: YouTube Video with Authentication
 ```json
 {
-    "video_url": "https://www.youtube.com/watch?v=restricted_video",
+    "video_input": "https://www.youtube.com/watch?v=restricted_video",
     "cookies_content": "your_youtube_cookies_here",
     "auth_method": "cookies_content",
     "context": "Exclusive behind-the-scenes content that will go viral",
@@ -92,7 +95,7 @@ curl -X POST \
      -H "x-api-key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{
-        "video_url": "https://example.com/trending_video.mp4",
+        "video_input": "https://example.com/trending_video.mp4",
         "context": "Breaking down this viral moment everyone is talking about",
         "tts_voice": "en-US-AriaNeural"
     }' \
@@ -235,6 +238,7 @@ Unlike traditional voiceover replacement, the viral shorts endpoint uses sophist
 - `job_id` (string): A unique identifier for the job.
 - `script_data` (object): The AI-generated script data with hook and main content.
 - `segment_info` (object): Information about the video segment selected for the short.
+- `source_metadata` (object): Information about the processed video source including type and file details.
 - `video_format` (string): The output video format applied.
 - `duration` (integer): The duration of the generated short in seconds.
 - `language` (string): The language used for script generation (detected from TTS voice).
@@ -257,6 +261,13 @@ Example:
         "score": 0.85,
         "reason": "High audio energy and engaging keywords"
     },
+    "source_metadata": {
+        "source_type": "direct_url",
+        "original_url": "https://example.com/video.mp4",
+        "file_size": 15728640,
+        "filename": "video.mp4",
+        "content_type": "video/mp4"
+    },
     "video_format": "portrait",
     "duration": 60,
     "language": "en",
@@ -273,7 +284,7 @@ Example:
 
 ```json
 {
-    "error": "Missing 'video_url' parameter"
+    "error": "Missing 'video_input' parameter"
 }
 ```
 
@@ -336,7 +347,7 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 
 ## 10. Usage Notes
 
-- The `video_url` must be a valid and accessible URL pointing to a video file.
+- The `video_input` must be a valid YouTube URL or direct video file URL with supported format (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v).
 - Ensure that the `GEMINI_API_KEY` environment variable is correctly configured for AI analysis.
 - The `tts_voice` parameter determines both the voice and the language for script generation (e.g., "fr-CA-ThierryNeural" will generate French scripts).
 - The `short_duration` parameter controls the length of the final viral short - the system will find the best segment of this duration.
@@ -350,7 +361,7 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 
 ## 11. Common Issues
 
-- Invalid `video_url` causing download failures.
+- Invalid `video_input` causing download failures.
 - Missing `GEMINI_API_KEY` preventing AI analysis.
 - Video upload to Gemini AI failing (automatically falls back to transcript analysis).
 - Issues with the TTS service (e.g., invalid `tts_voice`).

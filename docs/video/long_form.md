@@ -19,7 +19,10 @@ The `/v1/video/long-form` endpoint is designed specifically for creating profess
 
 The request body must be a JSON object with the following properties:
 
-- `video_url` (string, required): The URL of the source video from which the long-form content will be generated.
+- `video_input` (string, required): The video source for generating long-form content. Can be:
+  - **YouTube URL**: Any YouTube video URL (youtube.com, youtu.be)
+  - **Direct Video URL**: Direct link to video files (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v)
+  - **Examples**: `https://youtube.com/watch?v=...`, `https://example.com/video.mp4`
 - `target_duration` (integer, optional): Target duration for the final video in seconds. Range: 300-3600 (5-60 minutes). Default: 600 (10 minutes).
 - `content_style` (string, optional): The style of content to generate. Options: "educational", "commentary", "documentary", "analysis". Default: "educational".
 - `script_tone` (string, optional): The tone for the generated script. Options: "professional", "casual", "academic", "conversational". Default: "professional".
@@ -42,21 +45,21 @@ The request body must be a JSON object with the following properties:
 
 ### Example Requests
 
-#### Example 1: Basic Educational Long-Form Video
+#### Example 1: Basic Educational Long-Form Video (Direct URL)
 
 ```json
 {
-    "video_url": "https://example.com/lecture.mp4",
+    "video_input": "https://example.com/lecture.mp4",
     "target_duration": 900,
     "content_style": "educational"
 }
 ```
 
-#### Example 2: French Documentary-Style Analysis
+#### Example 2: French Documentary-Style Analysis (WebM File)
 
 ```json
 {
-    "video_url": "https://example.com/documentary.mp4",
+    "video_input": "https://example.com/documentary.webm",
     "target_duration": 1200,
     "content_style": "documentary",
     "script_tone": "academic",
@@ -66,11 +69,11 @@ The request body must be a JSON object with the following properties:
 }
 ```
 
-#### Example 3: Professional Commentary for YouTube
+#### Example 3: Professional Commentary (YouTube Source)
 
 ```json
 {
-    "video_url": "https://www.youtube.com/watch?v=example",
+    "video_input": "https://www.youtube.com/watch?v=example",
     "target_duration": 600,
     "content_style": "commentary",
     "script_tone": "professional",
@@ -81,11 +84,11 @@ The request body must be a JSON object with the following properties:
 }
 ```
 
-#### Example 4: Casual Analysis with Custom Resolution
+#### Example 4: Casual Analysis with Custom Resolution (AVI File)
 
 ```json
 {
-    "video_url": "https://example.com/tutorial.mp4",
+    "video_input": "https://example.com/tutorial.avi",
     "target_duration": 1800,
     "content_style": "analysis",
     "script_tone": "conversational",
@@ -104,7 +107,7 @@ curl -X POST \
      -H "x-api-key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{
-        "video_url": "https://example.com/conference_talk.mp4",
+        "video_input": "https://example.com/conference_talk.mp4",
         "target_duration": 900,
         "content_style": "educational",
         "script_tone": "professional",
@@ -316,6 +319,7 @@ Designed specifically for educational and professional content:
 - `video_url` (string): The cloud URL of the generated long-form video file.
 - `job_id` (string): A unique identifier for the job.
 - `script_data` (object): The complete structured script with sections.
+- `source_metadata` (object): Information about the processed video source including type and file details.
 - `content_style` (string): The content style used for generation.
 - `target_duration` (integer): The requested target duration in seconds.
 - `actual_duration` (integer): The estimated actual duration based on script.
@@ -349,6 +353,12 @@ Example:
         "conclusion": "In conclusion, machine learning...",
         "total_duration_estimate": 600
     },
+    "source_metadata": {
+        "source_type": "youtube",
+        "original_url": "https://youtube.com/watch?v=example",
+        "file_size": 52428800,
+        "download_method": "youtube-dl"
+    },
     "content_style": "educational",
     "target_duration": 600,
     "actual_duration": 600,
@@ -367,7 +377,7 @@ Example:
 
 ```json
 {
-    "error": "Missing 'video_url' parameter"
+    "error": "Missing 'video_input' parameter"
 }
 ```
 
@@ -412,7 +422,7 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 
 ## 11. Usage Notes
 
-- The `video_url` must be a valid and accessible URL pointing to a video file.
+- The `video_input` must be a valid YouTube URL or direct video file URL with supported format (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v).
 - Ensure that the `GEMINI_API_KEY` environment variable is correctly configured for AI analysis.
 - The `tts_voice` parameter determines both the voice and the language for script generation.
 - `target_duration` helps the AI structure content appropriately - longer durations allow for more detailed analysis.
@@ -427,7 +437,7 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 
 ## 12. Common Issues
 
-- Invalid `video_url` causing download failures.
+- Invalid `video_input` causing download failures.
 - Missing `GEMINI_API_KEY` preventing AI analysis.
 - Video upload to Gemini AI failing (automatically falls back to transcript analysis).
 - Issues with the TTS service (e.g., invalid `tts_voice`).
@@ -491,7 +501,7 @@ def create_educational_series(video_urls, target_language="en"):
             'https://api.example.com/v1/video/long-form',
             headers={'x-api-key': 'your_api_key'},
             json={
-                'video_url': url,
+                'video_input': url,
                 'target_duration': 900,  # 15 minutes
                 'content_style': 'educational',
                 'script_tone': 'professional',
@@ -508,7 +518,7 @@ def create_educational_series(video_urls, target_language="en"):
 
 ### Multi-Language Content Creation
 ```python
-def create_multilingual_content(video_url, languages):
+def create_multilingual_content(video_input, languages):
     results = {}
     
     language_configs = {
@@ -525,7 +535,7 @@ def create_multilingual_content(video_url, languages):
             'https://api.example.com/v1/video/long-form',
             headers={'x-api-key': 'your_api_key'},
             json={
-                'video_url': video_url,
+                'video_input': video_input,
                 'target_duration': 600,
                 'content_style': 'commentary',
                 'script_tone': config['tone'],

@@ -5,7 +5,7 @@ import tempfile
 import shutil
 import uuid
 
-from services.simone.utils.downloader import Downloader
+from services.video_source_handler import VideoSourceHandler
 from services.v1.ai.long_form_ai_service import LongFormAIService
 from services.v1.audio.speech import generate_tts
 from services.v1.audio.long_form_audio_mixer import LongFormAudioMixer
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @validate_payload({
     "type": "object",
     "properties": {
-        "video_url": {"type": "string", "format": "uri"},
+        "video_input": {"type": "string", "description": "YouTube URL or direct video file URL"},
         "target_duration": {"type": "integer", "minimum": 300, "maximum": 3600, "default": 600},  # 5-60 minutes
         "content_style": {
             "type": "string",
@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
-    "required": ["video_url"],
+    "required": ["video_input"],
     "additionalProperties": False
 })
 @queue_task_wrapper(bypass_queue=False)
@@ -81,7 +81,7 @@ def create_long_form_video(job_id, data):
     6. Optimize for target format and duration
     7. Return final long-form video
     """
-    video_url = data.get('video_url')
+    video_input = data.get('video_input')
     target_duration = data.get('target_duration', 600)  # 10 minutes default
     content_style = data.get('content_style', 'educational')
     script_tone = data.get('script_tone', 'professional')
@@ -109,7 +109,7 @@ def create_long_form_video(job_id, data):
     if not job_id:
         job_id = str(uuid.uuid4())
     
-    logger.info(f"Job {job_id}: Creating long-form video from {video_url}")
+    logger.info(f"Job {job_id}: Creating long-form video from {video_input}")
     logger.info(f"Job {job_id}: Style: {content_style}, Duration: {target_duration}s, Format: {video_format}, Language: {voice_language}")
     
     # Set video dimensions based on format
@@ -134,21 +134,29 @@ def create_long_form_video(job_id, data):
         temp_dir = tempfile.mkdtemp()
         os.chdir(temp_dir)
         
-        # Step 1: Download video using Simone Downloader
-        logger.info(f"Job {job_id}: Downloading video...")
+        # Step 1: Process video source (YouTube or direct file)
+        logger.info(f"Job {job_id}: Processing video source...")
         try:
-            downloader = Downloader(url=video_url, cookies_content=cookies_content, cookies_url=cookies_url)
-            downloader.video()  # Downloads as 'video.mp4'
-            downloaded_video_path = os.path.join(temp_dir, 'video.mp4')
+            # Validate video input first
+            validation_result = VideoSourceHandler.validate_video_input(video_input)
+            if not validation_result['valid']:
+                raise Exception(f"Invalid video input: {', '.join(validation_result['errors'])}")
             
-            if not os.path.exists(downloaded_video_path):
-                raise Exception("Video download failed - file not found")
+            # Process the video source
+            downloaded_video_path, source_metadata = VideoSourceHandler.process_video_source(
+                video_input=video_input,
+                job_id=job_id,
+                temp_dir=temp_dir,
+                cookies_content=cookies_content,
+                cookies_url=cookies_url,
+                auth_method=auth_method
+            )
             
-            logger.info(f"Job {job_id}: Video downloaded successfully")
+            logger.info(f"Job {job_id}: Video processed successfully - Source: {source_metadata['source_type']}")
             
         except Exception as e:
-            logger.error(f"Job {job_id}: Video download failed: {e}")
-            raise Exception(f"Video download failed: {e}")
+            logger.error(f"Job {job_id}: Video processing failed: {e}")
+            raise Exception(f"Video processing failed: {e}")
         
         # Step 2: AI Analysis and Script Generation
         logger.info(f"Job {job_id}: Analyzing video with Long-Form AI...")
@@ -351,6 +359,7 @@ def create_long_form_video(job_id, data):
             "video_url": final_video_url,
             "job_id": job_id,
             "script_data": script_data,
+            "source_metadata": source_metadata,
             "content_style": content_style,
             "target_duration": target_duration,
             "actual_duration": script_data['total_duration_estimate'],

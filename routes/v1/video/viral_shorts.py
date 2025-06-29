@@ -6,7 +6,7 @@ import shutil
 import uuid
 import yt_dlp
 
-from services.simone.utils.downloader import Downloader
+from services.video_source_handler import VideoSourceHandler
 from services.v1.ai.gemini_service import GeminiService
 from services.v1.audio.speech import generate_tts
 from services.v1.audio.intelligent_audio_mixer import IntelligentAudioMixer
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @validate_payload({
     "type": "object",
     "properties": {
-        "video_url": {"type": "string", "format": "uri"},
+        "video_input": {"type": "string", "description": "YouTube URL or direct video file path/URL"},
         "context": {"type": "string"},  # Optional context for AI script generation
         "tts_voice": {"type": "string"},  # Optional voice for TTS
         "short_duration": {"type": "integer", "minimum": 15, "maximum": 180, "default": 60},  # Duration of the short
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
-    "required": ["video_url"],
+    "required": ["video_input"],
     "additionalProperties": False
 })
 @queue_task_wrapper(bypass_queue=False)
@@ -58,7 +58,7 @@ def create_viral_short(job_id, data):
     7. Convert to portrait format and add captions
     8. Return final viral short
     """
-    video_url = data.get('video_url')
+    video_input = data.get('video_input')
     context = data.get('context', '')
     tts_voice = data.get('tts_voice', 'en-US-AvaNeural')
     short_duration = data.get('short_duration', 60)
@@ -87,7 +87,7 @@ def create_viral_short(job_id, data):
     }
     target_width, target_height = format_dimensions.get(video_format, (1080, 1920))
     
-    logger.info(f"Job {job_id}: Creating viral short from {video_url}")
+    logger.info(f"Job {job_id}: Creating viral short from {video_input}")
     logger.info(f"Job {job_id}: Duration: {short_duration}s, Format: {video_format} ({target_width}x{target_height}), Language: {voice_language}")
     
     temp_dir = None
@@ -98,21 +98,29 @@ def create_viral_short(job_id, data):
         temp_dir = tempfile.mkdtemp()
         os.chdir(temp_dir)
         
-        # Step 1: Download video using Simone Downloader (same as viral-shorts-creator)
-        logger.info(f"Job {job_id}: Downloading video...")
+        # Step 1: Process video source (YouTube or direct file)
+        logger.info(f"Job {job_id}: Processing video source...")
         try:
-            downloader = Downloader(url=video_url, cookies_content=cookies_content, cookies_url=cookies_url)
-            downloader.video()  # Downloads as 'video.mp4'
-            downloaded_video_path = os.path.join(temp_dir, 'video.mp4')
+            # Validate video input first
+            validation_result = VideoSourceHandler.validate_video_input(video_input)
+            if not validation_result['valid']:
+                raise Exception(f"Invalid video input: {', '.join(validation_result['errors'])}")
             
-            if not os.path.exists(downloaded_video_path):
-                raise Exception("Video download failed - file not found")
+            # Process the video source
+            downloaded_video_path, source_metadata = VideoSourceHandler.process_video_source(
+                video_input=video_input,
+                job_id=job_id,
+                temp_dir=temp_dir,
+                cookies_content=cookies_content,
+                cookies_url=cookies_url,
+                auth_method=auth_method
+            )
             
-            logger.info(f"Job {job_id}: Video downloaded successfully")
+            logger.info(f"Job {job_id}: Video processed successfully - Source: {source_metadata['source_type']}")
             
         except Exception as e:
-            logger.error(f"Job {job_id}: Video download failed: {e}")
-            raise Exception(f"Video download failed: {e}")
+            logger.error(f"Job {job_id}: Video processing failed: {e}")
+            raise Exception(f"Video processing failed: {e}")
         
         # Step 2: Find best segment for viral short
         logger.info(f"Job {job_id}: Finding best segment for {short_duration}s viral short...")
@@ -375,6 +383,7 @@ def create_viral_short(job_id, data):
             "job_id": job_id,
             "script_data": script_data,
             "segment_info": best_segment,
+            "source_metadata": source_metadata,
             "video_format": video_format,
             "duration": short_duration,
             "language": voice_language,
