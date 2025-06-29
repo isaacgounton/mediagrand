@@ -48,9 +48,17 @@ def get_job_status(job_id, data):
     try:
         # Construct the path to the job status file
         job_file_path = os.path.join(LOCAL_STORAGE_PATH, 'jobs', f"{get_job_id}.json")
+        logger.info(f"Looking for job file at: {job_file_path}")
         
         # Check if the job file exists
         if not os.path.exists(job_file_path):
+            # Log available files for debugging
+            jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
+            if os.path.exists(jobs_dir):
+                available_files = os.listdir(jobs_dir)
+                logger.info(f"Available job files: {available_files}")
+            else:
+                logger.warning(f"Jobs directory does not exist: {jobs_dir}")
             return {"error": "Job not found", "job_id": get_job_id}, "/v1/toolkit/job/status", 404
         
         # Read the job status file

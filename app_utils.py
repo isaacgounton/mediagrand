@@ -87,8 +87,8 @@ def log_job_status(job_id, data):
         data (dict): Data to write to the log file
     """
     try:
-        # Use app directory instead of /tmp for Docker compatibility
-        jobs_dir = os.path.join('/app/data', 'jobs')
+        # Use LOCAL_STORAGE_PATH for consistency with job status reading
+        jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
         
         # Create jobs directory if it doesn't exist
         if not os.path.exists(jobs_dir):
