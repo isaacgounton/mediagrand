@@ -10,7 +10,7 @@ import signal
 from redis import Redis
 from redis.exceptions import ConnectionError, ReadOnlyError, ResponseError
 from rq import Worker
-from rq.exceptions import WorkerException
+from rq.exceptions import ShutDownImminentException
 
 def create_redis_connection(max_retries=5, retry_delay=2):
     """Create Redis connection with retry logic and master detection"""
@@ -94,11 +94,9 @@ def main():
                 logging.info("Retrying connection in 10 seconds...")
                 time.sleep(10)
                 
-        except WorkerException as e:
-            logging.error(f"Worker error: {str(e)}")
-            if not shutdown_requested:
-                logging.info("Restarting worker in 5 seconds...")
-                time.sleep(5)
+        except ShutDownImminentException as e:
+            logging.error(f"Worker shutdown imminent: {str(e)}")
+            break
             
         except KeyboardInterrupt:
             logging.info("Worker interrupted by user")
