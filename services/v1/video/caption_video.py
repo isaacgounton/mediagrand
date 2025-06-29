@@ -720,15 +720,31 @@ def process_captioning_v1(video_url, captions, settings, replace, job_id, langua
             logger.warning(f"Job {job_id}: 'highlight_color' is deprecated; merging into 'word_color'.")
             style_options['word_color'] = style_options.pop('highlight_color')
 
-        # Check font availability
+        # Check font availability and use fallback if needed
         font_family = style_options.get('font_family', 'Arial')
         available_fonts = get_available_fonts()
         if font_family not in available_fonts:
-            logger.warning(f"Job {job_id}: Font '{font_family}' not found.")
-            # Return font error with available_fonts
-            return {"error": f"Font '{font_family}' not available.", "available_fonts": available_fonts}
+            logger.warning(f"Job {job_id}: Font '{font_family}' not found, trying fallbacks...")
+            # Try common fallback fonts
+            fallback_fonts = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'Sans', 'sans-serif']
+            font_found = False
+            for fallback in fallback_fonts:
+                if fallback in available_fonts:
+                    logger.info(f"Job {job_id}: Using fallback font '{fallback}' instead of '{font_family}'")
+                    style_options['font_family'] = fallback
+                    font_found = True
+                    break
+            
+            if not font_found:
+                logger.warning(f"Job {job_id}: No suitable fonts found, using first available font")
+                if available_fonts:
+                    style_options['font_family'] = available_fonts[0]
+                    logger.info(f"Job {job_id}: Using first available font: {available_fonts[0]}")
+                else:
+                    logger.error(f"Job {job_id}: No fonts available on system")
+                    return {"error": "No fonts available on system", "available_fonts": available_fonts}
 
-        logger.info(f"Job {job_id}: Font '{font_family}' is available.")
+        logger.info(f"Job {job_id}: Using font '{style_options['font_family']}' for captions")
 
         # Determine if captions is a URL or raw content
         if captions and is_url(captions):

@@ -257,9 +257,9 @@ def create_viral_short(job_id, data):
         logger.info(f"Job {job_id}: Generated viral script - Hook: {script_data['hook'][:50]}...")
         logger.info(f"Job {job_id}: Script: {script_data['script'][:100]}...")
         
-        # Step 3: Generate TTS commentary
-        logger.info(f"Job {job_id}: Generating TTS commentary...")
-        commentary_audio_path, _ = generate_tts(
+        # Step 3: Generate TTS commentary with subtitles
+        logger.info(f"Job {job_id}: Generating TTS commentary with subtitles...")
+        commentary_audio_path, tts_subtitle_path = generate_tts(
             tts="edge-tts",
             text=full_script,
             voice=tts_voice,
@@ -269,6 +269,7 @@ def create_viral_short(job_id, data):
         )
         
         logger.info(f"Job {job_id}: TTS commentary generated: {commentary_audio_path}")
+        logger.info(f"Job {job_id}: TTS subtitles generated: {tts_subtitle_path}")
         
         # Step 6: Intelligent audio mixing (viral-shorts-creator style)
         logger.info(f"Job {job_id}: Mixing audio with viral-style intelligence...")
@@ -307,54 +308,57 @@ def create_viral_short(job_id, data):
         if add_captions:
             logger.info(f"Job {job_id}: Adding captions to viral short...")
             
-            # Generate subtitle file for the segment
-            segment_subtitle_path = os.path.join(temp_dir, f"{job_id}_subtitles.srt")
-            _, subtitle_path = generate_tts(
-                tts="edge-tts",
-                text=full_script,
-                voice=tts_voice,
-                job_id=f"{job_id}_srt",
-                output_format="mp3",
-                subtitle_format="srt"
-            )
+            # Use the subtitle file already generated with TTS
+            subtitle_path = tts_subtitle_path
             
-            # Use caption service to add subtitles
-            from services.v1.video.caption_video import process_captioning_v1
-            
-            # Upload formatted video for captioning
-            temp_formatted_url = upload_file(formatted_video_path)
-            
-            # Read subtitle content
-            with open(subtitle_path, 'r', encoding="utf-8") as f:
-                srt_content = f.read()
-            
-            # Apply captions with viral-optimized settings
-            caption_settings = {
-                "font_size": 28,
-                "line_color": "#FFFFFF",
-                "outline_color": "#000000",
-                "outline_width": 3,
-                "position": "bottom_center",
-                "bold": True,
-                "all_caps": True,
-                "style": "word_by_word"
-            }
-            
-            captioned_local_path = process_captioning_v1(
-                video_url=temp_formatted_url,
-                captions=srt_content,
-                settings=caption_settings,
-                replace=[],
-                job_id=job_id,
-                language=voice_language
-            )
-            
-            if isinstance(captioned_local_path, dict) and 'error' in captioned_local_path:
-                logger.warning(f"Job {job_id}: Captioning failed, using video without captions")
+            # Check if subtitle file exists
+            if not subtitle_path or not os.path.exists(subtitle_path):
+                logger.warning(f"Job {job_id}: Subtitle file not found at {subtitle_path}, skipping captions")
                 final_output_path = formatted_video_path
             else:
-                final_output_path = captioned_local_path
-                logger.info(f"Job {job_id}: Captions added successfully")
+                # Use caption service to add subtitles
+                from services.v1.video.caption_video import process_captioning_v1
+                
+                # Upload formatted video for captioning
+                temp_formatted_url = upload_file(formatted_video_path)
+                
+                # Read subtitle content
+                with open(subtitle_path, 'r', encoding="utf-8") as f:
+                    srt_content = f.read()
+                
+                logger.info(f"Job {job_id}: Generated SRT content preview: {srt_content[:200]}...")  # Log first 200 chars
+                
+                # Apply captions with viral-optimized settings
+                caption_settings = {
+                    "font_size": 28,
+                    "line_color": "#FFFFFF",
+                    "outline_color": "#000000",
+                    "outline_width": 3,
+                    "position": "bottom_center",
+                    "bold": True,
+                    "all_caps": True,
+                    "style": "word_by_word",
+                    "font_family": "Arial"  # Explicitly set Arial font which should be available
+                }
+                
+                captioned_local_path = process_captioning_v1(
+                    video_url=temp_formatted_url,
+                    captions=srt_content,
+                    settings=caption_settings,
+                    replace=[],
+                    job_id=job_id,
+                    language=voice_language
+                )
+                
+                if isinstance(captioned_local_path, dict) and 'error' in captioned_local_path:
+                    logger.error(f"Job {job_id}: Captioning failed with error: {captioned_local_path['error']}")
+                    if 'available_fonts' in captioned_local_path:
+                        logger.info(f"Job {job_id}: Available fonts: {captioned_local_path['available_fonts'][:10]}...")  # Log first 10 fonts
+                    logger.warning(f"Job {job_id}: Using video without captions due to captioning failure")
+                    final_output_path = formatted_video_path
+                else:
+                    final_output_path = captioned_local_path
+                    logger.info(f"Job {job_id}: Captions added successfully")
         else:
             final_output_path = formatted_video_path
         
