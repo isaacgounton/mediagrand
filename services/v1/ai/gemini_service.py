@@ -33,6 +33,21 @@ class GeminiService:
             "Return your response as JSON with exactly these fields: {\"hook\": \"your engaging hook\", \"script\": \"your main script content\"}"
         )
     
+    def _clean_json_response(self, response_text: str) -> str:
+        """Clean markdown-wrapped JSON response from AI model."""
+        text = response_text.strip()
+        
+        # Remove markdown code fences if present
+        if text.startswith('```json'):
+            text = text[7:]  # Remove '```json'
+        elif text.startswith('```'):
+            text = text[3:]   # Remove '```'
+        
+        if text.endswith('```'):
+            text = text[:-3]  # Remove trailing '```'
+        
+        return text.strip()
+    
     def upload_video_for_analysis(self, video_path: str) -> Any:
         """Upload video file to Gemini for analysis using the new API"""
         try:
@@ -46,6 +61,7 @@ class GeminiService:
     
     def generate_viral_script(self, uploaded_file: Any, context: str = "") -> Dict[str, str]:
         """Generate viral script from uploaded video with optional context"""
+        response = None
         try:
             logger.info("Generating viral script with Gemini AI")
             
@@ -68,8 +84,9 @@ class GeminiService:
             
             logger.info(f"Generated script JSON: {script_json[:200]}...")
             
-            # Parse the JSON response
-            script_data = json.loads(script_json)
+            # Clean and parse the JSON response
+            cleaned_json = self._clean_json_response(script_json)
+            script_data = json.loads(cleaned_json)
             
             # Validate required fields
             if 'hook' not in script_data or 'script' not in script_data:
@@ -82,7 +99,8 @@ class GeminiService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Raw response: {response.text}")
+            if response is not None:
+                logger.error(f"Raw response: {response.text}")
             raise Exception(f"Failed to parse AI response: {e}")
         except Exception as e:
             logger.error(f"Failed to generate viral script: {e}")
@@ -90,6 +108,7 @@ class GeminiService:
     
     def generate_script_from_transcript(self, transcript: str, context: str = "") -> Dict[str, str]:
         """Generate viral script from transcript text (fallback when video upload fails)"""
+        response = None
         try:
             logger.info("Generating viral script from transcript")
             
@@ -113,8 +132,9 @@ class GeminiService:
             
             logger.info(f"Generated script JSON from transcript: {script_json[:200]}...")
             
-            # Parse the JSON response
-            script_data = json.loads(script_json)
+            # Clean and parse the JSON response  
+            cleaned_json = self._clean_json_response(script_json)
+            script_data = json.loads(cleaned_json)
             
             # Validate required fields
             if 'hook' not in script_data or 'script' not in script_data:
@@ -127,7 +147,8 @@ class GeminiService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Raw response: {response.text}")
+            if response is not None:
+                logger.error(f"Raw response: {response.text}")
             raise Exception(f"Failed to parse AI response: {e}")
         except Exception as e:
             logger.error(f"Failed to generate viral script from transcript: {e}")

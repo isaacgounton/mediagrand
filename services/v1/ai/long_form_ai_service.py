@@ -50,6 +50,21 @@ class LongFormAIService:
             },
         }
     
+    def _clean_json_response(self, response_text: str) -> str:
+        """Clean markdown-wrapped JSON response from AI model."""
+        text = response_text.strip()
+        
+        # Remove markdown code fences if present
+        if text.startswith('```json'):
+            text = text[7:]  # Remove '```json'
+        elif text.startswith('```'):
+            text = text[3:]   # Remove '```'
+        
+        if text.endswith('```'):
+            text = text[:-3]  # Remove trailing '```'
+        
+        return text.strip()
+    
     def get_system_instruction(self, content_style: str, target_duration: int) -> str:
         """Get system instruction based on content style and target duration"""
         
@@ -127,6 +142,7 @@ class LongFormAIService:
                                 context: str = "",
                                 script_tone: str = "professional") -> Dict[str, Any]:
         """Generate structured long-form script from uploaded video"""
+        result = None
         try:
             logger.info(f"Generating long-form script: style={content_style}, duration={target_duration}s")
             
@@ -177,8 +193,9 @@ class LongFormAIService:
             
             logger.info(f"Generated long-form script JSON: {script_json[:300]}...")
             
-            # Parse the JSON response
-            script_data = json.loads(script_json)
+            # Clean and parse the JSON response
+            cleaned_json = self._clean_json_response(script_json)
+            script_data = json.loads(cleaned_json)
             
             # Validate required fields
             required_fields = ["title", "introduction", "main_sections", "conclusion", "total_duration_estimate"]
@@ -194,7 +211,8 @@ class LongFormAIService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Raw response: {result.text}")
+            if result is not None:
+                logger.error(f"Raw response: {result.text}")
             raise Exception(f"Failed to parse AI response: {e}")
         except Exception as e:
             logger.error(f"Failed to generate long-form script: {e}")
@@ -207,6 +225,7 @@ class LongFormAIService:
                                       context: str = "",
                                       script_tone: str = "professional") -> Dict[str, Any]:
         """Generate long-form script from transcript text (fallback when video upload fails)"""
+        result = None
         try:
             logger.info(f"Generating long-form script from transcript: style={content_style}")
             
@@ -239,8 +258,9 @@ class LongFormAIService:
             
             logger.info(f"Generated long-form script from transcript: {script_json[:300]}...")
             
-            # Parse the JSON response
-            script_data = json.loads(script_json)
+            # Clean and parse the JSON response
+            cleaned_json = self._clean_json_response(script_json)
+            script_data = json.loads(cleaned_json)
             
             # Validate required fields
             required_fields = ["title", "introduction", "main_sections", "conclusion", "total_duration_estimate"]
@@ -256,7 +276,8 @@ class LongFormAIService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
-            logger.error(f"Raw response: {result.text}")
+            if result is not None:
+                logger.error(f"Raw response: {result.text}")
             raise Exception(f"Failed to parse AI response: {e}")
         except Exception as e:
             logger.error(f"Failed to generate long-form script from transcript: {e}")

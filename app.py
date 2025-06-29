@@ -132,6 +132,14 @@ def process_task(task_wrapper_instance, start_time):
 
         send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
 
+        # Update job status to done after successful completion
+        log_job_status(task_wrapper_instance.job_id, {
+            "job_status": "done",
+            "job_id": task_wrapper_instance.job_id,
+            "process_id": worker_pid,
+            "response": response_data
+        })
+
         return response_data
         
     except Exception as e:
