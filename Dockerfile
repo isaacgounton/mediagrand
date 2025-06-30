@@ -6,6 +6,7 @@
 
 FROM python:3.10-slim as python-builder
 
+ENV DEBIAN_FRONTEND=noninteractive
 # Install only essential build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

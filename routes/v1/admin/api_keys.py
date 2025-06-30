@@ -136,6 +136,20 @@ def revoke_api_key(user_id, key_id):
         logging.error(f"Error revoking API key: {e}")
         return jsonify({"error": "Failed to revoke API key"}), 500
 
+@api_keys_bp.route('/v1/admin/users/<int:user_id>', methods=['DELETE'])
+@enhanced_authenticate
+def delete_user(user_id):
+    """Delete a user and all their API keys"""
+    try:
+        success = api_manager.delete_user(user_id)
+        if success:
+            return jsonify({"message": "User deleted successfully"})
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        logging.error(f"Error deleting user: {e}")
+        return jsonify({"error": "Failed to delete user"}), 500
+
 @api_keys_bp.route('/v1/admin/api-keys/<int:key_id>/usage', methods=['GET'])
 @enhanced_authenticate
 def get_api_key_usage(key_id):

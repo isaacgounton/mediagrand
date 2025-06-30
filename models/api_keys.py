@@ -146,7 +146,7 @@ class APIKeyManager:
             conn.commit()
     
     def get_user_api_keys(self, user_id: int) -> List[Dict]:
-        """Get all API keys for a user"""
+        """Get all API keys for a user (including revoked ones)"""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute("""
@@ -182,6 +182,18 @@ class APIKeyManager:
             )
             conn.commit()
             return cursor.rowcount > 0
+    
+    def delete_user(self, user_id: int) -> bool:
+        """Delete a user and all their API keys"""
+        with sqlite3.connect(self.db_path) as conn:
+            # First delete all API keys for this user (CASCADE should handle this, but being explicit)
+            conn.execute("DELETE FROM api_keys WHERE user_id = ?", (user_id,))
+            
+            # Then delete the user
+            cursor = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
     
     def get_usage_stats(self, api_key_id: int, days: int = 30) -> Dict:
         """Get usage statistics for an API key"""
