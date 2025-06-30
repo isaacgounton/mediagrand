@@ -63,10 +63,28 @@ def get_job_status(job_id, data):
         
         # Read the job status file
         with open(job_file_path, 'r') as file:
-            job_status = json.load(file)
+            job_data = json.load(file)
         
-        # Return the job status file content directly
-        return job_status, "/v1/toolkit/job/status", 200
+        # Create consistent response structure
+        clean_response = {
+            "job_id": job_data.get("job_id"),
+            "job_status": job_data.get("job_status"),
+            "process_id": job_data.get("process_id")
+        }
+        
+        # Add response data or error based on status
+        if job_data.get("job_status") == "completed" and job_data.get("response"):
+            clean_response["response"] = job_data["response"]["response"]
+            clean_response["message"] = job_data["response"].get("message", "success")
+            clean_response["run_time"] = job_data["response"].get("run_time")
+            clean_response["total_time"] = job_data["response"].get("total_time")
+        elif job_data.get("job_status") == "failed":
+            clean_response["error"] = job_data.get("error") or (job_data.get("response", {}).get("message") if job_data.get("response") else "Unknown error")
+        else:
+            clean_response["response"] = None
+        
+        # Return clean, consistent response structure
+        return clean_response, "/v1/toolkit/job/status", 200
         
     except Exception as e:
         logger.error(f"Error retrieving status for job {get_job_id}: {str(e)}")

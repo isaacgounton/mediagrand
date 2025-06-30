@@ -54,7 +54,7 @@ def get_all_jobs_status(job_id, data):
         cutoff_time = time.time() - since_seconds
         
         # Construct the path to the jobs directory
-        jobs_dir = os.path.join('/app/data', 'jobs')
+        jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
         
         # Check if the jobs directory exists
         if not os.path.exists(jobs_dir):

@@ -121,22 +121,25 @@ def create_viral_short(job_id, data):
             logger.error(f"Job {job_id}: Video processing failed: {e}")
             raise Exception(f"Video processing failed: {e}")
         
-        # Step 2: Find best segment for viral short
+        # Step 2: Find best segment for viral short + Cache transcription
         logger.info(f"Job {job_id}: Finding best segment for {short_duration}s viral short...")
+        
+        # Initialize cached transcription for reuse
+        cached_transcription_text = None
+        
         try:
             from services.v1.video.video_analysis import analyze_video_segments
             
-            # Get video transcript for intelligent segmentation
-            transcription_text = None
+            # Get video transcript for intelligent segmentation (and cache for later use)
             try:
                 from services.ffmpeg_toolkit import extract_audio_from_video
                 from services.v1.media.media_transcribe import process_transcribe_media
                 
-                # Extract audio for transcription
+                # Extract audio for transcription (single time)
                 temp_audio_path = os.path.join(temp_dir, f"{job_id}_temp_audio.mp3")
                 extract_audio_from_video(downloaded_video_path, temp_audio_path)
                 
-                # Transcribe audio
+                # Transcribe audio once and cache result
                 transcription_result = process_transcribe_media(
                     media_source=temp_audio_path,
                     task='transcribe',
@@ -150,8 +153,8 @@ def create_viral_short(job_id, data):
                     words_per_line=None
                 )
                 
-                transcription_text = transcription_result[0]
-                logger.info(f"Job {job_id}: Transcription completed for segmentation ({len(transcription_text)} chars)")
+                cached_transcription_text = transcription_result[0]
+                logger.info(f"Job {job_id}: ✅ Transcription completed ONCE and cached ({len(cached_transcription_text)} chars)")
                 
                 # Clean up temp audio
                 os.remove(temp_audio_path)
@@ -159,10 +162,10 @@ def create_viral_short(job_id, data):
             except Exception as e:
                 logger.warning(f"Job {job_id}: Transcription for segmentation failed: {e}")
             
-            # Find best segment using highlights method
+            # Find best segment using highlights method with cached transcription
             video_segments = analyze_video_segments(
                 video_path=downloaded_video_path,
-                transcription_text=transcription_text,
+                transcription_text=cached_transcription_text,  # Use cached transcription
                 segment_method="highlights",  # Use highlights for viral content
                 num_segments=1,  # Just one segment for viral short
                 segment_duration=short_duration,
@@ -213,16 +216,18 @@ def create_viral_short(job_id, data):
                 script_data = gemini_service.generate_viral_script_from_youtube(video_input, language_context)
             except Exception as e:
                 logger.warning(f"Job {job_id}: YouTube URL analysis failed: {e}")
-                logger.info(f"Job {job_id}: Falling back to transcript-based analysis...")
-                # Use cached transcription from segmentation if available
-                if transcription_text:
-                    script_data = gemini_service.generate_script_from_transcript(transcription_text, language_context)
+                logger.info(f"Job {job_id}: Falling back to cached transcript-based analysis...")
+                # Use cached transcription from segmentation (NO double transcription!)
+                if cached_transcription_text:
+                    logger.info(f"Job {job_id}: ♻️ Using cached transcription (avoiding redundant transcription)")
+                    script_data = gemini_service.generate_script_from_transcript(cached_transcription_text, language_context)
                 else:
-                    # Extract and transcribe as fallback
+                    logger.warning(f"Job {job_id}: No cached transcription available, performing emergency transcription...")
+                    # Emergency fallback only if cached transcription failed
                     from services.ffmpeg_toolkit import extract_audio_from_video
                     from services.v1.media.media_transcribe import process_transcribe_media
                     
-                    audio_path = os.path.join(temp_dir, f"{job_id}_audio.mp3")
+                    audio_path = os.path.join(temp_dir, f"{job_id}_emergency_audio.mp3")
                     extract_audio_from_video(downloaded_video_path, audio_path)
                     
                     transcription_result = process_transcribe_media(
@@ -241,17 +246,19 @@ def create_viral_short(job_id, data):
                     script_data = gemini_service.generate_script_from_transcript(transcription_result[0], language_context)
                     os.remove(audio_path)
         else:
-            # For non-YouTube videos, use transcript-based analysis (faster)
-            logger.info(f"Job {job_id}: Using transcript-based analysis for faster processing")
-            # Use cached transcription from segmentation if available
-            if transcription_text:
-                script_data = gemini_service.generate_script_from_transcript(transcription_text, language_context)
+            # For non-YouTube videos, use cached transcript-based analysis (faster)
+            logger.info(f"Job {job_id}: Using cached transcript-based analysis for faster processing")
+            # Use cached transcription from segmentation (NO double transcription!)
+            if cached_transcription_text:
+                logger.info(f"Job {job_id}: ♻️ Using cached transcription (avoiding redundant transcription)")
+                script_data = gemini_service.generate_script_from_transcript(cached_transcription_text, language_context)
             else:
-                # Extract and transcribe
+                logger.warning(f"Job {job_id}: No cached transcription available, performing emergency transcription...")
+                # Emergency fallback only if cached transcription failed
                 from services.ffmpeg_toolkit import extract_audio_from_video
                 from services.v1.media.media_transcribe import process_transcribe_media
                 
-                audio_path = os.path.join(temp_dir, f"{job_id}_audio.mp3")
+                audio_path = os.path.join(temp_dir, f"{job_id}_emergency_audio.mp3")
                 extract_audio_from_video(downloaded_video_path, audio_path)
                 
                 transcription_result = process_transcribe_media(

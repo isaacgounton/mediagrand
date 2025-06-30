@@ -92,7 +92,7 @@ def process_task(task_wrapper_instance, start_time):
     
     try:
         log_job_status(task_wrapper_instance.job_id, {
-            "job_status": "running",
+            "job_status": "processing",
             "job_id": task_wrapper_instance.job_id,
             "process_id": worker_pid,
             "response": None
@@ -132,9 +132,9 @@ def process_task(task_wrapper_instance, start_time):
 
         send_webhook(task_wrapper_instance.data.get("webhook_url"), response_data)
 
-        # Update job status to done after successful completion
+        # Update job status to completed after successful completion
         log_job_status(task_wrapper_instance.job_id, {
-            "job_status": "done",
+            "job_status": "completed",
             "job_id": task_wrapper_instance.job_id,
             "process_id": worker_pid,
             "response": response_data
@@ -164,7 +164,7 @@ def queue_task(bypass_queue=False):
             
             if bypass_queue or 'webhook_url' not in current_request_data:
                 log_job_status(job_id, {
-                    "job_status": "running",
+                    "job_status": "processing",
                     "job_id": job_id,
                     "process_id": pid,
                     "response": None
@@ -186,7 +186,7 @@ def queue_task(bypass_queue=False):
                         "build_number": BUILD_NUMBER
                     }
                     log_job_status(job_id, {
-                        "job_status": "done",
+                        "job_status": "completed" if response[2] == 200 else "failed",
                         "job_id": job_id,
                         "process_id": pid,
                         "response": response_obj
@@ -205,7 +205,7 @@ def queue_task(bypass_queue=False):
                         "build_number": BUILD_NUMBER
                     }
                     log_job_status(job_id, {
-                        "job_status": "rejected",
+                        "job_status": "failed",
                         "job_id": job_id,
                         "process_id": pid,
                         "response": error_response
@@ -213,7 +213,7 @@ def queue_task(bypass_queue=False):
                     return error_response, 429
                 
                 log_job_status(job_id, {
-                    "job_status": "queued",
+                    "job_status": "processing",
                     "job_id": job_id,
                     "process_id": pid,
                     "response": None
