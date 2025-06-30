@@ -169,6 +169,43 @@ class TextOverlayService:
         text = text.replace('{', '\\\\{')
         text = text.replace('}', '\\\\}')
         
+        # Handle French accented characters and other special characters
+        text = text.replace('à', 'a')
+        text = text.replace('á', 'a')
+        text = text.replace('â', 'a')
+        text = text.replace('ã', 'a')
+        text = text.replace('ä', 'a')
+        text = text.replace('å', 'a')
+        text = text.replace('é', 'e')
+        text = text.replace('è', 'e')
+        text = text.replace('ê', 'e')
+        text = text.replace('ë', 'e')
+        text = text.replace('í', 'i')
+        text = text.replace('ì', 'i')
+        text = text.replace('î', 'i')
+        text = text.replace('ï', 'i')
+        text = text.replace('ó', 'o')
+        text = text.replace('ò', 'o')
+        text = text.replace('ô', 'o')
+        text = text.replace('õ', 'o')
+        text = text.replace('ö', 'o')
+        text = text.replace('ú', 'u')
+        text = text.replace('ù', 'u')
+        text = text.replace('û', 'u')
+        text = text.replace('ü', 'u')
+        text = text.replace('ç', 'c')
+        text = text.replace('ñ', 'n')
+        text = text.replace('ÿ', 'y')
+        
+        # Handle special punctuation and symbols that might cause issues
+        text = text.replace('—', '-')  # em dash
+        text = text.replace('–', '-')  # en dash
+        text = text.replace('"', '"')  # smart quotes
+        text = text.replace('"', '"')
+        text = text.replace(''', "'")
+        text = text.replace(''', "'")
+        text = text.replace('…', '...')  # ellipsis
+        
         # Handle newlines properly for FFmpeg
         text = text.replace('\n', '\\\\n')
         text = text.replace('\r', '\\\\r')
@@ -289,7 +326,7 @@ class TextOverlayService:
                 f"boxborderw={boxborderw}:"
                 f"line_spacing={line_spacing}:"
                 f"{position_coords}:"
-                f"enable='lt(t,{duration})'"
+                f"enable='between(t,0,{duration})'"
             )
             
             output_id = request_id
@@ -338,7 +375,7 @@ class TextOverlayService:
                         f"boxborderw={boxborderw}:"
                         f"line_spacing={line_spacing}:"
                         f"{position_coords}:"
-                        f"enable='lt(t,{duration})'"
+                        f"enable='between(t,0,{duration})'"
                     )
                     ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
                     result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
@@ -369,7 +406,7 @@ class TextOverlayService:
                                 f"boxborderw={boxborderw}:"
                                 f"line_spacing={line_spacing}:"
                                 f"{position_coords}:"
-                                f"enable='lt(t,{duration})'"
+                                f"enable='between(t,0,{duration})'"
                             )
                             ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
                             try:
@@ -393,7 +430,7 @@ class TextOverlayService:
                         f"boxborderw={boxborderw}:"
                         f"line_spacing={line_spacing}:"
                         f"{position_coords}:"
-                        f"enable='lt(t,{duration})'"
+                        f"enable='between(t,0,{duration})'"
                     )
                     ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
                     result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
