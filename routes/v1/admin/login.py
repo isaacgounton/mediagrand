@@ -3,9 +3,16 @@
 from flask import Blueprint, request, jsonify, make_response
 from models.api_keys import APIKeyManager
 import hashlib
-import jwt
-import datetime
 import os
+import time
+import hmac
+import base64
+
+try:
+    import jwt
+    HAS_JWT = True
+except ImportError:
+    HAS_JWT = False
 
 admin_login_bp = Blueprint('admin_login', __name__)
 api_manager = APIKeyManager()
@@ -324,8 +331,23 @@ def admin_login():
     
     return login_html
 
+def generate_secure_token(username, api_key):
+    """Generate a secure token (JWT if available, otherwise custom HMAC)"""
+    if HAS_JWT:
+        return generate_jwt_token(username, api_key)
+    else:
+        return generate_hmac_token(username, api_key)
+
+def verify_secure_token(token):
+    """Verify secure token (JWT if available, otherwise custom HMAC)"""
+    if HAS_JWT:
+        return verify_jwt_token(token)
+    else:
+        return verify_hmac_token(token)
+
 def generate_jwt_token(username, api_key):
     """Generate a secure JWT token"""
+    import datetime
     now = datetime.datetime.now(datetime.timezone.utc)
     payload = {
         'username': username,
@@ -350,6 +372,58 @@ def verify_jwt_token(token):
     except jwt.InvalidTokenError:
         return None
 
+def generate_hmac_token(username, api_key):
+    """Generate a secure HMAC-based token (fallback when JWT not available)"""
+    secret = os.getenv('JWT_SECRET_KEY', 'fallback-secret-key').encode()
+    expiry = int(time.time()) + (24 * 60 * 60)  # 24 hours
+    
+    # Create payload: username|api_key|expiry
+    payload = f"{username}|{api_key}|{expiry}"
+    
+    # Create HMAC signature
+    signature = hmac.new(secret, payload.encode(), hashlib.sha256).hexdigest()
+    
+    # Combine payload and signature
+    token_data = f"{payload}|{signature}"
+    
+    # Base64 encode for safe transport
+    return base64.b64encode(token_data.encode()).decode()
+
+def verify_hmac_token(token):
+    """Verify HMAC-based token"""
+    try:
+        # Decode from base64
+        token_data = base64.b64decode(token.encode()).decode()
+        
+        # Split token parts
+        parts = token_data.split('|')
+        if len(parts) != 4:
+            return None
+            
+        username, api_key, expiry_str, signature = parts
+        
+        # Check expiry
+        if int(time.time()) > int(expiry_str):
+            return None
+        
+        # Verify signature
+        secret = os.getenv('JWT_SECRET_KEY', 'fallback-secret-key').encode()
+        payload = f"{username}|{api_key}|{expiry_str}"
+        expected_signature = hmac.new(secret, payload.encode(), hashlib.sha256).hexdigest()
+        
+        if not hmac.compare_digest(signature, expected_signature):
+            return None
+        
+        # Return payload in JWT-like format
+        return {
+            'username': username,
+            'api_key': api_key,
+            'exp': int(expiry_str)
+        }
+        
+    except Exception:
+        return None
+
 @admin_login_bp.route('/v1/admin/login', methods=['POST'])
 def admin_login_api():
     """Username/password login endpoint with secure cookie authentication"""
@@ -366,8 +440,8 @@ def admin_login_api():
             # Get legacy API key for admin access
             from config import API_KEY as LEGACY_KEY
             
-            # Generate JWT token
-            token = generate_jwt_token(admin_username, LEGACY_KEY)
+            # Generate secure token (JWT if available, HMAC fallback)
+            token = generate_secure_token(admin_username, LEGACY_KEY)
             
             # Create response
             response = make_response(jsonify({
@@ -412,7 +486,7 @@ def verify_admin_session():
             return jsonify({"status": "error", "message": "No session found"}), 401
         
         # Verify token
-        payload = verify_jwt_token(token)
+        payload = verify_secure_token(token)
         if not payload:
             return jsonify({"status": "error", "message": "Invalid or expired session"}), 401
         
