@@ -14,7 +14,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from flask import Flask, request, Response as FlaskResponse
+from flask import Flask, request, Response as FlaskResponse, jsonify
 from flask_cors import CORS
 from redis import Redis
 from rq import Queue, Worker
@@ -157,8 +157,13 @@ def queue_task(bypass_queue=False):
         @wraps(f)
         def wrapper(*args, **kwargs):
             job_id = str(uuid.uuid4())
-            current_request_data = getattr(request, '_validated_json', 
-                                           request.json if request.is_json else {})
+            # Safely get request data, handling GET requests and malformed JSON
+            try:
+                current_request_data = getattr(request, '_validated_json', 
+                                             request.get_json(silent=True) or {})
+            except Exception:
+                current_request_data = {}
+            
             pid = os.getpid()
             start_time = time.time()
             
@@ -526,6 +531,42 @@ def create_app():
                 "contact": "isaac@etugrand.com"
             }
         }
+
+    # Global error handlers to ensure JSON responses
+    @app.errorhandler(400)
+    def handle_400(error):
+        return jsonify({
+            "error": "Bad Request",
+            "message": "The request could not be understood by the server due to malformed syntax"
+        }), 400
+
+    @app.errorhandler(401)
+    def handle_401(error):
+        return jsonify({
+            "error": "Unauthorized",
+            "message": "Authentication is required to access this resource"
+        }), 401
+
+    @app.errorhandler(403)
+    def handle_403(error):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You don't have permission to access this resource"
+        }), 403
+
+    @app.errorhandler(404)
+    def handle_404(error):
+        return jsonify({
+            "error": "Not Found",
+            "message": "The requested resource was not found"
+        }), 404
+
+    @app.errorhandler(500)
+    def handle_500(error):
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": "An internal server error occurred"
+        }), 500
 
     return app
 
