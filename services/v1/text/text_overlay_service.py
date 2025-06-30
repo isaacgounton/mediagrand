@@ -76,8 +76,8 @@ class TextOverlayService:
             }
         }
 
-    def wrap_text(self, text, max_width=60):
-        """Improved text wrapping function with proper spacing"""
+    def wrap_text(self, text, max_width=40):
+        """Improved text wrapping function with proper spacing for video overlays"""
         words = text.split()
         lines = []
         current_line = []
@@ -105,7 +105,8 @@ class TextOverlayService:
         """Escape special characters for FFmpeg drawtext filter with proper UTF-8 support"""
         # Ensure text is properly encoded as UTF-8
         if isinstance(text, str):
-            text = text.encode('utf-8').decode('utf-8')
+            # Normalize UTF-8 encoding
+            text = text.encode('utf-8', errors='ignore').decode('utf-8')
         
         # Escape characters that have special meaning in FFmpeg
         # Order matters: escape backslash first
@@ -131,7 +132,7 @@ class TextOverlayService:
             request_id = str(uuid.uuid4())
 
         duration = options.get('duration', 3)
-        font_size = options.get('font_size', 36) # Default to 36 as per example
+        font_size = options.get('font_size', 48) # Increased default size for better visibility
         font_color = options.get('font_color', 'black')
         box_color = options.get('box_color', 'white')
         box_opacity = options.get('box_opacity', 1.0) # Default to 1.0 (fully opaque)
@@ -225,7 +226,11 @@ class TextOverlayService:
         ]
 
         try:
-            result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
+            # Ensure UTF-8 environment for subprocess
+            env = os.environ.copy()
+            env['LC_ALL'] = 'C.UTF-8'
+            env['LANG'] = 'C.UTF-8'
+            result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
         except subprocess.CalledProcessError as e:
             error_msg = f"FFmpeg command failed with font '{font_file}': {e.stderr}"
             # Try with a more basic font as fallback
