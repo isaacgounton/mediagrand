@@ -17,10 +17,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.85,
-                    "boxborderw": 45,
+                    "boxborderw": 80,
                     "position": "top-center",
                     "y_offset": 80,
-                    "line_spacing": 12
+                    "line_spacing": 18
                 }
             },
             "subtitle": {
@@ -123,7 +123,7 @@ class TextOverlayService:
             }
         }
 
-    def wrap_text(self, text, max_width=40):
+    def wrap_text(self, text, max_width=25):
         """Improved text wrapping function with proper spacing for video overlays"""
         words = text.split()
         lines = []
