@@ -33,12 +33,14 @@ The request body must be a JSON object with the following properties:
 - `webhook_url` (string, required): A URL to receive a webhook notification when the text overlay process is complete.
 - `options` (object, optional): An object containing various styling and positioning options for the text overlay. These options can be overridden when using a preset.
   - `duration` (integer, optional): How long the text overlay should be visible in seconds. Default: `3`.
-  - `font_size` (integer, optional): The size of the font. Default: `60`.
+  - `font_size` (integer, optional): The size of the font. Default: `48`.
   - `font_color` (string, optional): The color of the font (e.g., "black", "white", "red"). Default: `black`.
   - `box_color` (string, optional): The color of the background box behind the text. Default: `white`.
-  - `box_opacity` (number, optional): The opacity of the background box (0.0-1.0). Default: `0.85`.
+  - `box_opacity` (number, optional): The opacity of the background box (0.0-1.0). Default: `1.0`.
+  - `boxborderw` (integer, optional): The border width of the background box in pixels. Default: `20`.
   - `position` (string, optional): The position of the text overlay on the video. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. Default: `top-center`.
-  - `y_offset` (integer, optional): Vertical offset from the chosen position in pixels. Default: `100`.
+  - `y_offset` (integer, optional): Vertical offset from the chosen position in pixels. Default: `50`.
+  - `line_spacing` (integer, optional): Spacing between lines of text in pixels. Default: `8`.
   - `auto_wrap` (boolean, optional): Whether to automatically wrap long text. Default: `true`.
 
 ## 4. Response
@@ -69,51 +71,115 @@ The request body must be a JSON object with the following properties:
 ```json
 {
     "title_overlay": {
-        "description": "Large title text at the top",
+        "description": "Large title text at the top, optimized for short phrases",
         "options": {
             "duration": 5,
-            "font_size": 80,
+            "font_size": 60,
             "font_color": "white",
             "box_color": "black",
-            "box_opacity": 0.7,
+            "box_opacity": 0.85,
+            "boxborderw": 30,
             "position": "top-center",
-            "y_offset": 50
+            "y_offset": 80,
+            "line_spacing": 12
         }
     },
     "subtitle": {
-        "description": "Subtitle text at the bottom",
+        "description": "Subtitle text at the bottom, with good readability",
         "options": {
             "duration": 10,
-            "font_size": 40,
+            "font_size": 42,
             "font_color": "white",
             "box_color": "black",
             "box_opacity": 0.8,
+            "boxborderw": 25,
             "position": "bottom-center",
-            "y_offset": 100
+            "y_offset": 100,
+            "line_spacing": 10
         }
     },
     "watermark": {
-        "description": "Small watermark text",
+        "description": "Small, subtle watermark text",
         "options": {
             "duration": 999999,
-            "font_size": 24,
+            "font_size": 28,
             "font_color": "white",
             "box_color": "black",
-            "box_opacity": 0.5,
+            "box_opacity": 0.6,
+            "boxborderw": 15,
             "position": "bottom-right",
-            "y_offset": 30
+            "y_offset": 40,
+            "line_spacing": 6
         }
     },
     "alert": {
-        "description": "Alert/notification style overlay",
+        "description": "Alert/notification style overlay, prominent and attention-grabbing",
         "options": {
-            "duration": 3,
-            "font_size": 50,
-            "font_color": "red",
-            "box_color": "yellow",
+            "duration": 4,
+            "font_size": 56,
+            "font_color": "white",
+            "box_color": "red",
             "box_opacity": 0.9,
+            "boxborderw": 30,
             "position": "center",
-            "y_offset": 0
+            "y_offset": 0,
+            "line_spacing": 12
+        }
+    },
+    "modern_caption": {
+        "description": "Modern caption style with solid background and good padding",
+        "options": {
+            "duration": 5,
+            "font_size": 50,
+            "font_color": "black",
+            "box_color": "white",
+            "box_opacity": 0.85,
+            "boxborderw": 35,
+            "position": "top-center",
+            "y_offset": 100,
+            "line_spacing": 14
+        }
+    },
+    "social_post": {
+        "description": "Instagram/TikTok style caption, trendy and engaging",
+        "options": {
+            "duration": 6,
+            "font_size": 48,
+            "font_color": "white",
+            "box_color": "black",
+            "box_opacity": 0.7,
+            "boxborderw": 25,
+            "position": "bottom-center",
+            "y_offset": 120,
+            "line_spacing": 12
+        }
+    },
+    "quote": {
+        "description": "Quote or testimonial style with elegant presentation",
+        "options": {
+            "duration": 8,
+            "font_size": 44,
+            "font_color": "white",
+            "box_color": "navy",
+            "box_opacity": 0.8,
+            "boxborderw": 35,
+            "position": "center",
+            "y_offset": 0,
+            "line_spacing": 16
+        }
+    },
+    "news_ticker": {
+        "description": "News ticker style for breaking news or updates",
+        "options": {
+            "duration": 15,
+            "font_size": 36,
+            "font_color": "white",
+            "box_color": "darkred",
+            "box_opacity": 0.95,
+            "boxborderw": 20,
+            "position": "bottom-center",
+            "y_offset": 50,
+            "line_spacing": 8
         }
     }
 }
@@ -132,9 +198,10 @@ The endpoint handles the following common errors:
 
 No specific environment variables are required for this feature beyond a working FFmpeg installation accessible in the system's PATH. The application executes FFmpeg commands directly via `subprocess.run`.
 
-## 7. Usage Examples:
+## 7. Usage Examples
 
-### Basic overlay:
+### Basic overlay
+
 ```bash
 curl -X POST http://localhost:8080/v1/text/add-text-overlay \
   -H "Content-Type: application/json" \
@@ -145,7 +212,8 @@ curl -X POST http://localhost:8080/v1/text/add-text-overlay \
   }'
 ```
 
-### Advanced overlay with custom options:
+### Advanced overlay with custom options
+
 ```bash
 curl -X POST http://localhost:8080/v1/text/add-text-overlay \
   -H "Content-Type: application/json" \
@@ -166,7 +234,8 @@ curl -X POST http://localhost:8080/v1/text/add-text-overlay \
   }'
 ```
 
-### Using a preset:
+### Using a preset
+
 ```bash
 curl -X POST http://localhost:8080/v1/text/add-text-overlay/preset/title_overlay \
   -H "Content-Type: application/json" \
@@ -177,7 +246,8 @@ curl -X POST http://localhost:8080/v1/text/add-text-overlay/preset/title_overlay
   }'
 ```
 
-### Getting available presets:
+### Getting available presets
+
 ```bash
 curl -X GET http://localhost:8080/v1/text/presets
 ```

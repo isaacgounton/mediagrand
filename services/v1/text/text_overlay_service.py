@@ -13,65 +13,112 @@ class TextOverlayService:
                 "description": "Large title text at the top, optimized for short phrases",
                 "options": {
                     "duration": 5,
-                    "font_size": 50,
+                    "font_size": 60,
                     "font_color": "white",
                     "box_color": "black",
-                    "box_opacity": 1.0,
-                    "boxborderw": 20,
+                    "box_opacity": 0.85,
+                    "boxborderw": 30,
                     "position": "top-center",
-                    "y_offset": 50
+                    "y_offset": 80,
+                    "line_spacing": 12
                 }
             },
             "subtitle": {
                 "description": "Subtitle text at the bottom, with good readability",
                 "options": {
                     "duration": 10,
-                    "font_size": 36,
+                    "font_size": 42,
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.8,
-                    "boxborderw": 15,
+                    "boxborderw": 25,
                     "position": "bottom-center",
-                    "y_offset": 80
+                    "y_offset": 100,
+                    "line_spacing": 10
                 }
             },
             "watermark": {
                 "description": "Small, subtle watermark text",
                 "options": {
                     "duration": 999999,
-                    "font_size": 24,
+                    "font_size": 28,
                     "font_color": "white",
                     "box_color": "black",
-                    "box_opacity": 0.5,
-                    "boxborderw": 10,
+                    "box_opacity": 0.6,
+                    "boxborderw": 15,
                     "position": "bottom-right",
-                    "y_offset": 30
+                    "y_offset": 40,
+                    "line_spacing": 6
                 }
             },
             "alert": {
-                "description": "Alert/notification style overlay, prominent",
+                "description": "Alert/notification style overlay, prominent and attention-grabbing",
                 "options": {
-                    "duration": 3,
-                    "font_size": 50,
-                    "font_color": "red",
-                    "box_color": "yellow",
-                    "box_opacity": 1.0,
-                    "boxborderw": 25,
+                    "duration": 4,
+                    "font_size": 56,
+                    "font_color": "white",
+                    "box_color": "red",
+                    "box_opacity": 0.9,
+                    "boxborderw": 30,
                     "position": "center",
-                    "y_offset": 0
+                    "y_offset": 0,
+                    "line_spacing": 12
                 }
             },
             "modern_caption": {
                 "description": "Modern caption style with solid background and good padding",
                 "options": {
                     "duration": 5,
-                    "font_size": 36,
+                    "font_size": 50,
                     "font_color": "black",
                     "box_color": "white",
-                    "box_opacity": 1.0,
-                    "boxborderw": 20,
+                    "box_opacity": 0.85,
+                    "boxborderw": 35,
                     "position": "top-center",
-                    "y_offset": 50
+                    "y_offset": 100,
+                    "line_spacing": 14
+                }
+            },
+            "social_post": {
+                "description": "Instagram/TikTok style caption, trendy and engaging",
+                "options": {
+                    "duration": 6,
+                    "font_size": 48,
+                    "font_color": "white",
+                    "box_color": "black",
+                    "box_opacity": 0.7,
+                    "boxborderw": 25,
+                    "position": "bottom-center",
+                    "y_offset": 120,
+                    "line_spacing": 12
+                }
+            },
+            "quote": {
+                "description": "Quote or testimonial style with elegant presentation",
+                "options": {
+                    "duration": 8,
+                    "font_size": 44,
+                    "font_color": "white",
+                    "box_color": "navy",
+                    "box_opacity": 0.8,
+                    "boxborderw": 35,
+                    "position": "center",
+                    "y_offset": 0,
+                    "line_spacing": 16
+                }
+            },
+            "news_ticker": {
+                "description": "News ticker style for breaking news or updates",
+                "options": {
+                    "duration": 15,
+                    "font_size": 36,
+                    "font_color": "white",
+                    "box_color": "darkred",
+                    "box_opacity": 0.95,
+                    "boxborderw": 20,
+                    "position": "bottom-center",
+                    "y_offset": 50,
+                    "line_spacing": 8
                 }
             }
         }
@@ -145,6 +192,7 @@ class TextOverlayService:
         boxborderw = options.get('boxborderw', 20)
         position = options.get('position', 'top-center')
         y_offset = options.get('y_offset', 50)
+        line_spacing = options.get('line_spacing', 8)
         auto_wrap = options.get('auto_wrap', True)
         
         # Apply text wrapping before escaping
@@ -219,6 +267,13 @@ class TextOverlayService:
         # Create text file instead of passing text directly in command
         # This is more reliable for complex text with special characters
         text_file_path = os.path.join(LOCAL_STORAGE_PATH, f"{request_id}_text.txt")
+        
+        # Initialize variables that might be used in exception handling
+        input_path = None
+        output_filename = None
+        ffmpeg_command = None
+        env = None
+        
         try:
             with open(text_file_path, 'w', encoding='utf-8') as f:
                 f.write(text)  # Write the unescaped text
@@ -232,7 +287,7 @@ class TextOverlayService:
                 f"box=1:"
                 f"boxcolor={box_color}@{box_opacity}:"
                 f"boxborderw={boxborderw}:"
-                f"line_spacing=8:"
+                f"line_spacing={line_spacing}:"
                 f"{position_coords}:"
                 f"enable='lt(t,{duration})'"
             )
@@ -271,7 +326,7 @@ class TextOverlayService:
             fallback_attempted = False
             
             # Strategy 1: Try with text parameter instead of textfile
-            if "textfile" in str(e.stderr) or "Could not set font size" in str(e.stderr):
+            if ffmpeg_command is not None and env is not None and ("textfile" in str(e.stderr) or "Could not set font size" in str(e.stderr)):
                 try:
                     drawtext_filter = (
                         f"drawtext=fontfile={font_file}:"
@@ -281,7 +336,7 @@ class TextOverlayService:
                         f"box=1:"
                         f"boxcolor={box_color}@{box_opacity}:"
                         f"boxborderw={boxborderw}:"
-                        f"line_spacing=8:"
+                        f"line_spacing={line_spacing}:"
                         f"{position_coords}:"
                         f"enable='lt(t,{duration})'"
                     )
@@ -292,7 +347,7 @@ class TextOverlayService:
                     pass
             
             # Strategy 2: Try with a different font if font-related error
-            if not fallback_attempted and ("invalid library handle" in str(e.stderr) or "Could not set font size" in str(e.stderr)):
+            if ffmpeg_command is not None and env is not None and not fallback_attempted and ("invalid library handle" in str(e.stderr) or "Could not set font size" in str(e.stderr)):
                 try:
                     # Use a simpler, more reliable font
                     local_font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fonts')
@@ -312,7 +367,7 @@ class TextOverlayService:
                                 f"box=1:"
                                 f"boxcolor={box_color}@{box_opacity}:"
                                 f"boxborderw={boxborderw}:"
-                                f"line_spacing=8:"
+                                f"line_spacing={line_spacing}:"
                                 f"{position_coords}:"
                                 f"enable='lt(t,{duration})'"
                             )
@@ -327,7 +382,7 @@ class TextOverlayService:
                     pass
             
             # Strategy 3: Try without font specification (use FFmpeg default)
-            if not fallback_attempted:
+            if ffmpeg_command is not None and env is not None and not fallback_attempted:
                 try:
                     drawtext_filter = (
                         f"drawtext=text='{escaped_text}':"
@@ -336,7 +391,7 @@ class TextOverlayService:
                         f"box=1:"
                         f"boxcolor={box_color}@{box_opacity}:"
                         f"boxborderw={boxborderw}:"
-                        f"line_spacing=8:"
+                        f"line_spacing={line_spacing}:"
                         f"{position_coords}:"
                         f"enable='lt(t,{duration})'"
                     )
@@ -350,12 +405,15 @@ class TextOverlayService:
                 raise Exception(f"FFmpeg failed with all fallback strategies. Last error: {e.stderr}")
         finally:
             # Clean up temporary files
-            if os.path.exists(input_path):
+            if input_path is not None and os.path.exists(input_path):
                 os.remove(input_path)
             if os.path.exists(text_file_path):
                 os.remove(text_file_path)
         
-        # Upload the processed video to cloud storage
+        # Upload the processed video to cloud storage (only if we have a valid output file)
+        if output_filename is None:
+            raise Exception("Video processing failed - no output file generated")
+            
         cloud_url = upload_file(output_filename)
         
         # Clean up the local output file after upload
