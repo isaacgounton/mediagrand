@@ -31,10 +31,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.8,
-                    "boxborderw": 40,
+                    "boxborderw": 60,
                     "position": "bottom-center",
                     "y_offset": 100,
-                    "line_spacing": 10
+                    "line_spacing": 15
                 }
             },
             "watermark": {
@@ -45,10 +45,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.6,
-                    "boxborderw": 30,
+                    "boxborderw": 45,
                     "position": "bottom-right",
                     "y_offset": 40,
-                    "line_spacing": 6
+                    "line_spacing": 10
                 }
             },
             "alert": {
@@ -59,10 +59,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "red",
                     "box_opacity": 0.9,
-                    "boxborderw": 45,
+                    "boxborderw": 75,
                     "position": "center",
                     "y_offset": 0,
-                    "line_spacing": 12
+                    "line_spacing": 16
                 }
             },
             "modern_caption": {
@@ -73,10 +73,10 @@ class TextOverlayService:
                     "font_color": "black",
                     "box_color": "white",
                     "box_opacity": 0.85,
-                    "boxborderw": 50,
+                    "boxborderw": 70,
                     "position": "top-center",
                     "y_offset": 100,
-                    "line_spacing": 14
+                    "line_spacing": 16
                 }
             },
             "social_post": {
@@ -87,10 +87,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.7,
-                    "boxborderw": 40,
+                    "boxborderw": 65,
                     "position": "bottom-center",
                     "y_offset": 120,
-                    "line_spacing": 12
+                    "line_spacing": 15
                 }
             },
             "quote": {
@@ -101,10 +101,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "navy",
                     "box_opacity": 0.8,
-                    "boxborderw": 50,
+                    "boxborderw": 70,
                     "position": "center",
                     "y_offset": 0,
-                    "line_spacing": 16
+                    "line_spacing": 17
                 }
             },
             "news_ticker": {
@@ -115,10 +115,10 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "darkred",
                     "box_opacity": 0.95,
-                    "boxborderw": 35,
+                    "boxborderw": 50,
                     "position": "bottom-center",
                     "y_offset": 50,
-                    "line_spacing": 8
+                    "line_spacing": 12
                 }
             }
         }
@@ -226,7 +226,7 @@ class TextOverlayService:
         font_color = options.get('font_color', 'black')
         box_color = options.get('box_color', 'white')
         box_opacity = options.get('box_opacity', 1.0)
-        boxborderw = options.get('boxborderw', 40)
+        boxborderw = options.get('boxborderw', 60)
         position = options.get('position', 'top-center')
         y_offset = options.get('y_offset', 50)
         line_spacing = options.get('line_spacing', 8)
