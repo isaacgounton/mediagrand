@@ -43,6 +43,7 @@ def bootstrap_admin():
         
         if admin_key and admin_key['is_active']:
             print("✅ Admin API key already exists and is active")
+            print("🔑 Admin key is ready for use in the dashboard")
         else:
             # Create admin API key
             api_key = api_manager.create_api_key(
@@ -55,6 +56,16 @@ def bootstrap_admin():
             print("✅ Created admin API key")
             print(f"🔑 Admin API Key: {api_key}")
             print("⚠️  IMPORTANT: Save this key securely - it won't be shown again!")
+            
+            # Also save to a secure location for Docker startup
+            import os
+            key_file = os.path.join(LOCAL_STORAGE_PATH, '.admin_key')
+            try:
+                with open(key_file, 'w') as f:
+                    f.write(api_key)
+                print(f"📁 Admin key also saved to: {key_file}")
+            except Exception as e:
+                print(f"⚠️  Could not save admin key to file: {e}")
         
         print("\n🎉 Bootstrap completed successfully!")
         print(f"📁 Database location: {os.path.join(LOCAL_STORAGE_PATH, 'api_keys.db')}")

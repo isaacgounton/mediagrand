@@ -124,6 +124,9 @@ RUN --mount=type=cache,target=/root/.cache/ms-playwright \
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
 
+# Bootstrap the API key management system
+RUN python3 bootstrap_admin.py
+
 # Create startup script for RQ workers and Gunicorn (simplified like working repo)
 RUN echo '#!/bin/bash\n\
 \n\
