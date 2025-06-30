@@ -25,7 +25,7 @@ import jsonschema
 from functools import wraps
 from werkzeug.utils import secure_filename
 from services.v1.media.media_transcribe import process_transcribe_media
-from services.authentication import authenticate
+from services.enhanced_authentication import enhanced_authenticate, require_permission
 from services.cloud_storage import upload_file
 from config import LOCAL_STORAGE_PATH
 
@@ -90,7 +90,8 @@ def validate_transcribe_request():
     return decorator
 
 @v1_media_transcribe_bp.route('/v1/media/transcribe', methods=['POST'])
-@authenticate
+@enhanced_authenticate
+@require_permission('read')
 @validate_transcribe_request()
 @queue_task_wrapper(bypass_queue=False)
 def transcribe(job_id, data):

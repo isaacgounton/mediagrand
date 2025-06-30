@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key Management - DahoPevi</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-key text-blue-600 mr-3"></i>API Key Management
+            </h1>
+            <p class="text-gray-600">Manage users and their API keys for DahoPevi</p>
+        </div>
+
+        <!-- Users Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    <i class="fas fa-users text-green-600 mr-2"></i>Users
+                </h2>
+                <button onclick="showCreateUserModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-plus mr-2"></i>Add User
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Keys</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- API Keys Section -->
+        <div id="apiKeysSection" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    <i class="fas fa-key text-yellow-600 mr-2"></i>API Keys for <span id="selectedUserName"></span>
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="showCreateKeyModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-plus mr-2"></i>Create API Key
+                    </button>
+                    <button onclick="hideApiKeysSection()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Users
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate Limit</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Used</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apiKeysTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- API Keys will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Create New User</h3>
+                <form id="createUserForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="hideCreateUserModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div id="createKeyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Create API Key</h3>
+                <form id="createKeyForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Key Name</label>
+                        <input type="text" id="keyName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+                        <select id="permissions" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="read">Read Only</option>
+                            <option value="read,write" selected>Read & Write</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rate Limit (requests/hour)</label>
+                        <input type="number" id="rateLimit" value="1000" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Expires In (days)</label>
+                        <select id="expiresDays" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Never</option>
+                            <option value="30">30 days</option>
+                            <option value="90">90 days</option>
+                            <option value="365">1 year</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="hideCreateKeyModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">Create Key</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Display Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                <h3 class="text-lg font-semibold mb-4 text-green-600">API Key Created Successfully!</h3>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                    <p class="text-sm text-yellow-800 mb-2">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <strong>Important:</strong> Save this API key securely. It will not be shown again.
+                    </p>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-md mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Your API Key:</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="generatedApiKey" class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm" readonly>
+                        <button onclick="copyApiKey()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="hideApiKeyModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="fixed top-4 right-4 hidden">
+        <div class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+            <span id="notificationText"></span>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null;
+        let users = [];
+
+        // Load users on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+        });
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/v1/admin/users', {
+                    headers: {
+                        'X-API-Key': getApiKey()
+                    }
+                });
+                const data = await response.json();
+                users = data.users;
+                renderUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showNotification('Error loading users', 'error');
+            }
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = users.map(user => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                                    ${user.username.charAt(0).toUpperCase()}
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${user.username}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.email}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            ${user.api_key_count} keys
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="showUserApiKeys(${user.id}, '${user.username}')" 
+                                class="text-blue-600 hover:text-blue-900 mr-4">
+                            <i class="fas fa-key mr-1"></i>Manage Keys
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function showUserApiKeys(userId, username) {
+            currentUserId = userId;
+            document.getElementById('selectedUserName').textContent = username;
+            
+            try {
+                const response = await fetch(`/api/v1/admin/users/${userId}/api-keys`, {
+                    headers: {
+                        'X-API-Key': getApiKey()
+                    }
+                });
+                const data = await response.json();
+                renderApiKeys(data.api_keys);
+                document.getElementById('apiKeysSection').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading API keys:', error);
+                showNotification('Error loading API keys', 'error');
+            }
+        }
+
+        function renderApiKeys(apiKeys) {
+            const tbody = document.getElementById('apiKeysTableBody');
+            tbody.innerHTML = apiKeys.map(key => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${key.key_name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">${key.key_prefix}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${key.permissions}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${key.rate_limit}/hr</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${key.expires_at ? new Date(key.expires_at).toLocaleDateString() : 'Never'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${key.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${key.is_active ? 'Active' : 'Revoked'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${key.is_active ? `
+                            <button onclick="revokeApiKey(${key.id})" 
+                                    class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-ban mr-1"></i>Revoke
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function hideApiKeysSection() {
+            document.getElementById('apiKeysSection').classList.add('hidden');
+        }
+
+        // Modal functions
+        function showCreateUserModal() {
+            document.getElementById('createUserModal').classList.remove('hidden');
+        }
+
+        function hideCreateUserModal() {
+            document.getElementById('createUserModal').classList.add('hidden');
+            document.getElementById('createUserForm').reset();
+        }
+
+        function showCreateKeyModal() {
+            document.getElementById('createKeyModal').classList.remove('hidden');
+        }
+
+        function hideCreateKeyModal() {
+            document.getElementById('createKeyModal').classList.add('hidden');
+            document.getElementById('createKeyForm').reset();
+        }
+
+        function hideApiKeyModal() {
+            document.getElementById('apiKeyModal').classList.add('hidden');
+        }
+
+        // Form handlers
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            
+            try {
+                const response = await fetch('/api/v1/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': getApiKey()
+                    },
+                    body: JSON.stringify({ username, email })
+                });
+                
+                if (response.ok) {
+                    hideCreateUserModal();
+                    loadUsers();
+                    showNotification('User created successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                showNotification('Error creating user', 'error');
+            }
+        });
+
+        document.getElementById('createKeyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const keyName = document.getElementById('keyName').value;
+            const permissions = document.getElementById('permissions').value;
+            const rateLimit = document.getElementById('rateLimit').value;
+            const expiresDays = document.getElementById('expiresDays').value;
+            
+            try {
+                const response = await fetch(`/api/v1/admin/users/${currentUserId}/api-keys`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': getApiKey()
+                    },
+                    body: JSON.stringify({ 
+                        key_name: keyName, 
+                        permissions, 
+                        rate_limit: parseInt(rateLimit),
+                        expires_days: expiresDays ? parseInt(expiresDays) : null
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    hideCreateKeyModal();
+                    document.getElementById('generatedApiKey').value = data.api_key;
+                    document.getElementById('apiKeyModal').classList.remove('hidden');
+                    showUserApiKeys(currentUserId, document.getElementById('selectedUserName').textContent);
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating API key:', error);
+                showNotification('Error creating API key', 'error');
+            }
+        });
+
+        async function revokeApiKey(keyId) {
+            if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/admin/users/${currentUserId}/api-keys/${keyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-API-Key': getApiKey()
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('API key revoked successfully', 'success');
+                    showUserApiKeys(currentUserId, document.getElementById('selectedUserName').textContent);
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error revoking API key:', error);
+                showNotification('Error revoking API key', 'error');
+            }
+        }
+
+        function copyApiKey() {
+            const apiKeyInput = document.getElementById('generatedApiKey');
+            apiKeyInput.select();
+            document.execCommand('copy');
+            showNotification('API key copied to clipboard', 'success');
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            
+            text.textContent = message;
+            notification.className = `fixed top-4 right-4 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-lg`;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 3000);
+        }
+
+        function getApiKey() {
+            // In a real implementation, this would be retrieved from localStorage, session, or prompt user
+            return prompt('Enter your admin API key:');
+        }
+    </script>
+</body>
+</html>
