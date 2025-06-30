@@ -197,8 +197,44 @@
         let users = [];
 
         // Load users on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUsers();
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Dashboard page loaded');
+            
+            try {
+                // Try to verify session with secure cookie first
+                const verifyResponse = await fetch('/v1/admin/verify', {
+                    method: 'GET',
+                    credentials: 'same-origin'  // Include cookies
+                });
+                
+                if (verifyResponse.ok) {
+                    const verifyData = await verifyResponse.json();
+                    console.log('Session verified with secure cookie');
+                    
+                    // Store API key in memory for this session
+                    window.adminApiKey = verifyData.api_key;
+                    loadUsers();
+                    return;
+                }
+            } catch (error) {
+                console.log('Secure session verification failed:', error);
+            }
+            
+            // Fallback: Check sessionStorage for backwards compatibility
+            const apiKey = sessionStorage.getItem('admin_api_key');
+            console.log('Checking sessionStorage fallback:', apiKey ? apiKey.substring(0, 10) + '...' : 'null');
+            
+            if (apiKey) {
+                console.log('Using sessionStorage API key');
+                window.adminApiKey = apiKey;
+                loadUsers();
+                return;
+            }
+            
+            // No valid authentication found
+            console.log('No valid authentication found, redirecting to login');
+            alert('No authentication found. Please log in.');
+            window.location.href = '/admin';
         });
 
         async function loadUsers() {
@@ -454,9 +490,18 @@
         }
 
         function getApiKey() {
-            // Get API key from sessionStorage (set during login)
+            // Try to get API key from memory (set by secure session verification)
+            if (window.adminApiKey) {
+                console.log('getApiKey - using memory stored key');
+                return window.adminApiKey;
+            }
+            
+            // Fallback to sessionStorage for backwards compatibility
             const apiKey = sessionStorage.getItem('admin_api_key');
+            console.log('getApiKey called - found in sessionStorage:', apiKey ? apiKey.substring(0, 10) + '...' : 'null');
+            
             if (!apiKey) {
+                console.log('No API key found, redirecting to login');
                 alert('Session expired. Please log in again.');
                 window.location.href = '/admin';
                 return null;
@@ -466,6 +511,8 @@
 
         // Helper function for authenticated fetch requests
         async function authenticatedFetch(url, options = {}) {
+            console.log('authenticatedFetch called for:', url);
+            
             const apiKey = getApiKey();
             if (!apiKey) {
                 throw new Error('No API key available');
@@ -473,18 +520,31 @@
 
             const headers = {
                 'X-API-Key': apiKey,
+                'Content-Type': 'application/json',
                 ...options.headers
             };
+
+            console.log('Making request to:', url, 'with headers:', Object.keys(headers));
 
             const response = await fetch(url, {
                 ...options,
                 headers
             });
 
+            console.log('Response status:', response.status);
+
             if (response.status === 401) {
+                console.log('Received 401 unauthorized response');
                 alert('Session expired or invalid API key. Please log in again.');
+                sessionStorage.removeItem('admin_api_key'); // Clear invalid key
                 window.location.href = '/admin';
                 throw new Error('Authentication failed');
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Request failed:', response.status, errorText);
+                throw new Error(`Request failed: ${response.status} ${errorText}`);
             }
 
             return response;
