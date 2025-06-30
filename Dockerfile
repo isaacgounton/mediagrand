@@ -122,8 +122,7 @@ RUN mkdir -p /tmp/assets /tmp/music /app/data/jobs /app/public/assets && \
 
 # Install Playwright browsers as appuser to ensure proper permissions
 USER appuser
-RUN --mount=type=cache,target=/root/.cache/ms-playwright \
-    playwright install chromium
+RUN playwright install chromium
 
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
@@ -189,6 +188,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 CMD ["/app/run_services.sh"]
 
 # Pre-download the most accurate Whisper model (large-v3) at build time
-# Pre-download the most accurate Whisper model (large-v3) at build time using persistent Docker layers
-RUN --mount=type=cache,target=/root/.cache/whisper \
-    python3 -c "import whisper; whisper.load_model('base')"
+RUN python3 -c "import whisper; whisper.load_model('base')"

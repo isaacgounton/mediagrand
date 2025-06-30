@@ -1,0 +1,45 @@
+# DAHOPEVI - AI-Powered Media Processing API
+
+  A comprehensive Python-based API for video processing,
+  audio manipulation, and AI-powered media generation. Built
+   with Flask, Redis, and modern AI tools.
+
+  ## Features
+
+  - 🎥 Video processing (trimming, merging, captioning)
+  - 🎵 Audio manipulation and TTS integration
+  - 🤖 AI-powered content generation
+  - 📸 Image processing and conversion
+  - 🔧 FFmpeg integration
+  - 🎯 RESTful API with job queue system
+  - 📊 Admin dashboard with API key management
+
+  ## Quick Start
+
+  ```bash
+  # Run with Docker
+  docker run -p 8080:8080 isaacgounton/dahopevi:latest
+
+  # Or with Redis (recommended)
+  docker-compose up
+
+  Environment Variables
+
+  - REDIS_URL - Redis connection string
+  - API_KEY - Authentication key
+  - GUNICORN_WORKERS - Number of worker processes
+  - RQ_WORKERS - Number of background workers
+
+  Tags
+
+  - latest - Latest stable version
+  - v1.0 - Version 1.0 release
+
+  Documentation
+
+  API documentation available at /docs endpoint when
+  running.
+
+  Health Check
+
+  The container includes a health check endpoint at /health.
