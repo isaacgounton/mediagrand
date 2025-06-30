@@ -14,6 +14,26 @@ def dashboard():
     """API Key Management Dashboard"""
     return render_template('admin/api_keys.html')
 
+@api_keys_bp.route('/api/v1/admin/debug', methods=['GET'])
+@enhanced_authenticate
+def debug_status():
+    """Debug endpoint to check database status"""
+    try:
+        users = api_manager.get_all_users()
+        return jsonify({
+            "status": "ok",
+            "database_connected": True,
+            "user_count": len(users),
+            "users": users[:5]  # First 5 users for debugging
+        })
+    except Exception as e:
+        logging.error(f"Debug error: {e}")
+        return jsonify({
+            "status": "error",
+            "database_connected": False,
+            "error": str(e)
+        }), 500
+
 @api_keys_bp.route('/api/v1/admin/users', methods=['GET'])
 @enhanced_authenticate
 def get_users():

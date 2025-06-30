@@ -203,17 +203,15 @@
 
         async function loadUsers() {
             try {
-                const response = await fetch('/api/v1/admin/users', {
-                    headers: {
-                        'X-API-Key': getApiKey()
-                    }
-                });
+                const response = await authenticatedFetch('/api/v1/admin/users');
                 const data = await response.json();
                 users = data.users;
                 renderUsers();
             } catch (error) {
-                console.error('Error loading users:', error);
-                showNotification('Error loading users', 'error');
+                if (error.message !== 'Authentication failed') {
+                    console.error('Error loading users:', error);
+                    showNotification('Error loading users', 'error');
+                }
             }
         }
 
@@ -257,11 +255,21 @@
             document.getElementById('selectedUserName').textContent = username;
             
             try {
+                const apiKey = getApiKey();
+                if (!apiKey) return;
+                
                 const response = await fetch(`/api/v1/admin/users/${userId}/api-keys`, {
                     headers: {
-                        'X-API-Key': getApiKey()
+                        'X-API-Key': apiKey
                     }
                 });
+                
+                if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/admin';
+                    return;
+                }
+                
                 const data = await response.json();
                 renderApiKeys(data.api_keys);
                 document.getElementById('apiKeysSection').classList.remove('hidden');
@@ -454,6 +462,32 @@
                 return null;
             }
             return apiKey;
+        }
+
+        // Helper function for authenticated fetch requests
+        async function authenticatedFetch(url, options = {}) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                throw new Error('No API key available');
+            }
+
+            const headers = {
+                'X-API-Key': apiKey,
+                ...options.headers
+            };
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            if (response.status === 401) {
+                alert('Session expired or invalid API key. Please log in again.');
+                window.location.href = '/admin';
+                throw new Error('Authentication failed');
+            }
+
+            return response;
         }
     </script>
 </body>
