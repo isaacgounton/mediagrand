@@ -17,7 +17,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.85,
-                    "boxborderw": 30,
+                    "boxborderw": 45,
                     "position": "top-center",
                     "y_offset": 80,
                     "line_spacing": 12
@@ -31,7 +31,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.8,
-                    "boxborderw": 25,
+                    "boxborderw": 40,
                     "position": "bottom-center",
                     "y_offset": 100,
                     "line_spacing": 10
@@ -45,7 +45,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.6,
-                    "boxborderw": 15,
+                    "boxborderw": 30,
                     "position": "bottom-right",
                     "y_offset": 40,
                     "line_spacing": 6
@@ -59,7 +59,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "red",
                     "box_opacity": 0.9,
-                    "boxborderw": 30,
+                    "boxborderw": 45,
                     "position": "center",
                     "y_offset": 0,
                     "line_spacing": 12
@@ -73,7 +73,7 @@ class TextOverlayService:
                     "font_color": "black",
                     "box_color": "white",
                     "box_opacity": 0.85,
-                    "boxborderw": 35,
+                    "boxborderw": 50,
                     "position": "top-center",
                     "y_offset": 100,
                     "line_spacing": 14
@@ -87,7 +87,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "black",
                     "box_opacity": 0.7,
-                    "boxborderw": 25,
+                    "boxborderw": 40,
                     "position": "bottom-center",
                     "y_offset": 120,
                     "line_spacing": 12
@@ -101,7 +101,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "navy",
                     "box_opacity": 0.8,
-                    "boxborderw": 35,
+                    "boxborderw": 50,
                     "position": "center",
                     "y_offset": 0,
                     "line_spacing": 16
@@ -115,7 +115,7 @@ class TextOverlayService:
                     "font_color": "white",
                     "box_color": "darkred",
                     "box_opacity": 0.95,
-                    "boxborderw": 20,
+                    "boxborderw": 35,
                     "position": "bottom-center",
                     "y_offset": 50,
                     "line_spacing": 8
@@ -226,7 +226,7 @@ class TextOverlayService:
         font_color = options.get('font_color', 'black')
         box_color = options.get('box_color', 'white')
         box_opacity = options.get('box_opacity', 1.0)
-        boxborderw = options.get('boxborderw', 20)
+        boxborderw = options.get('boxborderw', 40)
         position = options.get('position', 'top-center')
         y_offset = options.get('y_offset', 50)
         line_spacing = options.get('line_spacing', 8)
@@ -240,15 +240,15 @@ class TextOverlayService:
         escaped_text = self.escape_text_for_ffmpeg(text)
         
         position_map = {
-            'top-left': 'x=50:y=50',
-            'top-center': 'x=(w-text_w)/2:y=50',
-            'top-right': 'x=w-text_w-50:y=50',
-            'center-left': 'x=50:y=(h-text_h)/2',
+            'top-left': 'x=30:y=30',
+            'top-center': 'x=(w-text_w)/2:y=30',
+            'top-right': 'x=w-text_w-30:y=30',
+            'center-left': 'x=30:y=(h-text_h)/2',
             'center': 'x=(w-text_w)/2:y=(h-text_h)/2',
-            'center-right': 'x=w-text_w-50:y=(h-text_h)/2',
-            'bottom-left': 'x=50:y=h-text_h-50',
-            'bottom-center': 'x=(w-text_w)/2:y=h-text_h-50',
-            'bottom-right': 'x=w-text_w-50:y=h-text_h-50',
+            'center-right': 'x=w-text_w-30:y=(h-text_h)/2',
+            'bottom-left': 'x=30:y=h-text_h-30',
+            'bottom-center': 'x=(w-text_w)/2:y=h-text_h-30',
+            'bottom-right': 'x=w-text_w-30:y=h-text_h-30',
         }
         
         if position in position_map:
@@ -257,10 +257,10 @@ class TextOverlayService:
             position_coords = 'x=(w-text_w)/2:y=50'
         
         # Adjust y_offset based on position
-        if 'top' in position and y_offset != 50:
-            position_coords = position_coords.replace('y=50', f'y={y_offset}')
-        elif 'bottom' in position and y_offset != 50:
-            position_coords = position_coords.replace('y=h-text_h-50', f'y=h-text_h-{y_offset}')
+        if 'top' in position and y_offset != 30:
+            position_coords = position_coords.replace('y=30', f'y={y_offset}')
+        elif 'bottom' in position and y_offset != 30:
+            position_coords = position_coords.replace('y=h-text_h-30', f'y=h-text_h-{y_offset}')
         elif 'center' in position and 'top' not in position and 'bottom' not in position and y_offset != 0:
             position_coords = position_coords.replace('y=(h-text_h)/2', f'y=(h-text_h)/2+{y_offset}')
 
