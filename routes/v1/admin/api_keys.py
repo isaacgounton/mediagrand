@@ -2,20 +2,20 @@
 
 from flask import Blueprint, render_template, request, jsonify
 from models.api_keys import APIKeyManager
-from services.authentication import authenticate
+from services.enhanced_authentication import enhanced_authenticate, require_permission
 import logging
 
 api_keys_bp = Blueprint('api_keys', __name__)
 api_manager = APIKeyManager()
 
 @api_keys_bp.route('/admin/api-keys')
-@authenticate
+@enhanced_authenticate
 def dashboard():
     """API Key Management Dashboard"""
     return render_template('admin/api_keys.html')
 
 @api_keys_bp.route('/api/v1/admin/users', methods=['GET'])
-@authenticate
+@enhanced_authenticate
 def get_users():
     """Get all users"""
     try:
@@ -26,7 +26,7 @@ def get_users():
         return jsonify({"error": "Failed to fetch users"}), 500
 
 @api_keys_bp.route('/api/v1/admin/users', methods=['POST'])
-@authenticate
+@enhanced_authenticate
 def create_user():
     """Create a new user"""
     try:
@@ -44,7 +44,7 @@ def create_user():
         return jsonify({"error": "Failed to create user"}), 500
 
 @api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys', methods=['GET'])
-@authenticate
+@enhanced_authenticate
 def get_user_api_keys(user_id):
     """Get API keys for a specific user"""
     try:
@@ -55,7 +55,7 @@ def get_user_api_keys(user_id):
         return jsonify({"error": "Failed to fetch API keys"}), 500
 
 @api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys', methods=['POST'])
-@authenticate
+@enhanced_authenticate
 def create_api_key(user_id):
     """Create a new API key for a user"""
     try:
@@ -86,7 +86,7 @@ def create_api_key(user_id):
         return jsonify({"error": "Failed to create API key"}), 500
 
 @api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys/<int:key_id>', methods=['DELETE'])
-@authenticate
+@enhanced_authenticate
 def revoke_api_key(user_id, key_id):
     """Revoke an API key"""
     try:
@@ -100,7 +100,7 @@ def revoke_api_key(user_id, key_id):
         return jsonify({"error": "Failed to revoke API key"}), 500
 
 @api_keys_bp.route('/api/v1/admin/api-keys/<int:key_id>/usage', methods=['GET'])
-@authenticate
+@enhanced_authenticate
 def get_api_key_usage(key_id):
     """Get usage statistics for an API key"""
     try:

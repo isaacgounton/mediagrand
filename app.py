@@ -339,6 +339,7 @@ def create_app():
     from routes.v1.text.text_overlay import text_overlay_bp # Import the new text overlay blueprint
     from routes.simone_integration import simone_bp
     from routes.v1.admin.api_keys import api_keys_bp
+    from routes.v1.admin.setup import setup_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -383,6 +384,7 @@ def create_app():
     app.register_blueprint(text_overlay_bp, url_prefix='/v1/text') # Register the new text overlay blueprint with prefix
     app.register_blueprint(simone_bp)
     app.register_blueprint(api_keys_bp)
+    app.register_blueprint(setup_bp)
 
     # Add homepage route
     @app.route('/')
