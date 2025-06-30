@@ -45,6 +45,10 @@ services:
       # Exclude cache and build directories
       - /app/__pycache__
       - /app/.pytest_cache
+      - whisper_models:/opt/whisper_cache
+      - dahopevi_data:/app/data
+      - gcp-sa-credentials:/app/gcp-sa-credentials
+      - tmp-assets:/tmp
     environment:
       API_KEY: ${API_KEY:-}
       APP_DEBUG: 'true'
@@ -68,11 +72,6 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       WHISPER_CACHE_DIR: /opt/whisper_cache
       TTS_SERVER_URL: ${TTS_SERVER_URL:-https://tts.dahopevi.com/api}
-    volumes:
-      - whisper_models:/opt/whisper_cache
-      - dahopevi_data:/app/data
-      - gcp-sa-credentials:/app/gcp-sa-credentials
-      - tmp-assets:/tmp
     restart: unless-stopped
     depends_on:
       redis:
