@@ -171,13 +171,15 @@ class TextOverlayService:
             position_coords = position_coords.replace('y=(h-text_h)/2', f'y=(h-text_h)/2+{y_offset}')
 
 
-        # Use a font that supports Unicode/emojis
+        # Use a reliable font that works with FFmpeg, prioritizing emoji support
         font_files = [
-            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+            "/home/etugrand/DEV.ai/Projects/dahopevi/fonts/OpenSansEmoji.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",
-            "/System/Library/Fonts/Arial.ttf"
+            "/System/Library/Fonts/Arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc"
         ]
         
         font_file = None
@@ -187,6 +189,7 @@ class TextOverlayService:
                 break
         
         if not font_file:
+            # Use default system font as last resort
             font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         
         drawtext_filter = (
@@ -224,7 +227,21 @@ class TextOverlayService:
         try:
             result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
         except subprocess.CalledProcessError as e:
-            raise Exception(f"FFmpeg command failed: {e.stderr}")
+            error_msg = f"FFmpeg command failed with font '{font_file}': {e.stderr}"
+            # Try with a more basic font as fallback
+            if "fontfile" in str(e.stderr) or "font" in str(e.stderr).lower():
+                fallback_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                if os.path.exists(fallback_font) and font_file != fallback_font:
+                    drawtext_filter = drawtext_filter.replace(f"fontfile={font_file}:", f"fontfile={fallback_font}:")
+                    ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
+                    try:
+                        result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8')
+                    except subprocess.CalledProcessError as e2:
+                        raise Exception(f"FFmpeg failed with fallback font '{fallback_font}': {e2.stderr}")
+                else:
+                    raise Exception(error_msg)
+            else:
+                raise Exception(error_msg)
         finally:
             # Clean up input file
             if os.path.exists(input_path):
