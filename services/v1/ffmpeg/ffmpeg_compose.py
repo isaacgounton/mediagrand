@@ -14,8 +14,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-
-
 import os
 import subprocess
 import json
@@ -41,7 +39,13 @@ def get_extension_from_format(format_name):
         'wav': 'wav',
         'aac': 'aac',
         'flac': 'flac',
-        'ogg': 'ogg'
+        'ogg': 'ogg',
+        'm4a': 'm4a',
+        'opus': 'opus',
+        'vorbis': 'ogg',
+        'h264': 'h264',
+        'h265': 'h265',
+        'hevc': 'hevc'
     }
     return format_to_extension.get(format_name.lower(), 'mp4')  # Default to mp4 if unknown
 
@@ -115,13 +119,45 @@ def process_ffmpeg_compose(data, job_id):
         input_path = download_file(input_data["file_url"], LOCAL_STORAGE_PATH)
         command.extend(["-i", input_path])
     
-    # Add filters
+    # Add filters (both simple and complex)
     if data.get("filters"):
-        filter_complex = ";".join(filter_obj["filter"] for filter_obj in data["filters"])
-        command.extend(["-filter_complex", filter_complex])
+        # Check if we should use simple filters or complex filters
+        use_simple_video = data.get("use_simple_video_filter", False)
+        use_simple_audio = data.get("use_simple_audio_filter", False)
+        
+        if use_simple_video or use_simple_audio:
+            # Handle simple filters
+            video_filters = []
+            audio_filters = []
+            
+            for filter_obj in data["filters"]:
+                if filter_obj.get("type") == "video" and use_simple_video:
+                    video_filters.append(filter_obj["filter"])
+                elif filter_obj.get("type") == "audio" and use_simple_audio:
+                    audio_filters.append(filter_obj["filter"])
+            
+            if video_filters:
+                command.extend(["-vf", ",".join(video_filters)])
+            if audio_filters:
+                command.extend(["-af", ",".join(audio_filters)])
+        else:
+            # Default to complex filter
+            filter_complex = ";".join(filter_obj["filter"] for filter_obj in data["filters"])
+            command.extend(["-filter_complex", filter_complex])
+    
+    # Add stream mappings
+    if data.get("stream_mappings"):
+        for mapping in data["stream_mappings"]:
+            command.extend(["-map", mapping])
     
     # Add outputs
     for i, output in enumerate(data["outputs"]):
+        # Add any stream-specific mappings for this output
+        if "stream_mappings" in output:
+            for mapping in output["stream_mappings"]:
+                command.extend(["-map", mapping])
+        
+        # Determine output format
         format_name = None
         for option in output["options"]:
             if option["option"] == "-f":
@@ -132,16 +168,20 @@ def process_ffmpeg_compose(data, job_id):
         output_filename = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}_output_{i}.{extension}")
         output_filenames.append(output_filename)
         
+        # Add output options
         for option in output["options"]:
             command.append(option["option"])
             if "argument" in option and option["argument"] is not None:
                 command.append(str(option["argument"]))
+        
         command.append(output_filename)
     
     # Execute FFmpeg command
     try:
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"FFmpeg command executed successfully: {' '.join(command)}")
     except subprocess.CalledProcessError as e:
+        print(f"FFmpeg command: {' '.join(command)}")
         raise Exception(f"FFmpeg command failed: {e.stderr}")
     
     # Clean up input files
@@ -157,3 +197,4 @@ def process_ffmpeg_compose(data, job_id):
             metadata.append(get_metadata(output_filename, data["metadata"], job_id))
     
     return output_filenames, metadata
+

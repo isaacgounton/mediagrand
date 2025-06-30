@@ -24,12 +24,20 @@ The request body should be a JSON object with the following properties:
   - `options` (optional, array): An array of option objects, each containing:
     - `option` (required, string): The FFmpeg option.
     - `argument` (optional, string, number, or null): The argument for the option.
+- `stream_mappings` (optional, array): An array of global stream mappings that apply to all outputs (e.g., ["0:v:0", "1:a:0"]).
 - `filters` (optional, array): An array of filter objects, each containing:
   - `filter` (required, string): The FFmpeg filter.
+  - `arguments` (optional, array): An array of filter arguments.
+  - `input_labels` (optional, array): An array of input stream labels.
+  - `output_label` (optional, string): Output label for this filter.
+  - `type` (optional, string): Filter type - "video" or "audio" (used for simple filters).
+- `use_simple_video_filter` (optional, boolean): Use `-vf` for video filters instead of complex filter graph.
+- `use_simple_audio_filter` (optional, boolean): Use `-af` for audio filters instead of complex filter graph.
 - `outputs` (required, array): An array of output option objects, each containing:
   - `options` (required, array): An array of option objects, each containing:
     - `option` (required, string): The FFmpeg option.
     - `argument` (optional, string, number, or null): The argument for the option.
+  - `stream_mappings` (optional, array): An array of stream mappings specific to this output.
 - `global_options` (optional, array): An array of global option objects, each containing:
   - `option` (required, string): The FFmpeg global option.
   - `argument` (optional, string, number, or null): The argument for the option.
@@ -100,6 +108,77 @@ The request body should be a JSON object with the following properties:
 }
 ```
 
+### Stream Mapping Examples
+
+#### Basic Stream Mapping
+```json
+{
+  "inputs": [
+    {"file_url": "https://example.com/video.mp4"},
+    {"file_url": "https://example.com/audio.mp3"}
+  ],
+  "stream_mappings": ["0:v:0", "1:a:0"],
+  "outputs": [
+    {
+      "options": [
+        {"option": "-c:v", "argument": "libx264"},
+        {"option": "-c:a", "argument": "aac"}
+      ]
+    }
+  ],
+  "webhook_url": "https://example.com/webhook",
+  "id": "stream-mapping-example"
+}
+```
+
+#### Per-Output Stream Mapping
+```json
+{
+  "inputs": [
+    {"file_url": "https://example.com/video1.mp4"},
+    {"file_url": "https://example.com/video2.mp4"}
+  ],
+  "outputs": [
+    {
+      "options": [{"option": "-c:v", "argument": "libx264"}],
+      "stream_mappings": ["0:v:0", "0:a:0"]
+    },
+    {
+      "options": [{"option": "-c:v", "argument": "libx265"}],
+      "stream_mappings": ["1:v:0", "1:a:0"]
+    }
+  ],
+  "webhook_url": "https://example.com/webhook",
+  "id": "per-output-mapping"
+}
+```
+
+#### Simple Filter Example
+```json
+{
+  "inputs": [
+    {"file_url": "https://example.com/input.mp4"}
+  ],
+  "filters": [
+    {
+      "filter": "scale",
+      "arguments": ["1280", "720"],
+      "type": "video"
+    }
+  ],
+  "use_simple_video_filter": true,
+  "outputs": [
+    {
+      "options": [
+        {"option": "-c:v", "argument": "libx264"}
+      ]
+    }
+  ],
+  "webhook_url": "https://example.com/webhook",
+  "id": "simple-filter-example"
+}
+```
+
 ```bash
 curl -X POST \
   https://api.example.com/v1/ffmpeg/compose \
@@ -124,9 +203,17 @@ curl -X POST \
         "file_url": "https://example.com/video2.mp4"
       }
     ],
+    "stream_mappings": [
+      "0:v:0",
+      "1:a:0"
+    ],
     "filters": [
       {
-        "filter": "hflip"
+        "filter": "scale",
+        "arguments": ["1920", "1080"],
+        "input_labels": ["0:v"],
+        "output_label": "scaled",
+        "type": "video"
       }
     ],
     "outputs": [
@@ -140,7 +227,8 @@ curl -X POST \
             "option": "-crf",
             "argument": 23
           }
-        ]
+        ],
+        "stream_mappings": ["[scaled]", "0:a"]
       }
     ],
     "global_options": [
@@ -225,9 +313,37 @@ The main application context (`app.py`) includes error handling for the processi
 - The `outputs` array must contain at least one output option object.
 - The `filters` array is optional and can be used to apply FFmpeg filters to the input files.
 - The `global_options` array is optional and can be used to specify global FFmpeg options.
+- The `stream_mappings` array is optional and provides global stream mapping for all outputs.
+- Per-output `stream_mappings` override global mappings for specific outputs.
+- Use `use_simple_video_filter` or `use_simple_audio_filter` flags to apply filters as `-vf` or `-af` instead of complex filter graphs.
 - The `metadata` object is optional and can be used to request specific metadata for the output files.
 - The `webhook_url` parameter is required and specifies the URL where the response should be sent.
 - The `id` parameter is required and should be a unique identifier for the request.
+
+### Stream Mapping Syntax
+
+- `"0:v:0"` - First video stream from first input (input index 0)
+- `"1:a:0"` - First audio stream from second input (input index 1)
+- `"0:v"` - All video streams from first input
+- `"0:a"` - All audio streams from first input
+- `"[labelname]"` - Output from a filter with specific label
+
+### New Features
+
+#### Stream Mapping Support
+- **Global Mappings**: Apply to all outputs using `stream_mappings` array
+- **Per-Output Mappings**: Override global mappings for specific outputs using `stream_mappings` in output objects
+- **Complex Stream Selection**: Support for `0:v:0`, `1:a:0`, `[label]` syntax
+
+#### Simple Filter Support
+- **Video Filters**: Use `-vf` for simple video filters when `use_simple_video_filter` is true
+- **Audio Filters**: Use `-af` for simple audio filters when `use_simple_audio_filter` is true
+- **Filter Types**: Specify `"type": "video"` or `"type": "audio"` on filter objects
+
+#### Extended Format Support
+- **Video Codecs**: h264, h265, hevc → libx264, libx265
+- **Audio Codecs**: opus → libopus, m4a → aac
+- **Modern Formats**: Support for latest codec standards
 
 ## 7. Common Issues
 
