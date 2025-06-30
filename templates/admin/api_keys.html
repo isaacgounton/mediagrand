@@ -203,7 +203,7 @@
 
         async function loadUsers() {
             try {
-                const response = await authenticatedFetch('/api/v1/admin/users');
+                const response = await authenticatedFetch('/v1/admin/users');
                 const data = await response.json();
                 users = data.users;
                 renderUsers();
@@ -258,7 +258,7 @@
                 const apiKey = getApiKey();
                 if (!apiKey) return;
                 
-                const response = await fetch(`/api/v1/admin/users/${userId}/api-keys`, {
+                const response = await fetch(`/v1/admin/users/${userId}/api-keys`, {
                     headers: {
                         'X-API-Key': apiKey
                     }
@@ -345,7 +345,7 @@
             const email = document.getElementById('email').value;
             
             try {
-                const response = await fetch('/api/v1/admin/users', {
+                const response = await fetch('/v1/admin/users', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -377,7 +377,7 @@
             const expiresDays = document.getElementById('expiresDays').value;
             
             try {
-                const response = await fetch(`/api/v1/admin/users/${currentUserId}/api-keys`, {
+                const response = await fetch(`/v1/admin/users/${currentUserId}/api-keys`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -413,7 +413,7 @@
             }
             
             try {
-                const response = await fetch(`/api/v1/admin/users/${currentUserId}/api-keys/${keyId}`, {
+                const response = await fetch(`/v1/admin/users/${currentUserId}/api-keys/${keyId}`, {
                     method: 'DELETE',
                     headers: {
                         'X-API-Key': getApiKey()

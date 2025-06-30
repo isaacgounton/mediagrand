@@ -83,7 +83,8 @@ def enhanced_authenticate(func):
                 
                 return func(*args, **kwargs)
         except Exception as e:
-            logging.error(f"Error in enhanced authentication: {e}")
+            logging.warning(f"Enhanced authentication failed, trying legacy: {e}")
+            # Continue to legacy authentication
         
         # Fallback to legacy authentication (single API key)
         if api_key == API_KEY:

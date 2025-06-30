@@ -14,27 +14,45 @@ def dashboard():
     """API Key Management Dashboard"""
     return render_template('admin/api_keys.html')
 
-@api_keys_bp.route('/api/v1/admin/debug', methods=['GET'])
-@enhanced_authenticate
+@api_keys_bp.route('/v1/admin/test', methods=['GET'])
+def test_basic():
+    """Basic test endpoint - NO AUTH"""
+    return jsonify({"status": "ok", "message": "API is working"})
+
+@api_keys_bp.route('/v1/admin/debug', methods=['GET'])
 def debug_status():
-    """Debug endpoint to check database status"""
+    """Debug endpoint to check authentication and database status - NO AUTH for testing"""
+    from config import API_KEY as LEGACY_KEY
+    api_key = request.headers.get('X-API-Key')
+    
     try:
         users = api_manager.get_all_users()
         return jsonify({
             "status": "ok",
             "database_connected": True,
             "user_count": len(users),
-            "users": users[:5]  # First 5 users for debugging
+            "users": users[:5],  # First 5 users for debugging
+            "auth_info": {
+                "api_key_provided": bool(api_key),
+                "api_key_length": len(api_key) if api_key else 0,
+                "legacy_key_available": bool(LEGACY_KEY),
+                "legacy_key_matches": api_key == LEGACY_KEY if api_key and LEGACY_KEY else False
+            }
         })
     except Exception as e:
         logging.error(f"Debug error: {e}")
         return jsonify({
             "status": "error",
             "database_connected": False,
-            "error": str(e)
+            "error": str(e),
+            "auth_info": {
+                "api_key_provided": bool(api_key),
+                "api_key_length": len(api_key) if api_key else 0,
+                "legacy_key_available": bool(LEGACY_KEY) if 'LEGACY_KEY' in locals() else False
+            }
         }), 500
 
-@api_keys_bp.route('/api/v1/admin/users', methods=['GET'])
+@api_keys_bp.route('/v1/admin/users', methods=['GET'])
 @enhanced_authenticate
 def get_users():
     """Get all users"""
@@ -45,7 +63,7 @@ def get_users():
         logging.error(f"Error fetching users: {e}")
         return jsonify({"error": "Failed to fetch users"}), 500
 
-@api_keys_bp.route('/api/v1/admin/users', methods=['POST'])
+@api_keys_bp.route('/v1/admin/users', methods=['POST'])
 @enhanced_authenticate
 def create_user():
     """Create a new user"""
@@ -63,7 +81,7 @@ def create_user():
         logging.error(f"Error creating user: {e}")
         return jsonify({"error": "Failed to create user"}), 500
 
-@api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys', methods=['GET'])
+@api_keys_bp.route('/v1/admin/users/<int:user_id>/api-keys', methods=['GET'])
 @enhanced_authenticate
 def get_user_api_keys(user_id):
     """Get API keys for a specific user"""
@@ -74,7 +92,7 @@ def get_user_api_keys(user_id):
         logging.error(f"Error fetching API keys: {e}")
         return jsonify({"error": "Failed to fetch API keys"}), 500
 
-@api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys', methods=['POST'])
+@api_keys_bp.route('/v1/admin/users/<int:user_id>/api-keys', methods=['POST'])
 @enhanced_authenticate
 def create_api_key(user_id):
     """Create a new API key for a user"""
@@ -105,7 +123,7 @@ def create_api_key(user_id):
         logging.error(f"Error creating API key: {e}")
         return jsonify({"error": "Failed to create API key"}), 500
 
-@api_keys_bp.route('/api/v1/admin/users/<int:user_id>/api-keys/<int:key_id>', methods=['DELETE'])
+@api_keys_bp.route('/v1/admin/users/<int:user_id>/api-keys/<int:key_id>', methods=['DELETE'])
 @enhanced_authenticate
 def revoke_api_key(user_id, key_id):
     """Revoke an API key"""
@@ -119,7 +137,7 @@ def revoke_api_key(user_id, key_id):
         logging.error(f"Error revoking API key: {e}")
         return jsonify({"error": "Failed to revoke API key"}), 500
 
-@api_keys_bp.route('/api/v1/admin/api-keys/<int:key_id>/usage', methods=['GET'])
+@api_keys_bp.route('/v1/admin/api-keys/<int:key_id>/usage', methods=['GET'])
 @enhanced_authenticate
 def get_api_key_usage(key_id):
     """Get usage statistics for an API key"""
