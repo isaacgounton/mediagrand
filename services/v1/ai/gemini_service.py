@@ -18,7 +18,7 @@ class GeminiService:
         self.client = genai.Client()
         
         # Model name for viral script generation
-        self.model_name = "gemini-2.0-flash"
+        self.model_name = "gemini-2.5-flash"
         
         # Viral-focused system instruction for clean narration text
         self.system_instruction = (
@@ -133,6 +133,60 @@ class GeminiService:
             logger.error(f"Failed to generate viral script: {e}")
             raise Exception(f"Failed to generate viral script: {e}")
     
+    def generate_viral_script_from_youtube(self, youtube_url: str, context: str = "") -> Dict[str, str]:
+        """Generate viral script directly from YouTube URL using Gemini 2.5"""
+        response = None
+        try:
+            logger.info(f"Generating viral script from YouTube URL: {youtube_url}")
+            
+            # Build the prompt
+            prompt = self.system_instruction
+            if context.strip():
+                prompt += f"\n\nAdditional context: {context}"
+            
+            # Use YouTube URL directly with Gemini 2.5
+            from google.genai import types
+            
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=types.Content(
+                    parts=[
+                        types.Part(
+                            file_data=types.FileData(file_uri=youtube_url)
+                        ),
+                        types.Part(text=prompt)
+                    ]
+                )
+            )
+            script_json = response.text
+            
+            if not script_json:
+                raise Exception("Empty response from Gemini")
+            
+            logger.info(f"Generated script JSON from YouTube: {script_json[:200]}...")
+            
+            # Clean and parse the JSON response
+            cleaned_json = self._clean_json_response(script_json)
+            script_data = json.loads(cleaned_json)
+            
+            # Validate required fields
+            if 'hook' not in script_data or 'script' not in script_data:
+                raise ValueError("Generated script missing required 'hook' or 'script' fields")
+            
+            logger.info(f"Generated hook from YouTube: {script_data['hook'][:50]}...")
+            logger.info(f"Generated script from YouTube: {script_data['script'][:100]}...")
+            
+            return script_data
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Gemini response as JSON: {e}")
+            if response is not None:
+                logger.error(f"Raw response: {response.text}")
+            raise Exception(f"Failed to parse AI response: {e}")
+        except Exception as e:
+            logger.error(f"Failed to generate viral script from YouTube URL: {e}")
+            raise Exception(f"Failed to generate viral script from YouTube URL: {e}")
+
     def generate_script_from_transcript(self, transcript: str, context: str = "") -> Dict[str, str]:
         """Generate viral script from transcript text (fallback when video upload fails)"""
         response = None
@@ -156,6 +210,9 @@ class GeminiService:
                 contents=prompt
             )
             script_json = response.text
+            
+            if not script_json:
+                raise Exception("Empty response from Gemini")
             
             logger.info(f"Generated script JSON from transcript: {script_json[:200]}...")
             

@@ -10,6 +10,7 @@ from services.video_source_handler import VideoSourceHandler
 from services.v1.ai.gemini_service import GeminiService
 from services.v1.audio.speech import generate_tts
 from services.v1.audio.intelligent_audio_mixer import IntelligentAudioMixer
+from services.v1.ffmpeg.ffmpeg_compose import process_ffmpeg_compose
 from services.cloud_storage import upload_file
 from app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
@@ -31,7 +32,6 @@ logger = logging.getLogger(__name__)
             "enum": ["portrait", "landscape", "square"],
             "default": "portrait"
         },
-        "add_captions": {"type": "boolean", "default": True},  # Add captions automatically
         "cookies_content": {"type": "string"},  # Optional YouTube cookies
         "cookies_url": {"type": "string", "format": "uri"},  # Optional cookies URL
         "auth_method": {
@@ -55,15 +55,14 @@ def create_viral_short(job_id, data):
     4. Generate viral script with hook + main content (in correct language)
     5. Generate TTS commentary
     6. Intelligently mix original audio with commentary
-    7. Convert to portrait format and add captions
-    8. Return final viral short
+    7. Convert to portrait format
+    8. Return final viral short (without captions)
     """
     video_input = data.get('video_input')
     context = data.get('context', '')
     tts_voice = data.get('tts_voice', 'en-US-AvaNeural')
     short_duration = data.get('short_duration', 60)
     video_format = data.get('video_format', 'portrait')
-    add_captions = data.get('add_captions', True)
     cookies_content = data.get('cookies_content')
     cookies_url = data.get('cookies_url')
     auth_method = data.get('auth_method', 'auto')
@@ -193,71 +192,83 @@ def create_viral_short(job_id, data):
                 "reason": "Fallback: segmentation failed"
             }
         
-        # Step 3: Extract the best segment
-        logger.info(f"Job {job_id}: Extracting viral segment from {best_segment['start_time']:.1f}s to {best_segment['end_time']:.1f}s")
+        # Step 3: Segment extraction will be done in the ultra-optimized FFmpeg operation
+        logger.info(f"Job {job_id}: Preparing to extract viral segment from {best_segment['start_time']:.1f}s to {best_segment['end_time']:.1f}s")
         
-        segment_video_path = os.path.join(temp_dir, f"{job_id}_segment.mp4")
-        from services.ffmpeg_toolkit import clip_video
-        clip_video(
-            input_path=downloaded_video_path,
-            output_path=segment_video_path,
-            start_time=best_segment['start_time'],
-            end_time=best_segment['end_time']
-        )
-        
-        # Step 4: Upload segment to Gemini AI for visual analysis
-        logger.info(f"Job {job_id}: Analyzing video with Gemini AI...")
+        # Step 4: Generate viral script with optimized AI analysis
+        logger.info(f"Job {job_id}: Analyzing video with optimized Gemini AI...")
         gemini_service = GeminiService()
         
-        try:
-            # Upload video segment for AI analysis
-            uploaded_file = gemini_service.upload_video_for_analysis(segment_video_path)
-            
-            # Add language context for script generation
-            language_names = {'en': 'English', 'fr': 'French', 'es': 'Spanish', 'de': 'German', 'it': 'Italian', 'pt': 'Portuguese'}
-            language_name = language_names.get(voice_language, 'English')
-            language_context = f"{context}\n\nIMPORTANT: Generate the script in {language_name} language only. Create engaging viral content suitable for short-form platforms."
-            
-            # Generate viral script using visual analysis
-            script_data = gemini_service.generate_viral_script(uploaded_file, language_context)
-            
-        except Exception as e:
-            logger.warning(f"Job {job_id}: Video upload to Gemini failed: {e}")
-            logger.info(f"Job {job_id}: Falling back to transcript-based analysis...")
-            
-            # Fallback: Extract audio and transcribe for script generation
-            from services.ffmpeg_toolkit import extract_audio_from_video
-            from services.v1.media.media_transcribe import process_transcribe_media
-            
-            # Extract audio
-            audio_path = os.path.join(temp_dir, f"{job_id}_audio.mp3")
-            extract_audio_from_video(downloaded_video_path, audio_path)
-            
-            # Transcribe audio
-            transcription_result = process_transcribe_media(
-                media_source=audio_path,
-                task='transcribe',
-                include_text=True,
-                include_srt=False,
-                include_segments=False,
-                word_timestamps=False,
-                response_type='direct',
-                language=None,
-                job_id=job_id,
-                words_per_line=None
-            )
-            
-            transcript_text = transcription_result[0]
-            
-            # Generate script from transcript with language context
-            language_names = {'en': 'English', 'fr': 'French', 'es': 'Spanish', 'de': 'German', 'it': 'Italian', 'pt': 'Portuguese'}
-            language_name = language_names.get(voice_language, 'English')
-            language_context = f"{context}\n\nIMPORTANT: Generate the script in {language_name} language only. Create engaging viral content suitable for short-form platforms."
-            
-            script_data = gemini_service.generate_script_from_transcript(transcript_text, language_context)
-            
-            # Clean up audio file
-            os.remove(audio_path)
+        # Add language context for script generation
+        language_names = {'en': 'English', 'fr': 'French', 'es': 'Spanish', 'de': 'German', 'it': 'Italian', 'pt': 'Portuguese'}
+        language_name = language_names.get(voice_language, 'English')
+        language_context = f"{context}\n\nIMPORTANT: Generate the script in {language_name} language only. Create engaging viral content suitable for short-form platforms."
+        
+        # Check if input is YouTube URL for direct analysis
+        is_youtube = ('youtube.com' in video_input.lower() or 'youtu.be' in video_input.lower())
+        
+        if is_youtube:
+            try:
+                logger.info(f"Job {job_id}: Using YouTube URL direct analysis (no upload needed)")
+                script_data = gemini_service.generate_viral_script_from_youtube(video_input, language_context)
+            except Exception as e:
+                logger.warning(f"Job {job_id}: YouTube URL analysis failed: {e}")
+                logger.info(f"Job {job_id}: Falling back to transcript-based analysis...")
+                # Use cached transcription from segmentation if available
+                if transcription_text:
+                    script_data = gemini_service.generate_script_from_transcript(transcription_text, language_context)
+                else:
+                    # Extract and transcribe as fallback
+                    from services.ffmpeg_toolkit import extract_audio_from_video
+                    from services.v1.media.media_transcribe import process_transcribe_media
+                    
+                    audio_path = os.path.join(temp_dir, f"{job_id}_audio.mp3")
+                    extract_audio_from_video(downloaded_video_path, audio_path)
+                    
+                    transcription_result = process_transcribe_media(
+                        media_source=audio_path,
+                        task='transcribe',
+                        include_text=True,
+                        include_srt=False,
+                        include_segments=False,
+                        word_timestamps=False,
+                        response_type='direct',
+                        language=None,
+                        job_id=job_id,
+                        words_per_line=None
+                    )
+                    
+                    script_data = gemini_service.generate_script_from_transcript(transcription_result[0], language_context)
+                    os.remove(audio_path)
+        else:
+            # For non-YouTube videos, use transcript-based analysis (faster)
+            logger.info(f"Job {job_id}: Using transcript-based analysis for faster processing")
+            # Use cached transcription from segmentation if available
+            if transcription_text:
+                script_data = gemini_service.generate_script_from_transcript(transcription_text, language_context)
+            else:
+                # Extract and transcribe
+                from services.ffmpeg_toolkit import extract_audio_from_video
+                from services.v1.media.media_transcribe import process_transcribe_media
+                
+                audio_path = os.path.join(temp_dir, f"{job_id}_audio.mp3")
+                extract_audio_from_video(downloaded_video_path, audio_path)
+                
+                transcription_result = process_transcribe_media(
+                    media_source=audio_path,
+                    task='transcribe',
+                    include_text=True,
+                    include_srt=False,
+                    include_segments=False,
+                    word_timestamps=False,
+                    response_type='direct',
+                    language=None,
+                    job_id=job_id,
+                    words_per_line=None
+                )
+                
+                script_data = gemini_service.generate_script_from_transcript(transcription_result[0], language_context)
+                os.remove(audio_path)
         
         # Combine hook and script for TTS
         full_script = f"{script_data['hook']} {script_data['script']}"
@@ -265,112 +276,98 @@ def create_viral_short(job_id, data):
         logger.info(f"Job {job_id}: Generated viral script - Hook: {script_data['hook'][:50]}...")
         logger.info(f"Job {job_id}: Script: {script_data['script'][:100]}...")
         
-        # Step 3: Generate TTS commentary with subtitles
-        logger.info(f"Job {job_id}: Generating TTS commentary with subtitles...")
-        commentary_audio_path, tts_subtitle_path = generate_tts(
+        # Step 5: Generate TTS commentary
+        logger.info(f"Job {job_id}: Generating TTS commentary...")
+        commentary_audio_path, _ = generate_tts(
             tts="edge-tts",
             text=full_script,
             voice=tts_voice,
             job_id=job_id,
-            output_format="mp3",
-            subtitle_format="srt"
+            output_format="mp3"
         )
-        
         logger.info(f"Job {job_id}: TTS commentary generated: {commentary_audio_path}")
-        logger.info(f"Job {job_id}: TTS subtitles generated: {tts_subtitle_path}")
         
-        # Step 6: Intelligent audio mixing (viral-shorts-creator style)
-        logger.info(f"Job {job_id}: Mixing audio with viral-style intelligence...")
-        audio_mixer = IntelligentAudioMixer()
+        # Step 6: Ultra-optimized processing with ffmpeg-compose stream mappings
+        logger.info(f"Job {job_id}: Performing ultra-optimized processing with stream mappings...")
         
-        # Create output path for mixed video
-        mixed_video_path = os.path.join(temp_dir, f"{job_id}_viral_short.mp4")
+        # Upload TTS audio to get URL for ffmpeg-compose
+        from services.cloud_storage import upload_file
+        commentary_audio_url = upload_file(commentary_audio_path)
         
-        # Create viral-style short with intelligent audio mixing
-        final_video_path = audio_mixer.create_viral_style_short(
-            video_path=segment_video_path,  # Use segment, not full video
-            commentary_audio_path=commentary_audio_path,
-            output_path=mixed_video_path
-        )
-        
-        logger.info(f"Job {job_id}: Viral short created with intelligent audio mixing")
-        
-        # Step 7: Convert to target format
-        logger.info(f"Job {job_id}: Converting to {video_format} format ({target_width}x{target_height})")
-        formatted_video_path = os.path.join(temp_dir, f"{job_id}_formatted.mp4")
-        
-        import subprocess
-        format_command = [
-            "ffmpeg",
-            "-i", final_video_path,
-            "-vf", f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black",
-            "-c:a", "copy",
-            "-y",
-            formatted_video_path
-        ]
-        
-        subprocess.run(format_command, check=True, capture_output=True)
-        logger.info(f"Job {job_id}: Video converted to {video_format} format")
-        
-        # Step 8: Add captions if requested
-        if add_captions:
-            logger.info(f"Job {job_id}: Adding captions to viral short...")
-            
-            # Use the subtitle file already generated with TTS
-            subtitle_path = tts_subtitle_path
-            
-            # Check if subtitle file exists
-            if not subtitle_path or not os.path.exists(subtitle_path):
-                logger.warning(f"Job {job_id}: Subtitle file not found at {subtitle_path}, skipping captions")
-                final_output_path = formatted_video_path
-            else:
-                # Use caption service to add subtitles
-                from services.v1.video.caption_video import process_captioning_v1
-                
-                # Upload formatted video for captioning
-                temp_formatted_url = upload_file(formatted_video_path)
-                
-                # Read subtitle content
-                with open(subtitle_path, 'r', encoding="utf-8") as f:
-                    srt_content = f.read()
-                
-                logger.info(f"Job {job_id}: Generated SRT content preview: {srt_content[:200]}...")  # Log first 200 chars
-                
-                # Apply captions with viral-optimized settings
-                # Note: Using 'classic' instead of 'word_by_word' because TTS generates sentence-level timing
-                # word_by_word requires word-level timestamps which TTS doesn't provide
-                caption_settings = {
-                    "font_size": 28,
-                    "line_color": "#FFFFFF",
-                    "outline_color": "#000000",
-                    "outline_width": 3,
-                    "position": "bottom_center",
-                    "bold": True,
-                    "all_caps": True,
-                    "style": "classic",
-                    "font_family": "Arial"  # Explicitly set Arial font which should be available
-                }
-                
-                captioned_local_path = process_captioning_v1(
-                    video_url=temp_formatted_url,
-                    captions=srt_content,
-                    settings=caption_settings,
-                    replace=[],
-                    job_id=job_id,
-                    language=voice_language
-                )
-                
-                if isinstance(captioned_local_path, dict) and 'error' in captioned_local_path:
-                    logger.error(f"Job {job_id}: Captioning failed with error: {captioned_local_path['error']}")
-                    if 'available_fonts' in captioned_local_path:
-                        logger.info(f"Job {job_id}: Available fonts: {captioned_local_path['available_fonts'][:10]}...")  # Log first 10 fonts
-                    logger.warning(f"Job {job_id}: Using video without captions due to captioning failure")
-                    final_output_path = formatted_video_path
-                else:
-                    final_output_path = captioned_local_path
-                    logger.info(f"Job {job_id}: Captions added successfully")
+        # Get original video URL for direct processing
+        original_video_url = None
+        if hasattr(source_metadata, 'original_url'):
+            original_video_url = source_metadata['original_url']
         else:
-            final_output_path = formatted_video_path
+            # Upload downloaded video to get URL
+            original_video_url = upload_file(downloaded_video_path)
+        
+        # Use proven optimal audio mixing parameters from IntelligentAudioMixer
+        mix_settings = {
+            'original_volume': '0.3',      # 30% original audio volume
+            'commentary_volume': '1.5',    # 150% commentary volume
+            'original_weight': '0.3',      # Weight for original audio in mix
+            'commentary_weight': '1.5'     # Weight for commentary audio in mix
+        }
+        
+        # Design single FFmpeg command with stream mappings for:
+        # 1. Extract segment from original video
+        # 2. Mix original audio with commentary (intelligent levels)
+        # 3. Scale and format to target dimensions
+        # 4. All in ONE operation!
+        
+        ffmpeg_compose_data = {
+            "inputs": [
+                {
+                    "file_url": original_video_url,
+                    "options": [
+                        {"option": "-ss", "argument": str(best_segment['start_time'])},
+                        {"option": "-t", "argument": str(best_segment['end_time'] - best_segment['start_time'])}
+                    ]
+                },
+                {
+                    "file_url": commentary_audio_url
+                }
+            ],
+            "filters": [
+                {
+                    "filter": f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black[scaled_video]",
+                    "type": "video"
+                },
+                {
+                    "filter": f"[0:a]volume={mix_settings['original_volume']}[original_audio];[1:a]volume={mix_settings['commentary_volume']}[commentary_audio];[original_audio][commentary_audio]amix=inputs=2:duration=shortest:weights={mix_settings['original_weight']} {mix_settings['commentary_weight']}[mixed_audio]",
+                    "type": "audio"
+                }
+            ],
+            "stream_mappings": ["[scaled_video]", "[mixed_audio]"],
+            "outputs": [
+                {
+                    "options": [
+                        {"option": "-c:v", "argument": "libx264"},
+                        {"option": "-preset", "argument": "faster"},
+                        {"option": "-crf", "argument": "25"},
+                        {"option": "-c:a", "argument": "aac"},
+                        {"option": "-b:a", "argument": "128k"},
+                        {"option": "-f", "argument": "mp4"}
+                    ]
+                }
+            ],
+            "metadata": {
+                "duration": True,
+                "filesize": True
+            }
+        }
+        
+        # Execute ultra-optimized single FFmpeg operation
+        logger.info(f"Job {job_id}: Executing single FFmpeg operation (segment + mix + scale + encode)")
+        output_files, metadata = process_ffmpeg_compose(ffmpeg_compose_data, job_id)
+        final_output_path = output_files[0]
+        
+        logger.info(f"Job {job_id}: Ultra-optimized processing completed in single operation!")
+        logger.info(f"Job {job_id}: Final video: {final_output_path}, Duration: {metadata[0].get('duration', 'unknown')}s")
+        
+        # Step 8: Video ready for upload (no captions)
+        logger.info(f"Job {job_id}: Final video ready (no captions added)")
         
         # Step 9: Upload final video to cloud storage
         logger.info(f"Job {job_id}: Uploading viral short to cloud storage...")
@@ -387,7 +384,6 @@ def create_viral_short(job_id, data):
             "video_format": video_format,
             "duration": short_duration,
             "language": voice_language,
-            "captions_added": add_captions,
             "message": "Viral short created successfully"
         }, "/v1/video/viral-shorts", 200
         
