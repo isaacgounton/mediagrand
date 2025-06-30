@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 import requests
+import logging
 from services.v1.text.text_overlay_service import TextOverlayService
 from app_utils import queue_task_wrapper
 import uuid
@@ -31,6 +32,7 @@ def add_text_overlay_route(job_id, data):
     }
     """
     try:
+        logging.info(f"Starting text overlay operation - Job ID: {job_id}")
         # data is already parsed by queue_task_wrapper
         
         required_fields = ['video_url', 'text'] # webhook_url is now optional, handled by queue_task_wrapper
@@ -101,6 +103,7 @@ def add_text_overlay_preset_route(job_id, data, preset_name=None):
         return {"error": f"Preset '{preset_name}' not found"}, "/v1/text/add-text-overlay/preset", 404
     
     try:
+        logging.info(f"Starting text overlay preset '{preset_name}' operation - Job ID: {job_id}")
         required_fields = ['video_url', 'text']
         for field in required_fields:
             if field not in data:

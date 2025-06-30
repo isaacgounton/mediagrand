@@ -2,6 +2,7 @@ import uuid
 import re
 import os
 import subprocess
+import logging
 from services.file_management import download_file
 from services.cloud_storage import upload_file
 from config import LOCAL_STORAGE_PATH
