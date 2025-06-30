@@ -124,8 +124,7 @@ RUN --mount=type=cache,target=/root/.cache/ms-playwright \
 # Create lightweight placeholder files using Python script
 RUN python3 scripts/create_placeholders.py
 
-# Bootstrap the API key management system
-RUN python3 bootstrap_admin.py
+# Note: Bootstrap will run during container startup when all env vars are available
 
 # Create startup script for RQ workers and Gunicorn (simplified like working repo)
 RUN echo '#!/bin/bash\n\
@@ -139,6 +138,11 @@ cleanup() {\n\
 }\n\
 \n\
 trap cleanup SIGTERM\n\
+\n\
+# Bootstrap API key management system on first run\n\
+echo "🚀 Bootstrapping API key management system..."\n\
+python3 bootstrap_admin.py\n\
+echo "✅ Bootstrap completed"\n\
 \n\
 # Array to store background process PIDs\n\
 declare -a pids\n\

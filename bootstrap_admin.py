@@ -58,7 +58,6 @@ def bootstrap_admin():
             print("⚠️  IMPORTANT: Save this key securely - it won't be shown again!")
             
             # Also save to a secure location for Docker startup
-            import os
             key_file = os.path.join(LOCAL_STORAGE_PATH, '.admin_key')
             try:
                 with open(key_file, 'w') as f:
