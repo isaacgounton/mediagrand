@@ -9,9 +9,8 @@ api_keys_bp = Blueprint('api_keys', __name__)
 api_manager = APIKeyManager()
 
 @api_keys_bp.route('/admin/api-keys')
-@enhanced_authenticate
 def dashboard():
-    """API Key Management Dashboard"""
+    """API Key Management Dashboard - Authentication handled by frontend"""
     return render_template('admin/api_keys.html')
 
 @api_keys_bp.route('/v1/admin/test', methods=['GET'])

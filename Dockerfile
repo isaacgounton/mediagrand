@@ -1,6 +1,9 @@
 # ====================================================================
 # Stage 1: Python dependencies builder
 # ====================================================================
+
+# syntax=docker/dockerfile:1.4
+
 FROM python:3.10-slim as python-builder
 
 # Install only essential build dependencies
@@ -28,7 +31,7 @@ COPY requirements.txt .
 # Upgrade pip and install requirements with optimized flags
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --use-pep517 -r requirements.txt && \
     playwright install-deps && \
     playwright install chromium
 

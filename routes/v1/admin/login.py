@@ -454,12 +454,14 @@ def admin_login_api():
             }))
             
             # Set secure HTTP-only cookie
+            # For production, use secure=True. For development, allow HTTP
+            is_production = os.getenv('APP_DEBUG', 'false').lower() == 'false'
             response.set_cookie(
                 'admin_token',
                 token,
                 max_age=24*60*60,  # 24 hours
                 httponly=True,      # Cannot be accessed by JavaScript
-                secure=True,        # Only sent over HTTPS
+                secure=is_production,  # Only HTTPS in production
                 samesite='Strict'   # CSRF protection
             )
             
@@ -480,15 +482,23 @@ def admin_login_api():
 def verify_admin_session():
     """Verify admin session and return API key"""
     try:
+        # Debug: log all cookies
+        import logging
+        logging.info(f"All cookies: {dict(request.cookies)}")
+        
         # Get token from cookie
         token = request.cookies.get('admin_token')
+        logging.info(f"Admin token from cookie: {token[:20] if token else 'None'}...")
+        
         if not token:
-            return jsonify({"status": "error", "message": "No session found"}), 401
+            return jsonify({"status": "error", "message": "No session found", "debug": "No admin_token cookie"}), 401
         
         # Verify token
         payload = verify_secure_token(token)
+        logging.info(f"Token verification result: {payload is not None}")
+        
         if not payload:
-            return jsonify({"status": "error", "message": "Invalid or expired session"}), 401
+            return jsonify({"status": "error", "message": "Invalid or expired session", "debug": "Token verification failed"}), 401
         
         # Return API key for frontend use
         return jsonify({
@@ -501,7 +511,9 @@ def verify_admin_session():
         })
         
     except Exception as e:
-        return jsonify({"status": "error", "message": "Session verification failed"}), 500
+        import logging
+        logging.error(f"Session verification error: {str(e)}")
+        return jsonify({"status": "error", "message": "Session verification failed", "debug": str(e)}), 500
 
 @admin_login_bp.route('/admin/logout')
 def admin_logout():
@@ -515,5 +527,6 @@ def admin_logout():
     """)
     
     # Clear the secure cookie
-    response.set_cookie('admin_token', '', expires=0, httponly=True, secure=True, samesite='Strict')
+    is_production = os.getenv('APP_DEBUG', 'false').lower() == 'false'
+    response.set_cookie('admin_token', '', expires=0, httponly=True, secure=is_production, samesite='Strict')
     return response
