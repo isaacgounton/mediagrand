@@ -109,22 +109,25 @@ class TextOverlayService:
         
         # FFmpeg drawtext filter requires these escapes:
         # Order is important - escape backslash first
-        text = text.replace('\\', '\\\\')
-        text = text.replace(':', '\\:')
-        text = text.replace("'", "\\'")
-        text = text.replace('"', '\\"')
-        text = text.replace('[', '\\[')
-        text = text.replace(']', '\\]')
-        text = text.replace(',', '\\,')
-        text = text.replace(';', '\\;')
-        text = text.replace('=', '\\=')
-        text = text.replace('%', '\\%')
-        text = text.replace('{', '\\{')
-        text = text.replace('}', '\\}')
+        text = text.replace('\\', '\\\\\\\\')  # More aggressive backslash escaping
+        text = text.replace(':', '\\\\:')
+        text = text.replace("'", "\\\\'")
+        text = text.replace('"', '\\\\"')
+        text = text.replace('[', '\\\\[')
+        text = text.replace(']', '\\\\]')
+        text = text.replace(',', '\\\\,')
+        text = text.replace(';', '\\\\;')
+        text = text.replace('=', '\\\\=')
+        text = text.replace('%', '\\\\%')
+        text = text.replace('{', '\\\\{')
+        text = text.replace('}', '\\\\}')
         
         # Handle newlines properly for FFmpeg
-        text = text.replace('\n', '\\n')
-        text = text.replace('\r', '\\r')
+        text = text.replace('\n', '\\\\n')
+        text = text.replace('\r', '\\\\r')
+        
+        # Handle special spaces that might get mangled
+        text = text.replace('  ', ' ')  # Normalize double spaces
         
         return text
 
@@ -176,17 +179,30 @@ class TextOverlayService:
         elif 'center' in position and 'top' not in position and 'bottom' not in position and y_offset != 0:
             position_coords = position_coords.replace('y=(h-text_h)/2', f'y=(h-text_h)/2+{y_offset}')
 
-        # Font selection
-        font_files = [
-            "/usr/share/fonts/truetype/custom/OpenSansEmoji.ttf",
-            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Better emoji support
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/System/Library/Fonts/Arial.ttf",
-            "/System/Library/Fonts/Helvetica.ttc"
-        ]
+        # Font selection - Use local fonts first, then fallback to system fonts
+        local_font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fonts')
+        
+        # Check if text contains emojis
+        has_emoji = bool(re.search(r'[\U0001F600-\U0001F64F]|[\U0001F300-\U0001F5FF]|[\U0001F680-\U0001F6FF]|[\U0001F1E0-\U0001F1FF]|[\U00002600-\U000027BF]|[\U0001F900-\U0001F9FF]', text))
+        
+        # Font files with priority order - local fonts first
+        if has_emoji:
+            font_files = [
+                os.path.join(local_font_dir, "OpenSansEmoji.ttf"),
+                os.path.join(local_font_dir, "DejaVuSans.ttf"),
+                os.path.join(local_font_dir, "Roboto-Regular.ttf"),
+                os.path.join(local_font_dir, "Arial.ttf"),
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            ]
+        else:
+            font_files = [
+                os.path.join(local_font_dir, "Roboto-Bold.ttf"),
+                os.path.join(local_font_dir, "Arial.ttf"),
+                os.path.join(local_font_dir, "DejaVuSans-Bold.ttf"),
+                os.path.join(local_font_dir, "DejaVuSans.ttf"),
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            ]
         
         font_file = None
         for font in font_files:
@@ -194,8 +210,11 @@ class TextOverlayService:
                 font_file = font
                 break
         
+        # Final fallback
         if not font_file:
-            font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            font_file = os.path.join(local_font_dir, "DejaVuSans.ttf")
+            if not os.path.exists(font_file):
+                font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         
         # Create text file instead of passing text directly in command
         # This is more reliable for complex text with special characters
@@ -247,28 +266,88 @@ class TextOverlayService:
             
         except subprocess.CalledProcessError as e:
             error_msg = f"FFmpeg command failed: {e.stderr}"
-            # Try alternative approach with direct text if textfile fails
-            if "textfile" in str(e.stderr):
-                # Fall back to using text parameter with escaped text
-                drawtext_filter = (
-                    f"drawtext=fontfile={font_file}:"
-                    f"text='{escaped_text}':"
-                    f"fontcolor={font_color}:"
-                    f"fontsize={font_size}:"
-                    f"box=1:"
-                    f"boxcolor={box_color}@{box_opacity}:"
-                    f"boxborderw={boxborderw}:"
-                    f"line_spacing=8:"
-                    f"{position_coords}:"
-                    f"enable='lt(t,{duration})'"
-                )
-                ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
+            
+            # Try multiple fallback strategies
+            fallback_attempted = False
+            
+            # Strategy 1: Try with text parameter instead of textfile
+            if "textfile" in str(e.stderr) or "Could not set font size" in str(e.stderr):
                 try:
+                    drawtext_filter = (
+                        f"drawtext=fontfile={font_file}:"
+                        f"text='{escaped_text}':"
+                        f"fontcolor={font_color}:"
+                        f"fontsize={font_size}:"
+                        f"box=1:"
+                        f"boxcolor={box_color}@{box_opacity}:"
+                        f"boxborderw={boxborderw}:"
+                        f"line_spacing=8:"
+                        f"{position_coords}:"
+                        f"enable='lt(t,{duration})'"
+                    )
+                    ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
                     result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
-                except subprocess.CalledProcessError as e2:
-                    raise Exception(f"FFmpeg failed with both textfile and text parameter: {e2.stderr}")
-            else:
-                raise Exception(error_msg)
+                    fallback_attempted = True
+                except subprocess.CalledProcessError:
+                    pass
+            
+            # Strategy 2: Try with a different font if font-related error
+            if not fallback_attempted and ("invalid library handle" in str(e.stderr) or "Could not set font size" in str(e.stderr)):
+                try:
+                    # Use a simpler, more reliable font
+                    local_font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fonts')
+                    reliable_fonts = [
+                        os.path.join(local_font_dir, "DejaVuSans.ttf"),
+                        os.path.join(local_font_dir, "Arial.ttf"),
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                    ]
+                    
+                    for reliable_font in reliable_fonts:
+                        if os.path.exists(reliable_font):
+                            drawtext_filter = (
+                                f"drawtext=fontfile={reliable_font}:"
+                                f"text='{escaped_text}':"
+                                f"fontcolor={font_color}:"
+                                f"fontsize={font_size}:"
+                                f"box=1:"
+                                f"boxcolor={box_color}@{box_opacity}:"
+                                f"boxborderw={boxborderw}:"
+                                f"line_spacing=8:"
+                                f"{position_coords}:"
+                                f"enable='lt(t,{duration})'"
+                            )
+                            ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
+                            try:
+                                result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
+                                fallback_attempted = True
+                                break
+                            except subprocess.CalledProcessError:
+                                continue
+                except Exception:
+                    pass
+            
+            # Strategy 3: Try without font specification (use FFmpeg default)
+            if not fallback_attempted:
+                try:
+                    drawtext_filter = (
+                        f"drawtext=text='{escaped_text}':"
+                        f"fontcolor={font_color}:"
+                        f"fontsize={font_size}:"
+                        f"box=1:"
+                        f"boxcolor={box_color}@{box_opacity}:"
+                        f"boxborderw={boxborderw}:"
+                        f"line_spacing=8:"
+                        f"{position_coords}:"
+                        f"enable='lt(t,{duration})'"
+                    )
+                    ffmpeg_command[ffmpeg_command.index("-vf") + 1] = drawtext_filter
+                    result = subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True, encoding='utf-8', env=env)
+                    fallback_attempted = True
+                except subprocess.CalledProcessError:
+                    pass
+            
+            if not fallback_attempted:
+                raise Exception(f"FFmpeg failed with all fallback strategies. Last error: {e.stderr}")
         finally:
             # Clean up temporary files
             if os.path.exists(input_path):
