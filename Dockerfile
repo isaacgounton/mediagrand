@@ -131,8 +131,7 @@ RUN python3 scripts/create_placeholders.py
 
 # Create startup script for RQ workers and Gunicorn (simplified like working repo)
 # Copy and set up startup script
-COPY run_services.sh /app/run_services.sh
-RUN chmod +x /app/run_services.sh
+COPY --chmod=755 run_services.sh /app/run_services.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

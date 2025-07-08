@@ -346,6 +346,7 @@ def create_app():
     from routes.v1.admin.api_keys import api_keys_bp
     from routes.v1.admin.setup import setup_bp
     from routes.v1.admin.login import admin_login_bp
+    from routes.v1.audio.musicgen import musicgen_bp
 
     app.register_blueprint(v1_ffmpeg_compose_bp)
     app.register_blueprint(v1_media_transcribe_bp)
@@ -392,6 +393,7 @@ def create_app():
     app.register_blueprint(api_keys_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(admin_login_bp)
+    app.register_blueprint(musicgen_bp)
 
     # Add homepage route
     @app.route('/')
@@ -446,7 +448,8 @@ def create_app():
                     "audio": {
                         "concatenate": "/v1/audio/concatenate",
                         "speech": "/v1/audio/speech",
-                        "convert": "/v1/audio/convert"
+                        "convert": "/v1/audio/convert",
+                        "music": "/v1/audio/music"
                     },
                     "image": {
                         "convert_to_video": "/v1/image/convert/video",
