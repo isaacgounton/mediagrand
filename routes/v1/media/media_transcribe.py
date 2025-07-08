@@ -22,6 +22,7 @@ import logging
 import os
 import tempfile
 import jsonschema
+import json
 from functools import wraps
 from werkzeug.utils import secure_filename
 from services.v1.media.media_transcribe import process_transcribe_media
@@ -62,7 +63,8 @@ def validate_transcribe_request():
                         "language": {"type": "string"},
                         "webhook_url": {"type": "string", "format": "uri"},
                         "id": {"type": "string"},
-                        "words_per_line": {"type": "integer", "minimum": 1}
+                        "words_per_line": {"type": "integer", "minimum": 1},
+                        "use_chunked": {"type": "boolean"}
                     },
                     "required": ["media_url"],
                     "additionalProperties": False
@@ -123,6 +125,7 @@ def transcribe(job_id, data):
             id = request.form.get('id', None)
             words_per_line_str = request.form.get('words_per_line', None)
             words_per_line = int(words_per_line_str) if words_per_line_str else None
+            use_chunked = request.form.get('use_chunked', 'true').lower() == 'true'
             
             logger.info(f"Job {job_id}: Received transcription request for uploaded file {file.filename}")
             
@@ -140,6 +143,7 @@ def transcribe(job_id, data):
             webhook_url = validated_data.get('webhook_url')
             id = validated_data.get('id')
             words_per_line = validated_data.get('words_per_line', None)
+            use_chunked = validated_data.get('use_chunked', True)
             
             logger.info(f"Job {job_id}: Received transcription request for URL {media_file_path}")
         
@@ -151,7 +155,7 @@ def transcribe(job_id, data):
                 return "Invalid response_type value. Must be 'direct' or 'cloud'", "/v1/transcribe/media", 400
 
         try:
-            result = process_transcribe_media(media_file_path, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line)
+            result = process_transcribe_media(media_file_path, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line, use_chunked)
             logger.info(f"Job {job_id}: Transcription process completed successfully")
 
             # If the result is a file path, upload it using the unified upload_file() method
@@ -204,7 +208,7 @@ def transcribe(job_id, data):
                 logger.warning(f"Job {job_id}: Failed to clean up uploaded file {media_file_path}: {str(e)}")
 
     try:
-        result = process_transcribe_media(media_url, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line)
+        result = process_transcribe_media(media_source, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line, use_chunked)
         logger.info(f"Job {job_id}: Transcription process completed successfully")
 
         # If the result is a file path, upload it using the unified upload_file() method
@@ -246,3 +250,95 @@ def transcribe(job_id, data):
     except Exception as e:
         logger.error(f"Job {job_id}: Error during transcription process - {str(e)}")
         return str(e), "/v1/transcribe/media", 500
+
+
+@v1_media_transcribe_bp.route('/v1/media/transcribe/progress/<job_id>', methods=['GET'])
+@enhanced_authenticate
+@require_permission('read')
+def get_transcription_progress(job_id):
+    """Get the progress of a transcription job."""
+    try:
+        jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
+        job_file = os.path.join(jobs_dir, f"{job_id}.json")
+        
+        if not os.path.exists(job_file):
+            return jsonify({
+                "error": "Job not found",
+                "job_id": job_id
+            }), 404
+        
+        with open(job_file, 'r') as f:
+            job_data = json.load(f)
+        
+        # Extract progress information
+        progress_info = {
+            "job_id": job_id,
+            "status": job_data.get('status', 'unknown'),
+            "progress": job_data.get('progress', {}),
+            "timestamp": job_data.get('timestamp'),
+            "started_at": job_data.get('started_at'),
+            "completed_at": job_data.get('completed_at'),
+            "error": job_data.get('error')
+        }
+        
+        return jsonify(progress_info), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting progress for job {job_id}: {str(e)}")
+        return jsonify({
+            "error": "Failed to get job progress",
+            "job_id": job_id,
+            "message": str(e)
+        }), 500
+
+
+@v1_media_transcribe_bp.route('/v1/media/transcribe/status', methods=['GET'])
+@enhanced_authenticate
+@require_permission('read')
+def get_transcription_status():
+    """Get status of all transcription jobs."""
+    try:
+        jobs_dir = os.path.join(LOCAL_STORAGE_PATH, 'jobs')
+        
+        if not os.path.exists(jobs_dir):
+            return jsonify({
+                "jobs": [],
+                "message": "No jobs found"
+            }), 200
+        
+        jobs = []
+        for filename in os.listdir(jobs_dir):
+            if filename.endswith('.json'):
+                job_id = filename[:-5]  # Remove .json extension
+                job_file = os.path.join(jobs_dir, filename)
+                
+                try:
+                    with open(job_file, 'r') as f:
+                        job_data = json.load(f)
+                    
+                    jobs.append({
+                        "job_id": job_id,
+                        "status": job_data.get('status', 'unknown'),
+                        "progress": job_data.get('progress', {}),
+                        "timestamp": job_data.get('timestamp'),
+                        "started_at": job_data.get('started_at'),
+                        "completed_at": job_data.get('completed_at')
+                    })
+                except Exception as e:
+                    logger.warning(f"Error reading job file {filename}: {str(e)}")
+                    continue
+        
+        # Sort by timestamp (most recent first)
+        jobs.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+        
+        return jsonify({
+            "jobs": jobs,
+            "total_jobs": len(jobs)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting job status: {str(e)}")
+        return jsonify({
+            "error": "Failed to get job status",
+            "message": str(e)
+        }), 500

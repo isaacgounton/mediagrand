@@ -1,3 +1,192 @@
+def get_topic_identification_prompt(transcript: str, min_topics: int = 3, max_topics: int = 10,
+                                   include_timestamps: bool = True, timestamped_segments=None) -> str:
+    """Generate prompt for identifying viral topics from transcription."""
+    
+    base_prompt = f"""
+You are an expert content strategist specializing in viral content creation. Analyze the following transcript and identify the most viral-worthy topics that would perform well on social media platforms.
+
+TRANSCRIPT:
+{transcript}
+
+"""
+    
+    if include_timestamps and timestamped_segments:
+        base_prompt += "\nTIMESTAMPED SEGMENTS:\n"
+        for segment in timestamped_segments[:20]:  # Limit to first 20 segments
+            base_prompt += f"[{segment['start_time']} - {segment['end_time']}] {segment['text'][:100]}...\n"
+    
+    return base_prompt + f"""
+INSTRUCTIONS:
+1. Identify {min_topics}-{max_topics} viral-worthy topics from this content
+2. For each topic, provide:
+   - Topic title (5-8 words)
+   - Brief description (1-2 sentences)
+   - Viral potential score (0.0-1.0)
+   - Target audience
+   - Content category (educational, entertainment, motivational, controversial, etc.)
+   - Key hook/angle for social media
+   {'- Timestamp ranges where this topic appears' if include_timestamps else ''}
+
+3. Focus on topics that are:
+   - Relatable and shareable
+   - Emotionally engaging
+   - Actionable or thought-provoking
+   - Trending or timely
+   - Have strong hook potential
+
+OUTPUT FORMAT (JSON):
+{{
+  "topics": [
+    {{
+      "topic": "Topic Title",
+      "description": "Brief description of the topic",
+      "confidence": 0.85,
+      "viral_potential": 0.9,
+      "category": "educational",
+      "target_audience": "professionals",
+      "hook_angle": "Main hook for social media",
+      {'"timestamp_ranges": [{{"start": "00:01:30", "end": "00:03:45"}}],' if include_timestamps else ''}
+      "hashtags": ["#relevant", "#hashtags"]
+    }}
+  ],
+  "summary": "Overall content theme and viral potential"
+}}
+
+Analyze and extract the topics:
+"""
+
+
+def get_x_thread_prompt(transcript: str, max_posts: int = 8, character_limit: int = 280,
+                        thread_style: str = "viral", include_timestamps: bool = True,
+                        timestamped_segments=None, topic_focus: str = None) -> str:
+    """Generate prompt for creating X/Twitter threads from transcription."""
+    
+    style_instructions = {
+        "viral": "engaging hooks, controversial takes, and shareable insights",
+        "educational": "clear explanations, actionable tips, and learning points",
+        "storytelling": "narrative flow, personal anecdotes, and emotional connection",
+        "professional": "industry insights, thought leadership, and expertise",
+        "conversational": "casual tone, questions, and community engagement"
+    }
+    
+    base_prompt = f"""
+You are a viral content creator specializing in X (Twitter) threads. Create a compelling {max_posts}-post thread from the following transcript.
+
+TRANSCRIPT:
+{transcript}
+
+"""
+    
+    if include_timestamps and timestamped_segments:
+        base_prompt += "\nTIMESTAMPED SEGMENTS:\n"
+        for segment in timestamped_segments[:15]:  # Limit for context
+            base_prompt += f"[{segment['start_time']} - {segment['end_time']}] {segment['text'][:150]}...\n"
+    
+    focus_instruction = f"\nFOCUS TOPIC: {topic_focus}\n" if topic_focus else ""
+    
+    return base_prompt + focus_instruction + f"""
+THREAD REQUIREMENTS:
+1. Create exactly {max_posts} posts maximum
+2. Each post must be under {character_limit} characters
+3. Style: {thread_style} - focus on {style_instructions.get(thread_style, 'engaging content')}
+4. First post must be a strong hook that stops scrolling
+5. Include strategic thread numbering (1/n format)
+6. End with a strong call-to-action or question
+7. Use relevant emojis and hashtags strategically
+8. Maintain narrative flow between posts
+
+THREAD STRUCTURE:
+- Post 1: Hook + preview of value
+- Posts 2-{max_posts-1}: Main content with key insights
+- Post {max_posts}: Conclusion + CTA
+
+{'TIMESTAMP MAPPING: Include timestamp references for each post showing where the content comes from in the video.' if include_timestamps else ''}
+
+OUTPUT FORMAT (JSON):
+{{
+  "thread": [
+    {{
+      "post_number": 1,
+      "content": "1/{max_posts} Thread content here...",
+      "character_count": 95,
+      {'"start_time": "00:01:30",' if include_timestamps else ''}
+      {'"end_time": "00:02:15",' if include_timestamps else ''}
+      "engagement_elements": ["hook", "emoji", "hashtag"]
+    }}
+  ],
+  "thread_summary": "Brief description of thread focus",
+  "viral_elements": ["List of viral elements used"],
+  "target_metrics": {{
+    "expected_engagement": "high/medium/low",
+    "shareability_score": 0.8
+  }}
+}}
+
+Create the thread:
+"""
+
+
+def get_content_analysis_prompt(transcript: str, analysis_type: str = "comprehensive") -> str:
+    """Generate prompt for comprehensive content analysis."""
+    
+    analysis_types = {
+        "comprehensive": "topics, sentiment, viral potential, key moments, and audience insights",
+        "viral_assessment": "viral potential, shareability factors, and engagement predictions",
+        "audience_analysis": "target demographics, interests, and content preferences",
+        "key_moments": "highlight clips, quotable moments, and peak engagement points"
+    }
+    
+    return f"""
+You are a content analysis expert. Perform a {analysis_type} analysis of the following transcript.
+
+TRANSCRIPT:
+{transcript}
+
+ANALYSIS FOCUS: {analysis_types.get(analysis_type, 'general content analysis')}
+
+PROVIDE:
+1. Content Summary (2-3 sentences)
+2. Key Topics (3-5 main themes)
+3. Sentiment Analysis (overall tone and emotional elements)
+4. Viral Potential Assessment (0.0-1.0 score with reasoning)
+5. Target Audience Profile
+6. Recommended Content Formats (threads, posts, stories, etc.)
+7. Engagement Optimization Suggestions
+8. Hashtag Recommendations
+9. Best Practices Alignment
+10. Content Calendar Suggestions
+
+OUTPUT FORMAT (JSON):
+{{
+  "summary": "Content overview",
+  "topics": ["topic1", "topic2", "topic3"],
+  "sentiment": {{
+    "overall_tone": "positive/neutral/negative",
+    "emotional_elements": ["humor", "inspiration", "education"],
+    "confidence": 0.85
+  }},
+  "viral_assessment": {{
+    "score": 0.75,
+    "factors": ["relatability", "shareability", "timing"],
+    "potential_reach": "high/medium/low"
+  }},
+  "audience_profile": {{
+    "primary_demographic": "professionals",
+    "interests": ["interest1", "interest2"],
+    "platforms": ["platform preferences"]
+  }},
+  "recommendations": {{
+    "formats": ["twitter_thread", "linkedin_post"],
+    "timing": "optimal posting times",
+    "hashtags": ["#recommended", "#hashtags"],
+    "engagement_tactics": ["questions", "polls", "controversy"]
+  }}
+}}
+
+Perform the analysis:
+"""
+
+
 def get_social_media_prompt(platform: str, transcript: str, **kwargs) -> str:
     """
     Generates a social media content generation prompt based on the platform.
@@ -83,6 +272,22 @@ def get_social_media_prompt(platform: str, transcript: str, **kwargs) -> str:
     elif platform.lower() == "instagram":
         return f"{base_prompt}Generate an Instagram caption. Keep it concise and visually appealing. Use relevant hashtags and consider including emojis. The tone should be engaging and direct."
     elif platform.lower() == "x": # Formerly Twitter
-        return f"{base_prompt}Generate a tweet (X post). Keep it extremely concise, impactful, and within character limits. Use relevant hashtags and consider mentioning key accounts if appropriate."
+        # Enhanced X/Twitter generation with thread support
+        is_thread = kwargs.get("is_thread", False)
+        max_posts = kwargs.get("max_posts", 1)
+        character_limit = kwargs.get("character_limit", 280)
+        thread_style = kwargs.get("thread_style", "viral")
+        
+        if is_thread and max_posts > 1:
+            return get_x_thread_prompt(
+                transcript, 
+                max_posts=max_posts,
+                character_limit=character_limit,
+                thread_style=thread_style,
+                include_timestamps=kwargs.get("include_timestamps", False),
+                topic_focus=kwargs.get("topic_focus")
+            )
+        else:
+            return f"{base_prompt}Generate a tweet (X post). Keep it extremely concise, impactful, and within {character_limit} characters. Use relevant hashtags and consider mentioning key accounts if appropriate. Focus on the most engaging hook from the content."
     else:
-        return f"{base_prompt}Generate a social media post suitable for {platform}. Focus on key takeaways and a clear message."
+        return f"{base_prompt}Generate a social media post suitable for {platform}. Focus on key takeaways and a clear message. Consider platform-specific best practices for engagement and reach."

@@ -29,13 +29,61 @@ from config import LOCAL_STORAGE_PATH
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def process_transcribe_media(media_source, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line=None):
+def process_transcribe_media(media_source, task, include_text, include_srt, include_segments, word_timestamps, response_type, language, job_id, words_per_line=None, use_chunked=True):
     """Transcribe or translate media and return the transcript/translation, SRT or VTT file path.
     
     Args:
         media_source: Either a URL string or a local file path
     """
     
+    # Try enhanced transcription for better performance if enabled and task is transcribe
+    if use_chunked and task == 'transcribe':
+        try:
+            from services.transcription import process_transcription
+            
+            # Convert to the format expected by enhanced transcription
+            if include_text and not include_srt and not include_segments:
+                output_type = 'transcript'
+            elif include_srt:
+                output_type = 'srt'
+            else:
+                output_type = 'transcript'  # Default fallback
+            
+            # Use enhanced transcription
+            result = process_transcription(
+                media_url=media_source,
+                output_type=output_type,
+                max_chars=56,
+                language=language,
+                job_id=job_id,
+                use_chunked=True
+            )
+            
+            # Convert result to expected format
+            if output_type == 'transcript':
+                if response_type == "direct":
+                    return result if include_text else None, None, None
+                else:
+                    # Write to file
+                    text_filename = os.path.join(LOCAL_STORAGE_PATH, f"{job_id}.txt")
+                    with open(text_filename, 'w', encoding='utf-8') as f:
+                        f.write(result)
+                    return text_filename, None, None
+            elif output_type == 'srt':
+                if response_type == "direct":
+                    # Read the SRT file content
+                    with open(result, 'r', encoding='utf-8') as f:
+                        srt_content = f.read()
+                    os.remove(result)  # Clean up temp file
+                    return None, srt_content, None
+                else:
+                    return None, result, None
+                    
+        except Exception as e:
+            logger.warning(f"Enhanced transcription failed: {str(e)}. Falling back to standard processing.")
+            # Fall through to standard processing
+    
+    # Standard processing (original implementation)
     # Check if media_source is a local file path or a URL
     if os.path.exists(media_source):
         # It's a local file path (uploaded file)

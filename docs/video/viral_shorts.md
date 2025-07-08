@@ -1,8 +1,18 @@
-# Viral Shorts Generation Endpoint (v1)
+# Enhanced Viral Shorts Generation Endpoint (v1)
 
 ## 1. Overview
 
-The `/v1/video/viral-shorts` endpoint is a streamlined video API designed specifically for creating viral-quality short videos using advanced AI analysis. This endpoint is inspired by viral content creation best practices and focuses on generating engaging commentary-style shorts that blend original video content with AI-generated voiceover. Unlike the comprehensive `/v1/video/shorts` endpoint, this endpoint prioritizes viral content quality through visual AI analysis, intelligent audio mixing, and viral-focused script generation.
+The `/v1/video/viral-shorts` endpoint is an advanced video API designed specifically for creating viral-quality short videos using cutting-edge AI analysis and multi-segment compilation technology. This endpoint combines viral content creation best practices with innovative video repurposing features to generate engaging commentary-style shorts that maximize viral potential.
+
+### 🚀 Enhanced Features (New)
+- **Multi-Segment Viral Compilation**: Extracts and combines multiple viral moments from throughout the video
+- **AI-Powered Duplicate Detection**: Filters out repetitive content for maximum engagement diversity  
+- **Precision Timestamp Cutting**: Uses SRT transcription for perfect speech boundary detection
+- **Smart Transitions**: Cross-fade transitions between viral segments for professional flow
+- **Viral Scoring Algorithm**: Advanced scoring system that identifies the most engaging moments
+- **Content Diversity Optimization**: Ensures varied content across different parts of the video
+
+Unlike simple single-segment extraction, this endpoint creates true viral compilations that capture the best moments from the entire video, resulting in shorts with significantly higher engagement potential.
 
 ## 2. Endpoint
 
@@ -102,22 +112,53 @@ curl -X POST \
     https://your-api-endpoint.com/v1/video/viral-shorts
 ```
 
-## 4. Intelligent Video Clipping Features
+## 4. Enhanced Multi-Segment Viral Compilation
 
-### Automatic Segment Detection
-The viral shorts endpoint automatically finds the best segments from long videos:
+### Revolutionary Compilation Technology 🔥
+The enhanced viral shorts endpoint doesn't just find one good moment - it creates viral compilations by combining multiple engaging segments from throughout the entire video:
 
-#### AI-Powered Highlights Detection
-- **Audio Energy Analysis**: Identifies moments with high engagement based on volume and frequency changes
-- **Transcription Keywords**: Scans for viral-worthy words and phrases that indicate interesting content
-- **Scene Change Detection**: Uses visual analysis to find dynamic moments with significant changes
-- **Engagement Scoring**: Combines multiple factors to rank segments by viral potential
+#### Multi-Segment Viral Detection
+- **20+ Candidate Analysis**: Analyzes up to 20 potential viral moments throughout the video
+- **Enhanced Viral Scoring**: Uses advanced algorithm combining audio energy, keywords, scene changes, and engagement indicators  
+- **Optimal Duration Distribution**: Segments range from 5-15 seconds each for maximum impact
+- **Viral Keyword Detection**: Scans for 70+ viral keywords including reactions, emotions, superlatives, and engagement triggers
 
-#### Smart Duration Matching
-- **Precise Clipping**: Extracts exact duration specified (15-180 seconds)
-- **Natural Boundaries**: Respects sentence/phrase boundaries when possible
-- **Content Optimization**: Selects segments with complete thoughts and engaging hooks
-- **Fallback Strategy**: Uses beginning of video if analysis fails
+#### AI-Powered Content Filtering
+- **Duplicate Detection**: Automatically filters out repetitive or similar content (>50% overlap prevention)
+- **Content Similarity Analysis**: Uses text analysis to prevent redundant segments  
+- **Quality Threshold**: Only includes segments with viral potential score >0.3
+- **Diversity Optimization**: Ensures segments are spread across different parts of the video
+
+#### Precision Timestamp Cutting
+- **SRT-Based Boundaries**: Uses transcription timestamps to cut at perfect speech boundaries
+- **Word-Level Precision**: Avoids cutting mid-word or mid-sentence
+- **Natural Flow**: Maintains conversational flow across segment transitions
+- **Fallback Protection**: Gracefully handles missing transcription data
+
+#### Smart Transition System
+- **Cross-Fade Transitions**: Professional 0.5-second fade transitions between segments
+- **Audio Continuity**: Seamless audio mixing across segment boundaries  
+- **Visual Flow**: Smooth visual transitions that maintain viewer engagement
+- **Dynamic Timing**: Transition timing calculated based on segment content
+
+### Compilation Strategies
+The system uses intelligent strategies to create optimal viral compilations:
+
+#### Multi-Segment Strategy (Preferred)
+- **3-8 Viral Moments**: Combines multiple high-scoring segments
+- **Total Duration Matching**: Precisely matches requested duration (e.g., 60 seconds)
+- **Engagement Distribution**: Spreads viral content throughout the compilation
+- **Professional Transitions**: Cross-fade effects between segments
+
+#### Single-Segment Fallback
+- **High-Quality Single Moment**: Falls back to best single segment when needed
+- **Optimal Duration**: Uses the most viral continuous segment
+- **Quality Assurance**: Maintains high engagement even with single segment
+
+#### Intelligent Scoring Metrics
+- **Viral Score (0.0-1.0)**: Overall viral potential based on multiple factors
+- **Diversity Score (0.0-1.0)**: How well content is distributed across video timeline  
+- **Engagement Score (0.0-1.0)**: Combined metric predicting audience retention
 
 ### Video Format Conversion
 
@@ -232,28 +273,108 @@ Unlike traditional voiceover replacement, the viral shorts endpoint uses sophist
 
 ## 7. Response
 
-### Success Response
+### Enhanced Success Response
 
+#### Primary Response Fields
 - `short_url` (string): The cloud URL of the generated viral short video file.
 - `job_id` (string): A unique identifier for the job.
 - `script_data` (object): The AI-generated script data with hook and main content.
-- `segment_info` (object): Information about the video segment selected for the short.
-- `source_metadata` (object): Information about the processed video source including type and file details.
+- `segment_info` (object): Legacy field - single segment info (null for multi-segment compilations).
+- `compilation_info` (object): **NEW** - Complete compilation information including all segments and metadata.
+- `source_metadata` (object): Information about the processed video source.
 - `video_format` (string): The output video format applied.
 - `duration` (integer): The duration of the generated short in seconds.
-- `language` (string): The language used for script generation (detected from TTS voice).
-- `captions_added` (boolean): Whether captions were added to the video.
-- `message` (string): Success confirmation message.
+- `language` (string): The language used for script generation.
+- `enhanced_features` (object): **NEW** - Enhanced compilation features and metrics.
+- `message` (string): Success confirmation with segment count.
 
-Example:
+#### Enhanced Multi-Segment Response Example:
 
 ```json
 {
-    "short_url": "https://cloud.example.com/viral-short-video.mp4",
+    "short_url": "https://cloud.example.com/viral-compilation-short.mp4",
     "job_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
     "script_data": {
-        "hook": "You won't believe what happens next in this viral moment!",
-        "script": "This incredible footage shows exactly why this technique is taking social media by storm. The way they execute this move is absolutely mind-blowing and explains why everyone is talking about it."
+        "hook": "This compilation shows the 5 most viral moments that broke the internet!",
+        "script": "From the incredible opening sequence to the mind-blowing finale, these moments capture exactly why this content went viral and had millions of viewers rewatching again and again."
+    },
+    "segment_info": null,
+    "compilation_info": {
+        "segments": [
+            {
+                "start_time": 12.5,
+                "end_time": 20.8,
+                "score": 0.92,
+                "viral_score": 0.95,
+                "reason": "High energy moment with viral keywords",
+                "precision_adjusted": true,
+                "srt_segments": [
+                    {
+                        "index": 3,
+                        "start_time": 12.5,
+                        "end_time": 15.2,
+                        "text": "This is absolutely incredible!"
+                    }
+                ]
+            },
+            {
+                "start_time": 45.2,
+                "end_time": 56.7,
+                "score": 0.88,
+                "viral_score": 0.91,
+                "reason": "Scene change with emotional reaction",
+                "precision_adjusted": true
+            },
+            {
+                "start_time": 87.3,
+                "end_time": 99.1,
+                "score": 0.85,
+                "viral_score": 0.89,
+                "reason": "Climactic moment with engaging audio",
+                "precision_adjusted": true
+            }
+        ],
+        "metadata": {
+            "viral_score": 0.91,
+            "diversity_score": 0.83,
+            "engagement_score": 0.89,
+            "segment_count": 3,
+            "compilation_strategy": "multi_segment_compilation_3_segments",
+            "precision_timing_applied": true,
+            "total_duration": 59.3,
+            "transition_time": 1.0,
+            "average_segment_duration": 9.77
+        }
+    },
+    "source_metadata": {
+        "source_type": "youtube_url",
+        "original_url": "https://youtube.com/watch?v=example",
+        "title": "Amazing Viral Moments Compilation"
+    },
+    "video_format": "portrait",
+    "duration": 60,
+    "language": "en",
+    "enhanced_features": {
+        "multi_segment_compilation": true,
+        "viral_score": 0.91,
+        "diversity_score": 0.83,
+        "engagement_score": 0.89,
+        "compilation_strategy": "multi_segment_compilation_3_segments",
+        "precision_timing_applied": true
+    },
+    "message": "Enhanced viral short created successfully with 3 segment(s)"
+}
+```
+
+#### Single-Segment Response Example (Fallback):
+
+```json
+{
+    "short_url": "https://cloud.example.com/viral-single-short.mp4",
+    "job_id": "b2c3d4e5-f6g7-8901-2345-678901bcdefg",
+    "script_data": {
+        "hook": "You won't believe what happens in this viral moment!",
+        "script": "This single incredible sequence shows exactly why this content became an instant viral sensation."
     },
     "segment_info": {
         "start_time": 45.2,
@@ -261,18 +382,37 @@ Example:
         "score": 0.85,
         "reason": "High audio energy and engaging keywords"
     },
-    "source_metadata": {
-        "source_type": "direct_url",
-        "original_url": "https://example.com/video.mp4",
-        "file_size": 15728640,
-        "filename": "video.mp4",
-        "content_type": "video/mp4"
+    "compilation_info": {
+        "segments": [
+            {
+                "start_time": 45.2,
+                "end_time": 105.2,
+                "score": 0.85,
+                "viral_score": 0.87,
+                "reason": "High audio energy and engaging keywords"
+            }
+        ],
+        "metadata": {
+            "viral_score": 0.87,
+            "diversity_score": 0.5,
+            "engagement_score": 0.74,
+            "segment_count": 1,
+            "compilation_strategy": "single_segment_fallback",
+            "precision_timing_applied": false
+        }
     },
     "video_format": "portrait",
     "duration": 60,
     "language": "en",
-    "captions_added": true,
-    "message": "Viral short created successfully"
+    "enhanced_features": {
+        "multi_segment_compilation": false,
+        "viral_score": 0.87,
+        "diversity_score": 0.5,
+        "engagement_score": 0.74,
+        "compilation_strategy": "single_segment_fallback",
+        "precision_timing_applied": false
+    },
+    "message": "Enhanced viral short created successfully with 1 segment(s)"
 }
 ```
 
@@ -331,33 +471,73 @@ LOCAL_STORAGE_PATH=/app/data/tmp
 TTS_SERVER_URL=https://tts.dahopevi.com/api
 ```
 
-## 9. Key Differences from Standard Shorts
+## 9. Revolutionary Enhancements vs. Standard Processing
 
-### Viral-Focused Approach
-- **Visual AI Analysis**: Uses Gemini AI to analyze video content visually, not just audio
-- **Viral Script Prompts**: Specialized AI instructions for creating engaging, viral-ready content
-- **Intelligent Audio Mixing**: Blends original audio with commentary instead of replacing it
-- **Simplified Processing**: Streamlined pipeline focused on viral content quality
+### Multi-Segment Compilation Technology 🚀
+- **True Viral Compilation**: Creates compilations with 3-8 viral moments instead of single segments
+- **AI-Powered Segment Selection**: Analyzes 20+ candidates to find the most viral moments
+- **Precision Timing**: Uses SRT transcription for word-perfect cutting boundaries
+- **Smart Transitions**: Professional cross-fade transitions between viral segments
+- **Duplicate Filtering**: Prevents repetitive content with advanced similarity detection
 
-### Optimizations for Viral Content
-- **Hook-First Design**: Prioritizes attention-grabbing opening moments
-- **Energy Emphasis**: Focuses on unusual, surprising, or humorous elements
-- **Professional Audio**: Advanced mixing creates broadcast-quality audio experience
-- **Platform Optimization**: Output format optimized for viral short-form platforms
+### Enhanced Viral Detection
+- **70+ Viral Keywords**: Expanded keyword detection including emotions, reactions, and engagement triggers
+- **Multi-Modal Scoring**: Combines audio energy, scene changes, transcription analysis, and viral keywords
+- **Engagement Prediction**: Advanced metrics predict viral potential and audience retention
+- **Content Diversity**: Ensures varied content across different parts of the source video
 
-## 10. Usage Notes
+### Professional Compilation Features
+- **Seamless Transitions**: Cross-fade effects with perfect timing calculations
+- **Audio Continuity**: Intelligent mixing preserves audio flow across segment boundaries
+- **Precision Boundaries**: SRT-based cutting ensures natural speech flow
+- **Quality Thresholds**: Only includes segments with viral potential >0.3
 
-- The `video_input` must be a valid YouTube URL or direct video file URL with supported format (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v).
-- Ensure that the `GEMINI_API_KEY` environment variable is correctly configured for AI analysis.
-- The `tts_voice` parameter determines both the voice and the language for script generation (e.g., "fr-CA-ThierryNeural" will generate French scripts).
-- The `short_duration` parameter controls the length of the final viral short - the system will find the best segment of this duration.
-- Visual AI analysis provides better results than audio-only analysis for viral content.
-- The intelligent audio mixing preserves original video atmosphere while adding engaging commentary.
-- Video format conversion happens automatically - specify "portrait" for TikTok/Instagram, "landscape" for YouTube, or "square" for Instagram posts.
-- Captions are added by default with viral-optimized styling (word-by-word, bold, high contrast).
-- All text content supports UTF-8 encoding including international characters and emojis.
-- Use the `context` parameter to guide the AI toward specific viral angles or topics.
-- Longer source videos provide more opportunities for finding engaging segments.
+### Enhanced Analytics & Insights
+- **Viral Score (0.0-1.0)**: Predicts viral potential based on multiple engagement factors
+- **Diversity Score (0.0-1.0)**: Measures content variety across video timeline
+- **Engagement Score (0.0-1.0)**: Combined metric for audience retention prediction
+- **Segment-Level Analytics**: Individual viral scores and reasons for each segment
+
+### Backward Compatibility
+- **Legacy Support**: Single-segment fallback maintains compatibility with existing workflows
+- **Graceful Degradation**: Automatically falls back to single segments when compilation fails
+- **Enhanced Responses**: New fields added without breaking existing integrations
+
+## 10. Enhanced Usage Notes
+
+### Video Input Requirements
+- **Supported Formats**: YouTube URLs and direct video files (.mp4, .webm, .avi, .mov, .mkv, .flv, .wmv, .m4v)
+- **Optimal Length**: 2+ minute videos provide more viral moments for compilation
+- **Quality**: Higher quality source videos result in better viral segment detection
+
+### Multi-Segment Compilation Behavior
+- **Duration Targeting**: System intelligently combines segments to match requested duration (15-180s)
+- **Automatic Fallback**: Falls back to single-segment if compilation analysis fails
+- **Transition Handling**: 0.5s transitions automatically added between segments (accounted for in total duration)
+- **Segment Distribution**: Prefers 5-15 second segments for optimal viral impact
+
+### Enhanced Configuration
+- **Precision Timing**: Enable with high-quality transcription for word-perfect boundaries
+- **Viral Keywords**: System automatically scans for 70+ engagement indicators  
+- **Content Filtering**: Duplicate segments filtered automatically (>50% overlap prevention)
+- **Quality Thresholds**: Only segments with >0.3 viral score included in compilations
+
+### AI Analysis Optimization
+- **Gemini Visual Analysis**: Provides superior results for viral content detection
+- **Transcription Enhancement**: SRT timestamps enable precision cutting and better segment analysis
+- **Fallback Strategy**: Graceful degradation from visual → transcript → basic analysis
+- **Multi-Modal Scoring**: Combines visual, audio, and text analysis for best results
+
+### Response Interpretation
+- **compilation_info**: Contains complete segment details and analytics
+- **enhanced_features**: Provides viral scores and compilation metadata
+- **segment_info**: Legacy field (null for multi-segment compilations)
+- **Viral Scores**: >0.7 = High viral potential, >0.5 = Good potential, >0.3 = Acceptable
+
+### Platform Optimization
+- **Format Selection**: "portrait" for TikTok/Instagram, "landscape" for YouTube, "square" for social posts
+- **Cross-Platform**: Multi-segment compilations work well across all platforms
+- **Engagement Optimization**: System optimizes for each platform's viral characteristics
 
 ## 11. Common Issues
 
@@ -368,17 +548,43 @@ TTS_SERVER_URL=https://tts.dahopevi.com/api
 - Audio mixing failures due to corrupted files or unsupported formats.
 - Network issues during video upload or processing.
 
-## 12. Best Practices
+## 12. Enhanced Best Practices
 
-- Always validate input parameters before sending requests.
-- Use descriptive `context` to guide AI toward specific viral angles.
-- Choose voices that match your target audience and platform.
-- Utilize webhooks for asynchronous processing to avoid timeouts.
-- Monitor logs for detailed error information during development.
-- For international content, use native language voices for better viral performance.
-- Test with various video types to understand AI analysis capabilities.
-- Provide clear, specific context for better viral script generation.
-- Consider platform-specific viral trends when providing context guidance.
+### Video Selection for Optimal Compilation
+- **Longer Videos (2+ minutes)**: Provide more viral moments for better compilations
+- **High-Energy Content**: Videos with dynamic moments, reactions, and engagement work best
+- **Clear Audio**: Good audio quality improves transcription and viral keyword detection
+- **Varied Content**: Videos with different types of moments create better diversity scores
+
+### Maximizing Viral Potential
+- **Context Optimization**: Use descriptive context to guide AI toward specific viral angles
+- **Platform-Specific**: Tailor context for target platform (TikTok vs YouTube vs Instagram)
+- **Viral Keywords**: Include words like "amazing", "incredible", "unbelievable" in context
+- **Trend Awareness**: Reference current trends and viral formats in context
+
+### Technical Optimization
+- **Voice Selection**: Choose voices matching target audience and language for better engagement
+- **Duration Strategy**: 60-90 second compilations typically perform best for viral content
+- **Format Selection**: Use "portrait" for mobile-first platforms, "landscape" for desktop
+- **Webhook Integration**: Use webhooks for production to handle longer processing times
+
+### Monitoring & Analytics
+- **Viral Scores**: Target compilations with >0.7 viral scores for best performance
+- **Diversity Scores**: Higher diversity (>0.6) typically leads to better engagement
+- **Segment Analysis**: Review individual segment reasons to understand what works
+- **Compilation Strategy**: Monitor which strategies (multi vs single) work best for your content
+
+### Development Guidelines
+- **Error Handling**: Monitor logs for compilation failures and fallback behaviors
+- **Testing Strategy**: Test with various video types and lengths to understand capabilities
+- **Response Parsing**: Use new `compilation_info` and `enhanced_features` fields for insights
+- **Backward Compatibility**: Maintain support for legacy `segment_info` field if needed
+
+### Content Strategy
+- **Multi-Segment Benefits**: Emphasize multi-segment compilations for higher engagement
+- **Transcription Quality**: Ensure good audio quality for precision timing features
+- **Language Consistency**: Match TTS voice language with video content language
+- **International Content**: Use native language voices for cultural authenticity
 
 ## 13. Performance Considerations
 

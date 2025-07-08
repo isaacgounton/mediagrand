@@ -19,7 +19,7 @@
 from flask import Blueprint
 from app_utils import *
 import logging
-from services.v1.media.silence import detect_silence
+from services.v1.media.silence import detect_silence, detect_silence_segments, analyze_audio_characteristics
 from services.authentication import authenticate
 
 v1_media_silence_bp = Blueprint('v1_media_silence', __name__)
@@ -36,38 +36,113 @@ logger = logging.getLogger(__name__)
         "noise": {"type": "string"},
         "duration": {"type": "number", "minimum": 0.1},
         "mono": {"type": "boolean"},
+        "volume_threshold": {"type": "number", "minimum": 0, "maximum": 100},
+        "use_advanced_vad": {"type": "boolean"},
+        "min_speech_duration": {"type": "number", "minimum": 0.1},
+        "speech_padding_ms": {"type": "integer", "minimum": 0},
+        "silence_padding_ms": {"type": "integer", "minimum": 0},
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
-    "required": ["media_url", "duration"],
+    "required": ["media_url"],
     "additionalProperties": False
 })
 @queue_task_wrapper(bypass_queue=False)
 def silence(job_id, data):
-    """Detect silence in a media file and return the silence intervals."""
+    """Enhanced silence/speech detection with VAD support."""
     media_url = data['media_url']
-    start_time = data.get('start', None)  # None = start from beginning
-    end_time = data.get('end', None)  # None = process until end
-    noise_threshold = data.get('noise', '-30dB')
-    min_duration = data['duration']  # Required parameter
-    mono = data.get('mono', True)  # Default to True
     
-    logger.info(f"Job {job_id}: Received silence detection request for {media_url}")
+    # Enhanced parameters
+    volume_threshold = data.get('volume_threshold', 40.0)
+    use_advanced_vad = data.get('use_advanced_vad', True)
+    min_speech_duration = data.get('min_speech_duration', 0.5)
+    speech_padding_ms = data.get('speech_padding_ms', 50)
+    silence_padding_ms = data.get('silence_padding_ms', 450)
+    
+    # Legacy parameters (for backwards compatibility)
+    start_time = data.get('start', None)
+    end_time = data.get('end', None)
+    noise_threshold = data.get('noise', '-30dB')
+    min_duration = data.get('duration', min_speech_duration)
+    mono = data.get('mono', True)
+    
+    logger.info(f"Job {job_id}: Enhanced silence detection for {media_url} (VAD: {use_advanced_vad})")
     
     try:
-        silence_intervals = detect_silence(
+        if use_advanced_vad:
+            # Use enhanced VAD method
+            segments = detect_silence_segments(
+                media_url=media_url,
+                volume_threshold=volume_threshold,
+                use_advanced_vad=True,
+                min_speech_duration=min_speech_duration,
+                speech_padding_ms=speech_padding_ms,
+                silence_padding_ms=silence_padding_ms,
+                job_id=job_id
+            )
+            result_type = "speech_segments"
+        else:
+            # Use legacy FFmpeg method
+            segments = detect_silence(
+                media_url=media_url,
+                start_time=start_time,
+                end_time=end_time,
+                noise_threshold=noise_threshold,
+                min_duration=min_duration,
+                mono=mono,
+                job_id=job_id
+            )
+            result_type = "silence_intervals"
+        
+        result = {
+            "type": result_type,
+            "method": "advanced_vad" if use_advanced_vad else "ffmpeg_silencedetect",
+            "segments": segments,
+            "total_segments": len(segments),
+            "parameters": {
+                "volume_threshold": volume_threshold,
+                "min_duration": min_speech_duration if use_advanced_vad else min_duration,
+                "speech_padding_ms": speech_padding_ms,
+                "silence_padding_ms": silence_padding_ms
+            }
+        }
+        
+        logger.info(f"Job {job_id}: Detection completed - {len(segments)} {result_type} found")
+        return result, "/v1/media/silence", 200
+        
+    except Exception as e:
+        logger.error(f"Job {job_id}: Error during detection process - {str(e)}")
+        return str(e), "/v1/media/silence", 500
+
+
+@v1_media_silence_bp.route('/v1/media/silence/analyze', methods=['POST'])
+@authenticate
+@validate_payload({
+    "type": "object",
+    "properties": {
+        "media_url": {"type": "string", "format": "uri"},
+        "webhook_url": {"type": "string", "format": "uri"},
+        "id": {"type": "string"}
+    },
+    "required": ["media_url"],
+    "additionalProperties": False
+})
+@queue_task_wrapper(bypass_queue=False)
+def analyze_audio(job_id, data):
+    """Analyze audio characteristics and recommend optimal processing parameters."""
+    media_url = data['media_url']
+    
+    logger.info(f"Job {job_id}: Audio analysis request for {media_url}")
+    
+    try:
+        analysis = analyze_audio_characteristics(
             media_url=media_url,
-            start_time=start_time,
-            end_time=end_time,
-            noise_threshold=noise_threshold,
-            min_duration=min_duration,
-            mono=mono,
             job_id=job_id
         )
         
-        logger.info(f"Job {job_id}: Silence detection completed successfully")
-        return silence_intervals, "/v1/media/silence", 200
+        logger.info(f"Job {job_id}: Audio analysis completed successfully")
+        return analysis, "/v1/media/silence/analyze", 200
         
     except Exception as e:
-        logger.error(f"Job {job_id}: Error during silence detection process - {str(e)}")
-        return str(e), "/v1/media/silence", 500
+        logger.error(f"Job {job_id}: Error during audio analysis - {str(e)}")
+        return str(e), "/v1/media/silence/analyze", 500
