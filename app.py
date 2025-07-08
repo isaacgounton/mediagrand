@@ -443,7 +443,11 @@ def create_app():
                         "add_text_overlay": "/v1/text/add-text-overlay", # Add the new text overlay endpoint
                         "add_text_overlay_preset": "/v1/text/add-text-overlay/preset/<name>", # Add the new text overlay preset endpoint
                         "text_overlay_presets": "/v1/text/presets", # Add the new text overlay presets endpoint
-                        "simone": "/v1/simone/process_video"
+                        "simone": "/v1/simone/process_video",
+                        "simone_enhanced": "/v1/simone/process_video_enhanced",
+                        "simone_topics": "/v1/simone/generate_topics",
+                        "simone_x_thread": "/v1/simone/generate_x_thread",
+                        "generate_topics": "/v1/generate_topics"
                     },
                     "audio": {
                         "concatenate": "/v1/audio/concatenate",

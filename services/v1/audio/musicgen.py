@@ -6,7 +6,7 @@ from transformers import pipeline
 import scipy.io.wavfile
 import numpy as np
 from services.cloud_storage import get_storage_provider
-from services.ffmpeg_toolkit import convert_audio_format
+# from services.ffmpeg_toolkit import convert_audio_format  # Optional for format conversion
 
 class MusicGenService:
     """Service for generating music using Meta's MusicGen model"""
@@ -65,21 +65,23 @@ class MusicGenService:
             # Save WAV file
             scipy.io.wavfile.write(temp_wav_path, rate=sampling_rate, data=audio_data)
             
-            # Convert to requested format if needed
+            # For now, only support WAV output (MP3 conversion requires ffmpeg)
             if output_format.lower() == "mp3":
-                output_path = os.path.join(self.temp_dir, f"{filename}.mp3")
-                convert_audio_format(temp_wav_path, output_path, "mp3")
-                os.remove(temp_wav_path)  # Clean up WAV file
-            else:
-                output_path = temp_wav_path
+                logging.warning("MP3 output not yet supported, defaulting to WAV")
+                output_format = "wav"
+            
+            output_path = temp_wav_path
             
             # Upload to storage
             file_size = os.path.getsize(output_path)
             storage_provider = get_storage_provider()
-            upload_result = storage_provider.upload_file(output_path, f"audio/{output_format}")
+            upload_result = storage_provider.upload_file(output_path, f"audio/{filename}.{output_format}")
             
-            # Create public URL (assuming S3-compatible storage)
-            public_url = f"{os.getenv('S3_ENDPOINT_URL')}/{os.getenv('S3_BUCKET_NAME')}/{filename}.{output_format}"
+            # Get public URL from upload result
+            public_url = upload_result.get('public_url') or upload_result.get('url')
+            if not public_url:
+                # Fallback to constructing URL if not provided by storage provider
+                public_url = f"{os.getenv('S3_ENDPOINT_URL')}/{os.getenv('S3_BUCKET_NAME')}/audio/{filename}.{output_format}"
             
             # Clean up temp file
             if os.path.exists(output_path):

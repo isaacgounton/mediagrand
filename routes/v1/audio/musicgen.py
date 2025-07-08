@@ -1,54 +1,36 @@
 from flask import Blueprint, request, jsonify
-from services.enhanced_authentication import enhanced_authenticate
+from app_utils import validate_payload, queue_task_wrapper
+from services.authentication import authenticate
 from services.v1.audio.musicgen import MusicGenService
 import logging
 
 musicgen_bp = Blueprint('musicgen', __name__)
 
 @musicgen_bp.route('/v1/audio/music', methods=['POST'])
-@enhanced_authenticate
-def generate_music(job_id=None, data=None):
-    """
-    Generate music from text description using MusicGen model
-    
-    Expected JSON payload:
-    {
-        "description": "lo-fi music with a soothing melody",
-        "duration": 8,
-        "model_size": "small",
-        "output_format": "wav",
-        "webhook_url": "https://your-webhook.com/callback"
-    }
-    """
+@authenticate
+@validate_payload({
+    "type": "object",
+    "properties": {
+        "description": {"type": "string"},
+        "duration": {"type": ["integer", "string"], "minimum": 1, "maximum": 30, "default": 8},
+        "model_size": {"type": "string", "enum": ["small", "medium", "large"], "default": "small"},
+        "output_format": {"type": "string", "enum": ["wav", "mp3"], "default": "wav"},
+        "webhook_url": {"type": "string", "format": "uri"},
+        "id": {"type": "string"}
+    },
+    "required": ["description"],
+    "additionalProperties": False
+})
+@queue_task_wrapper(bypass_queue=False)
+def generate_music(job_id, data):
+    """Generate music from text description using MusicGen model"""
     try:
         logging.info(f"MusicGen request received for job {job_id}")
         
-        # Validate required parameters
-        if not data or not data.get('description'):
-            return jsonify({
-                "error": "Missing required parameter: description"
-            }), 400
-        
         description = data.get('description')
-        duration = data.get('duration', 8)
+        duration = int(data.get('duration', 8))
         model_size = data.get('model_size', 'small')
         output_format = data.get('output_format', 'wav')
-        
-        # Validate parameters
-        if duration > 30:
-            return jsonify({
-                "error": "Duration cannot exceed 30 seconds"
-            }), 400
-        
-        if model_size not in ['small', 'medium', 'large']:
-            return jsonify({
-                "error": "Invalid model_size. Must be 'small', 'medium', or 'large'"
-            }), 400
-        
-        if output_format not in ['wav', 'mp3']:
-            return jsonify({
-                "error": "Invalid output_format. Must be 'wav' or 'mp3'"
-            }), 400
         
         # Initialize service
         service = MusicGenService()
@@ -64,21 +46,20 @@ def generate_music(job_id=None, data=None):
         
         logging.info(f"MusicGen completed successfully for job {job_id}")
         
-        return jsonify({
+        # Return in the format expected by the API framework
+        return {
             "message": "Music generated successfully",
             "output_url": result['output_url'],
             "duration": result['duration'],
             "model_used": result['model_used'],
             "description": description,
-            "file_size": result['file_size']
-        }), 200
+            "file_size": result['file_size'],
+            "sampling_rate": result['sampling_rate']
+        }, "/v1/audio/music", 200
         
     except Exception as e:
         logging.error(f"MusicGen error for job {job_id}: {str(e)}", exc_info=True)
-        return jsonify({
-            "error": "Music generation failed",
-            "message": str(e)
-        }), 500
+        return f"Music generation failed: {str(e)}", "/v1/audio/music", 500
 
 @musicgen_bp.route('/v1/audio/music', methods=['GET'])
 def musicgen_info():
