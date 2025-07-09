@@ -26,6 +26,7 @@ v1_media_silence_bp = Blueprint('v1_media_silence', __name__)
 logger = logging.getLogger(__name__)
 
 @v1_media_silence_bp.route('/v1/media/silence', methods=['POST'])
+@queue_task_wrapper(bypass_queue=False)
 @authenticate
 @validate_payload({
     "type": "object",
@@ -36,28 +37,38 @@ logger = logging.getLogger(__name__)
         "noise": {"type": "string"},
         "duration": {"type": "number", "minimum": 0.1},
         "mono": {"type": "boolean"},
-        "volume_threshold": {"type": "number", "minimum": 0, "maximum": 100},
-        "use_advanced_vad": {"type": "boolean"},
-        "min_speech_duration": {"type": "number", "minimum": 0.1},
-        "speech_padding_ms": {"type": "integer", "minimum": 0},
-        "silence_padding_ms": {"type": "integer", "minimum": 0},
+        "volume_threshold": {"type": ["number", "string"], "minimum": 0, "maximum": 100},
+        "use_advanced_vad": {"type": ["boolean", "string"]},
+        "min_speech_duration": {"type": ["number", "string"], "minimum": 0.1},
+        "speech_padding_ms": {"type": ["integer", "string"], "minimum": 0},
+        "silence_padding_ms": {"type": ["integer", "string"], "minimum": 0},
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
     "required": ["media_url"],
     "additionalProperties": False
 })
-@queue_task_wrapper(bypass_queue=False)
 def silence(job_id, data):
     """Enhanced silence/speech detection with VAD support."""
     media_url = data['media_url']
     
-    # Enhanced parameters
-    volume_threshold = data.get('volume_threshold', 40.0)
-    use_advanced_vad = data.get('use_advanced_vad', True)
-    min_speech_duration = data.get('min_speech_duration', 0.5)
-    speech_padding_ms = data.get('speech_padding_ms', 50)
-    silence_padding_ms = data.get('silence_padding_ms', 450)
+    # Enhanced parameters with type conversion
+    try:
+        volume_threshold = float(data.get('volume_threshold', 40.0))
+        
+        # Handle boolean conversion for use_advanced_vad
+        use_advanced_vad_raw = data.get('use_advanced_vad', True)
+        if isinstance(use_advanced_vad_raw, str):
+            use_advanced_vad = use_advanced_vad_raw.lower() in ('true', '1', 'yes', 'on')
+        else:
+            use_advanced_vad = bool(use_advanced_vad_raw)
+        
+        min_speech_duration = float(data.get('min_speech_duration', 0.5))
+        speech_padding_ms = int(float(data.get('speech_padding_ms', 50)))
+        silence_padding_ms = int(float(data.get('silence_padding_ms', 450)))
+    except (ValueError, TypeError) as e:
+        logger.error(f"Job {job_id}: Parameter conversion error - {str(e)}")
+        return f"Invalid parameter values: {str(e)}", "/v1/media/silence", 400
     
     # Legacy parameters (for backwards compatibility)
     start_time = data.get('start', None)
@@ -116,6 +127,7 @@ def silence(job_id, data):
 
 
 @v1_media_silence_bp.route('/v1/media/silence/analyze', methods=['POST'])
+@queue_task_wrapper(bypass_queue=False)
 @authenticate
 @validate_payload({
     "type": "object",
@@ -127,7 +139,6 @@ def silence(job_id, data):
     "required": ["media_url"],
     "additionalProperties": False
 })
-@queue_task_wrapper(bypass_queue=False)
 def analyze_audio(job_id, data):
     """Analyze audio characteristics and recommend optimal processing parameters."""
     media_url = data['media_url']
