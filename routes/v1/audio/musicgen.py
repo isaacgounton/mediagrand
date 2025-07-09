@@ -5,8 +5,10 @@ from services.v1.audio.musicgen import MusicGenService
 import logging
 
 musicgen_bp = Blueprint('musicgen', __name__)
+logger = logging.getLogger(__name__)
 
 @musicgen_bp.route('/v1/audio/music', methods=['POST'])
+@queue_task_wrapper(bypass_queue=False)
 @authenticate
 @validate_payload({
     "type": "object",
@@ -21,11 +23,10 @@ musicgen_bp = Blueprint('musicgen', __name__)
     "required": ["description"],
     "additionalProperties": False
 })
-@queue_task_wrapper(bypass_queue=False)
 def generate_music(job_id, data):
     """Generate music from text description using MusicGen model"""
     try:
-        logging.info(f"MusicGen request received for job {job_id}")
+        logger.info(f"Job {job_id}: MusicGen request received")
         
         description = data.get('description')
         duration = int(data.get('duration', 8))
@@ -44,7 +45,7 @@ def generate_music(job_id, data):
             job_id=job_id
         )
         
-        logging.info(f"MusicGen completed successfully for job {job_id}")
+        logger.info(f"Job {job_id}: MusicGen completed successfully")
         
         # Return in the format expected by the API framework
         return {
@@ -58,13 +59,15 @@ def generate_music(job_id, data):
         }, "/v1/audio/music", 200
         
     except Exception as e:
-        logging.error(f"MusicGen error for job {job_id}: {str(e)}", exc_info=True)
-        return f"Music generation failed: {str(e)}", "/v1/audio/music", 500
+        logger.error(f"Job {job_id}: MusicGen error - {str(e)}", exc_info=True)
+        return str(e), "/v1/audio/music", 500
 
 @musicgen_bp.route('/v1/audio/music', methods=['GET'])
-def musicgen_info():
+@queue_task_wrapper(bypass_queue=True)
+@authenticate
+def musicgen_info(job_id=None, data=None):
     """Get information about the MusicGen endpoint"""
-    return jsonify({
+    return {
         "endpoint": "/v1/audio/music",
         "method": "POST",
         "description": "Generate music from text descriptions using Meta's MusicGen model",
@@ -113,10 +116,11 @@ def musicgen_info():
                 "model_size": "medium"
             }
         ]
-    })
+    }, "/v1/audio/music", 200
 
 @musicgen_bp.route('/v1/audio/music', methods=['OPTIONS'])
-def musicgen_options():
+@queue_task_wrapper(bypass_queue=True)
+def musicgen_options(job_id=None, data=None):
     """Handle preflight CORS requests"""
     response = jsonify({})
     response.headers.add('Access-Control-Allow-Origin', '*')
