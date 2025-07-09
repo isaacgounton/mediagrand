@@ -150,5 +150,9 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 # Run the application
 CMD ["/app/run_services.sh"]
 
-# Pre-download the most accurate Whisper model (large-v3) at build time
-RUN python3 -c "import whisper; whisper.load_model('base')"
+# Pre-download AI models at build time for faster startup
+# This increases build time (~3-5 minutes) but eliminates first-request delays
+RUN echo "Downloading AI models for immediate availability..." && \
+    python3 -c "import whisper; print('Downloading Whisper base model...'); whisper.load_model('base'); print('Whisper model ready')" && \
+    python3 -c "from transformers import pipeline; print('Downloading MusicGen small model (~300MB)...'); pipeline('text-to-audio', 'facebook/musicgen-small', device=-1); print('MusicGen model ready')" && \
+    echo "✅ All AI models pre-downloaded and ready for immediate use"
