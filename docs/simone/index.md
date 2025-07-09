@@ -1,167 +1,147 @@
-# Simone Integration: Video Processing Service
+# Simone Video Processing
 
-Simone is a comprehensive video processing service that converts videos into multiple content formats including blog posts, social media content, transcriptions, and viral content packages. It offers two processing modes to meet different content creation needs.
+The Simone service converts videos into various content formats including transcriptions, blog posts, topics, and social media threads using AI-powered processing.
 
-## Overview
+## Authentication
 
-Simone processes videos through an AI-powered pipeline that:
-- Downloads and transcribes video content
-- Generates blog posts and social media content
-- Extracts context-aware screenshots using OCR
-- Identifies viral topics and creates engagement-optimized content
-- Provides time-stamped content mapping
+Authentication token required in the request header:
+```
+x-api-key: your-api-key-here
+```
 
-## Available Endpoints
+## Endpoints
 
-### 1. Standard Processing
-`POST /v1/simone/process_video`
+### 1. Video Processing
+```
+POST /v1/simone/process_video
+```
 
-### 2. Enhanced Processing (Recommended)
-`POST /v1/simone/process_video_enhanced`
+### 2. Topic Generation
+```
+POST /v1/simone/generate_topics
+```
 
-### 3. Topic Generation
-`POST /v1/simone/generate_topics`
+### 3. X/Twitter Thread Generation
+```
+POST /v1/simone/generate_x_thread
+```
 
-### 4. X/Twitter Thread Generation
-`POST /v1/simone/generate_x_thread`
-
----
-
-## Standard Video Processing
-
-### Endpoint
-`POST /v1/simone/process_video`
-
-### Request Body
-| Parameter        | Type     | Description                                   | Required |
-| :--------------- | :------- | :-------------------------------------------- | :------- |
-| `video_url`      | `string` | The URL of the video to process               | Yes      |
-| `platform`       | `string` | Social media platform for content generation | No       |
-| `cookies_content`| `string` | Cookie content for private videos             | No       |
-| `cookies_url`    | `string` | Cookie URL for authentication                 | No       |
-
-### Response
-```json
-{
-  "blog_post_content": "Generated blog post text...",
-  "blog_post_url": "/public/simone_outputs/uuid/generated_blogpost.txt",
-  "screenshots": [
-    "/public/simone_outputs/uuid/screenshot_0.png",
-    "/public/simone_outputs/uuid/screenshot_1.png"
-  ],
-  "social_media_post_content": "Platform-specific social media post...",
-  "transcription_content": "Raw video transcription text...",
-  "transcription_url": "/public/simone_outputs/uuid/transcription.txt"
-}
+### 4. Topic Generation (Direct)
+```
+POST /v1/generate_topics
 ```
 
 ---
 
-## Enhanced Video Processing (Recommended)
+## Video Processing
 
-### Endpoint
-`POST /v1/simone/process_video_enhanced`
+The main endpoint for processing videos into various content formats.
 
-### Request Body
-| Parameter        | Type      | Description                                   | Required | Default |
-| :--------------- | :-------- | :-------------------------------------------- | :------- | :------ |
-| `video_url`      | `string`  | The URL of the video to process               | Yes      | -       |
-| `include_topics` | `boolean` | Generate viral topic identification           | No       | `true`  |
-| `include_x_thread`| `boolean`| Generate X/Twitter thread                    | No       | `true`  |
-| `platforms`      | `array`   | Social media platforms to generate content for| No      | `["x", "linkedin", "instagram"]` |
-| `thread_config`  | `object`  | Configuration for thread generation           | No       | See below |
-| `topic_config`   | `object`  | Configuration for topic identification        | No       | See below |
-| `cookies_content`| `string`  | Cookie content for private videos             | No       | -       |
-| `cookies_url`    | `string`  | Cookie URL for authentication                 | No       | -       |
+### Request Body (JSON)
 
-#### Thread Configuration
 ```json
 {
-  "max_posts": 8,           // 2-15 posts
-  "character_limit": 280,   // 100-500 characters
-  "thread_style": "viral"   // "viral", "educational", "storytelling", "professional", "conversational"
-}
-```
-
-#### Topic Configuration
-```json
-{
-  "min_topics": 3,          // 1-5 topics
-  "max_topics": 8           // 3-15 topics
-}
-```
-
-### Response
-```json
-{
-  "blog_post_content": "Generated blog post text...",
-  "blog_post_url": "/public/simone_outputs/uuid/generated_blogpost.txt",
-  "screenshots": [
-    "/public/simone_outputs/uuid/screenshot_0.png"
-  ],
-  "viral_content_package": {
-    "generated_at": "2024-01-01T00:00:00.000Z",
-    "source": "transcription",
-    "content": {
-      "topics": {
-        "topics": [
-          {
-            "topic": "AI Revolution in Content Creation",
-            "description": "How AI is transforming content creation workflows",
-            "confidence": 0.92,
-            "viral_potential": 0.85,
-            "category": "educational",
-            "target_audience": "content creators",
-            "hook_angle": "The secret to 10x content productivity",
-            "timestamp_ranges": [{"start": "00:01:30", "end": "00:03:45"}],
-            "hashtags": ["#AI", "#ContentCreation", "#Productivity"]
-          }
-        ],
-        "summary": "Content focuses on AI-powered productivity tools"
-      },
-      "x_thread": {
-        "thread": [
-          {
-            "post_number": 1,
-            "content": "1/8 🧵 The AI content revolution is here, and it's changing everything about how we create...",
-            "character_count": 95,
-            "start_time": "00:01:30",
-            "end_time": "00:02:15",
-            "engagement_elements": ["hook", "emoji", "thread_indicator"]
-          }
-        ],
-        "thread_summary": "AI revolution in content creation",
-        "viral_elements": ["strong_hook", "data_points", "actionable_tips"],
-        "target_metrics": {
-          "expected_engagement": "high",
-          "shareability_score": 0.8
-        }
-      },
-      "posts": {
-        "linkedin": "Professional LinkedIn post content...",
-        "instagram": "Instagram caption with hashtags..."
-      }
-    }
-  },
-  "content_package_url": "/public/simone_outputs/uuid/viral_content_package.json",
-  "transcription_content": "Raw video transcription text...",
-  "transcription_url": "/public/simone_outputs/uuid/transcription.txt",
-  "enhanced_features": {
-    "topics_included": true,
-    "x_thread_included": true,
-    "platforms_processed": ["x", "linkedin", "instagram"],
+    "video_url": "https://youtube.com/watch?v=example",
+    "platform": "youtube",
+    "include_transcription": true,
+    "include_blog": true,
+    "include_topics": true,
+    "include_x_thread": false,
+    "platforms": ["x", "linkedin", "instagram"],
     "thread_config": {
-      "max_posts": 8,
-      "character_limit": 280,
-      "thread_style": "viral"
-    }
-  },
-  "processing_summary": {
-    "total_topics": 5,
-    "thread_posts": 8,
-    "platforms_generated": ["linkedin", "instagram"],
-    "screenshots_count": 3
-  }
+        "max_posts": 8,
+        "character_limit": 280,
+        "thread_style": "viral"
+    },
+    "topic_config": {
+        "min_topics": 3,
+        "max_topics": 8
+    },
+    "cookies_content": "sessionid=abc123; csrftoken=def456",
+    "cookies_url": "https://example.com/cookies.txt"
+}
+```
+
+### Parameters
+
+- `video_url` (required): URL of the video to process
+- `platform` (optional): Platform type (e.g., "youtube", "vimeo")
+- `include_transcription` (optional): Generate transcription. Defaults to `true`
+- `include_blog` (optional): Generate blog post. Defaults to `true`
+- `include_topics` (optional): Generate topics. Defaults to `true`
+- `include_x_thread` (optional): Generate X/Twitter thread. Defaults to `false`
+- `platforms` (optional): Social media platforms for content generation. Defaults to `["x", "linkedin", "instagram"]`
+- `thread_config` (optional): Thread generation configuration
+  - `max_posts` (2-15): Maximum posts in thread. Defaults to `8`
+  - `character_limit` (100-500): Character limit per post. Defaults to `280`
+  - `thread_style` ("viral", "educational", "storytelling", "professional", "conversational"): Thread style. Defaults to `"viral"`
+- `topic_config` (optional): Topic generation configuration
+  - `min_topics` (1-5): Minimum topics to generate. Defaults to `3`
+  - `max_topics` (3-15): Maximum topics to generate. Defaults to `8`
+- `cookies_content` (optional): Raw cookie content for authentication
+- `cookies_url` (optional): URL to download cookies from
+
+### Response
+
+#### Success Response
+
+```json
+{
+    "code": 200,
+    "job_id": "unique-job-id",
+    "response": {
+        "transcription_content": "Video transcription text...",
+        "transcription_url": "/public/simone_outputs/uuid/transcription.txt",
+        "blog_post_content": "Generated blog post content...",
+        "blog_post_url": "/public/simone_outputs/uuid/generated_blogpost.txt",
+        "screenshots": [
+            "/public/simone_outputs/uuid/screenshot_0.png",
+            "/public/simone_outputs/uuid/screenshot_1.png"
+        ],
+        "viral_content_package": {
+            "topics": [
+                {
+                    "topic": "AI Revolution in Content Creation",
+                    "description": "How AI is transforming content creation workflows",
+                    "confidence": 0.92,
+                    "viral_potential": 0.85,
+                    "category": "educational",
+                    "hashtags": ["#AI", "#ContentCreation", "#Productivity"]
+                }
+            ],
+            "x_thread": [
+                {
+                    "post_number": 1,
+                    "content": "1/8 🧵 The AI content revolution is here...",
+                    "character_count": 95
+                }
+            ],
+            "social_posts": {
+                "linkedin": "Professional LinkedIn post content...",
+                "instagram": "Instagram caption with hashtags..."
+            }
+        }
+    },
+    "message": "success"
+}
+```
+
+#### For Queued Jobs
+
+```json
+{
+    "code": 202,
+    "job_id": "unique-job-id",
+    "message": "processing"
+}
+```
+
+#### Error Response
+
+```json
+{
+    "code": 400,
+    "message": "Error message here"
 }
 ```
 
@@ -169,116 +149,201 @@ Simone processes videos through an AI-powered pipeline that:
 
 ## Topic Generation
 
-### Endpoint
-`POST /v1/simone/generate_topics`
+Generate viral topics from transcription text or file. This endpoint is available at both `/v1/simone/generate_topics` and `/v1/generate_topics` (direct access).
 
-### Request Body
-| Parameter            | Type      | Description                           | Required |
-| :------------------- | :-------- | :------------------------------------ | :------- |
-| `transcription_text` | `string`  | Raw transcription text                | Yes*     |
-| `transcription_file_url` | `string` | URL to transcription file          | Yes*     |
-| `min_topics`         | `integer` | Minimum topics to generate (1-5)      | No       |
-| `max_topics`         | `integer` | Maximum topics to generate (3-15)     | No       |
-| `include_timestamps` | `boolean` | Include timestamp mapping             | No       |
+### Request Body (JSON)
+
+```json
+{
+    "transcription_text": "Your video transcription text here...",
+    "transcription_file_url": "https://example.com/transcription.txt",
+    "min_topics": 3,
+    "max_topics": 8,
+    "include_timestamps": true,
+    "cookies_content": "auth_token=xyz789; session=abc123"
+}
+```
+
+### Parameters
+
+- `transcription_text` (required*): Raw transcription text
+- `transcription_file_url` (required*): URL to transcription file
+- `min_topics` (optional): Minimum topics to generate (1-5). Defaults to `3`
+- `max_topics` (optional): Maximum topics to generate (3-15). Defaults to `8`
+- `include_timestamps` (optional): Include timestamp mapping. Defaults to `false`
+- `cookies_content` (optional): Raw cookie content for downloading transcription files
 
 *Either `transcription_text` or `transcription_file_url` is required.
+
+### Response
+
+```json
+{
+    "code": 200,
+    "job_id": "unique-job-id",
+    "response": {
+        "topics": [
+            {
+                "topic": "AI Revolution in Content Creation",
+                "description": "How AI is transforming content creation workflows",
+                "confidence": 0.92,
+                "viral_potential": 0.85,
+                "category": "educational",
+                "hashtags": ["#AI", "#ContentCreation", "#Productivity"]
+            }
+        ],
+        "parameters": {
+            "min_topics": 3,
+            "max_topics": 8,
+            "include_timestamps": true
+        }
+    },
+    "message": "success"
+}
+```
 
 ---
 
 ## X/Twitter Thread Generation
 
-### Endpoint
-`POST /v1/simone/generate_x_thread`
+Generate X/Twitter threads from transcription text or file.
 
-### Request Body
-| Parameter            | Type      | Description                           | Required |
-| :------------------- | :-------- | :------------------------------------ | :------- |
-| `transcription_text` | `string`  | Raw transcription text                | Yes*     |
-| `transcription_file_url` | `string` | URL to transcription file          | Yes*     |
-| `max_posts`          | `integer` | Maximum posts in thread (2-15)       | No       |
-| `character_limit`    | `integer` | Character limit per post (100-500)   | No       |
-| `thread_style`       | `string`  | Thread style (see options above)     | No       |
-| `topic_focus`        | `string`  | Specific topic to focus on            | No       |
-| `include_timestamps` | `boolean` | Include timestamp mapping             | No       |
+### Request Body (JSON)
+
+```json
+{
+    "transcription_text": "Your video transcription text here...",
+    "transcription_file_url": "https://example.com/transcription.txt",
+    "max_posts": 8,
+    "character_limit": 280,
+    "thread_style": "viral",
+    "topic_focus": "AI and productivity",
+    "include_timestamps": false,
+    "cookies_content": "auth_token=xyz789; session=abc123"
+}
+```
+
+### Parameters
+
+- `transcription_text` (required*): Raw transcription text
+- `transcription_file_url` (required*): URL to transcription file
+- `max_posts` (optional): Maximum posts in thread (2-15). Defaults to `8`
+- `character_limit` (optional): Character limit per post (100-500). Defaults to `280`
+- `thread_style` (optional): Thread style ("viral", "educational", "storytelling", "professional", "conversational"). Defaults to `"viral"`
+- `topic_focus` (optional): Specific topic to focus on
+- `include_timestamps` (optional): Include timestamp mapping. Defaults to `false`
+- `cookies_content` (optional): Raw cookie content for downloading transcription files
 
 *Either `transcription_text` or `transcription_file_url` is required.
 
+### Response
+
+```json
+{
+    "code": 200,
+    "job_id": "unique-job-id",
+    "response": {
+        "thread": [
+            {
+                "post_number": 1,
+                "content": "1/8 🧵 The AI content revolution is here...",
+                "character_count": 95,
+                "start_time": "00:01:30",
+                "end_time": "00:02:15"
+            }
+        ],
+        "parameters": {
+            "max_posts": 8,
+            "character_limit": 280,
+            "thread_style": "viral",
+            "topic_focus": "AI and productivity",
+            "include_timestamps": false
+        }
+    },
+    "message": "success"
+}
+```
+
 ---
 
-## Supported Platforms
+## Examples
 
-### Standard Social Media Platforms
-- **LinkedIn**: Professional content with industry insights
-- **Facebook**: Conversational and engaging posts
-- **Instagram**: Concise captions with strategic hashtags
-- **X (Twitter)**: Impactful posts optimized for engagement
+### Basic Video Processing
 
-### Enhanced Features
-- **Topic Identification**: AI-powered viral topic extraction
-- **Thread Generation**: Multi-post X/Twitter threads with engagement optimization
-- **Time-stamped Mapping**: Content mapped back to video timestamps
-- **Viral Scoring**: Confidence and viral potential scoring
-
----
-
-## Example Usage
-
-### Standard Processing
 ```bash
-curl -X POST \
-  http://localhost:8080/v1/simone/process_video \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_API_KEY' \
+curl -X POST https://api.example.com/v1/simone/process_video \
+  -H "x-api-key: your-api-key-here" \
+  -H "Content-Type: application/json" \
   -d '{
-    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "platform": "linkedin"
+    "video_url": "https://youtube.com/watch?v=example"
   }'
 ```
 
-### Enhanced Processing
+### Video Processing with X Thread
+
 ```bash
-curl -X POST \
-  http://localhost:8080/v1/simone/process_video_enhanced \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_API_KEY' \
+curl -X POST https://api.example.com/v1/simone/process_video \
+  -H "x-api-key: your-api-key-here" \
+  -H "Content-Type: application/json" \
   -d '{
-    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "include_topics": true,
+    "video_url": "https://youtube.com/watch?v=example",
     "include_x_thread": true,
-    "platforms": ["x", "linkedin", "instagram"],
     "thread_config": {
       "max_posts": 10,
-      "character_limit": 280,
-      "thread_style": "viral"
+      "thread_style": "educational"
     }
   }'
 ```
 
-### Topic Generation Only
+### Video Processing with Cookies
+
 ```bash
-curl -X POST \
-  http://localhost:8080/v1/simone/generate_topics \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_API_KEY' \
+curl -X POST https://api.example.com/v1/simone/process_video \
+  -H "x-api-key: your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_url": "https://youtube.com/watch?v=example",
+    "cookies_content": "sessionid=abc123; csrftoken=def456"
+  }'
+```
+
+### Topic Generation
+
+```bash
+curl -X POST https://api.example.com/v1/simone/generate_topics \
+  -H "x-api-key: your-api-key-here" \
+  -H "Content-Type: application/json" \
   -d '{
     "transcription_text": "Your video transcription text here...",
-    "min_topics": 3,
-    "max_topics": 8,
+    "min_topics": 5,
+    "max_topics": 10,
     "include_timestamps": true
   }'
 ```
 
----
+### X Thread Generation
+
+```bash
+curl -X POST https://api.example.com/v1/simone/generate_x_thread \
+  -H "x-api-key: your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcription_file_url": "https://example.com/transcription.txt",
+    "max_posts": 12,
+    "thread_style": "storytelling",
+    "cookies_content": "auth_token=xyz789"
+  }'
+```
 
 ## Environment Variables
 
 ### Required
 ```bash
-OPENAI_API_KEY=your_openai_api_key_here
 API_KEY=your_dahopevi_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### Optional Configuration
+### Optional
 ```bash
 OPENAI_MODEL=google/gemma-3-12b-it:free
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
@@ -287,7 +352,6 @@ TESSERACT_CMD_PATH=/usr/bin/tesseract
 
 ### Storage Configuration
 ```bash
-# S3 Storage (Optional)
 SIMONE_UPLOAD_TO_S3=true
 S3_ENDPOINT_URL=https://s3.amazonaws.com
 S3_ACCESS_KEY=your_access_key
@@ -295,81 +359,3 @@ S3_SECRET_KEY=your_secret_key
 S3_BUCKET_NAME=your_bucket_name
 S3_REGION=us-east-1
 ```
-
----
-
-## Dependencies
-
-### System Requirements
-- **FFmpeg**: Video processing and audio extraction
-- **Tesseract OCR Engine**: Text recognition in screenshots
-- **Python 3.8+**: Runtime environment
-
-### Python Dependencies
-- **OpenAI**: AI content generation
-- **yt-dlp**: Video downloading
-- **Whisper**: Audio transcription
-- **Pillow**: Image processing
-- **requests**: HTTP client
-
----
-
-## Features
-
-### Core Features
-- ✅ Video download and processing
-- ✅ AI-powered transcription
-- ✅ Blog post generation
-- ✅ Context-aware screenshot extraction
-- ✅ Multi-platform social media content
-- ✅ Raw transcription access
-- ✅ S3 and local storage support
-
-### Enhanced Features
-- ✅ Viral topic identification with scoring
-- ✅ X/Twitter thread generation
-- ✅ Time-stamped content mapping
-- ✅ Engagement optimization
-- ✅ Multi-platform content packages
-- ✅ Confidence scoring
-- ✅ Viral potential assessment
-
-### Quality Assurance
-- ✅ Error handling and graceful fallbacks
-- ✅ Authentication and authorization
-- ✅ Queue-based processing
-- ✅ Progress tracking
-- ✅ Comprehensive logging
-
----
-
-## Error Handling
-
-Simone includes comprehensive error handling:
-- Graceful fallbacks for missing files
-- S3 to local storage fallback
-- API error handling with detailed messages
-- Timeout handling for long videos
-- Memory management for large files
-
----
-
-## Performance Considerations
-
-- **Processing Time**: 2-10 minutes depending on video length
-- **Memory Usage**: Scales with video length and quality
-- **Storage**: Outputs stored temporarily, then moved to permanent storage
-- **Rate Limits**: Respects OpenAI API rate limits
-- **Concurrent Processing**: Queue-based system handles multiple requests
-
----
-
-## Changelog
-
-### Latest Updates
-- ✅ Added transcription content to response
-- ✅ Enhanced viral content package generation
-- ✅ Improved topic identification with confidence scoring
-- ✅ Added X/Twitter thread generation
-- ✅ Time-stamped content mapping
-- ✅ Multi-platform content optimization

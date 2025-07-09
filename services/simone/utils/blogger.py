@@ -29,7 +29,7 @@ class Blogger:
                     "messages": [
                         {
                             "role": "system",
-                            "content": "Generate a blogpost for the provided content.",
+                            "content": "You are a skilled content writer. Transform the provided video transcription into a well-structured, engaging blog post. Write directly in blog format without any introductory phrases like 'This is a blog post about' or 'Here's a blog post'. Start immediately with the content. Use clear headings, engaging paragraphs, and maintain a conversational yet professional tone. Focus on the key insights and make it valuable for readers.",
                         },
                         {"role": "user", "content": content},
                     ],

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify
 from app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
 from services.v1.audio.musicgen import MusicGenService
@@ -113,7 +113,7 @@ def musicgen_info(job_id=None, data=None):
             {
                 "description": "upbeat electronic dance music",
                 "duration": 15,
-                "model_size": "medium"
+                "model_size": "small"
             }
         ]
     }, "/v1/audio/music", 200

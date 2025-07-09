@@ -91,6 +91,8 @@ The application follows a layered service pattern with these main categories:
 
 #### Specialized Services
 - Simone AI processor for video-to-blog conversion (`services/simone/processor.py`)
+  - Unified endpoint with optional features: transcription, blog, topics, X threads
+  - Improved blog generation prompt for direct content without explanations
 - YouTube authentication (`services/youtube_auth.py`)
 - Webhook notifications (`services/webhook.py`)
 
