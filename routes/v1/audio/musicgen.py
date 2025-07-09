@@ -13,7 +13,7 @@ musicgen_bp = Blueprint('musicgen', __name__)
     "properties": {
         "description": {"type": "string"},
         "duration": {"type": ["integer", "string"], "minimum": 1, "maximum": 30, "default": 8},
-        "model_size": {"type": "string", "enum": ["small", "medium", "large"], "default": "small"},
+        "model_size": {"type": "string", "enum": ["small"], "default": "small"},
         "output_format": {"type": "string", "enum": ["wav", "mp3"], "default": "wav"},
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
@@ -85,7 +85,7 @@ def musicgen_info():
                 "type": "string",
                 "required": False,
                 "default": "small",
-                "options": ["small", "medium", "large"],
+                "options": ["small"],
                 "description": "Model size to use"
             },
             "output_format": {
