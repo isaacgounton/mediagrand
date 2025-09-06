@@ -365,7 +365,6 @@ cp .env.example .env
 - `API_KEY`: Your API authentication key
 
 **Optional** (for enhanced functionality):
-- `PIXABAY_API_KEY`: For background video search  
 - `S3_*` or `GCP_*`: For cloud storage
 
 ### Health Checks

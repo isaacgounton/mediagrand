@@ -16,7 +16,6 @@
 * [Thumbnail Generation](video/thumbnail.md)
 * [Trim Video](video/trim.md)
 * [Video to Blog Post (Simone)](simone/index.md)
-* [Roadmap](video/roadmap.md)
 
 ## 📝 Text Operations
 * [Text Overlay](text/text_overlay.md)
