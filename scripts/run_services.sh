@@ -12,7 +12,7 @@ trap cleanup SIGTERM
 
 # Bootstrap API key management system on first run
 echo "🚀 Bootstrapping API key management system..."
-python3 bootstrap_admin.py
+python3 utils/bootstrap_admin.py
 echo "✅ Bootstrap completed"
 
 # Array to store background process PIDs
@@ -20,7 +20,7 @@ declare -a pids
 
 # Start RQ workers with correct settings
 for i in $(seq 1 ${RQ_WORKERS:-2}); do
-    python start_worker.py & # Use custom worker script to avoid CLI conflicts
+    python3 utils/start_worker.py & # Use custom worker script to avoid CLI conflicts
     pids+=($!)
 done
 
