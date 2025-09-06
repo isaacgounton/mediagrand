@@ -29,7 +29,7 @@ from datetime import datetime
 import time
 import psutil
 from services.authentication import authenticate
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

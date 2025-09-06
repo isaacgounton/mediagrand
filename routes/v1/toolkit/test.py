@@ -5,8 +5,8 @@ import logging
 from flask import Blueprint
 from services.enhanced_authentication import enhanced_authenticate, require_permission
 from services.cloud_storage import upload_file
-from app_utils import queue_task_wrapper
-from config import LOCAL_STORAGE_PATH
+from utils.app_utils import queue_task_wrapper
+from config.config import LOCAL_STORAGE_PATH
 
 v1_toolkit_test_bp = Blueprint('v1_toolkit_test', __name__)
 logger = logging.getLogger(__name__)

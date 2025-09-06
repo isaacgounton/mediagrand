@@ -20,7 +20,7 @@ import os
 import ffmpeg
 import requests
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def process_video_concatenate(media_urls, job_id, webhook_url=None):
     """Combine multiple videos into one."""

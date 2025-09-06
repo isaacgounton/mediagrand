@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, request, jsonify
-from app_utils import *
+from utils.app_utils import *
 import logging
 import os
 import tempfile
@@ -28,7 +28,7 @@ from werkzeug.utils import secure_filename
 from services.v1.media.media_transcribe import process_transcribe_media
 from services.enhanced_authentication import enhanced_authenticate, require_permission
 from services.cloud_storage import upload_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 v1_media_transcribe_bp = Blueprint('v1_media_transcribe', __name__)
 logger = logging.getLogger(__name__)

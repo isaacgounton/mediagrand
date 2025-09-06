@@ -18,7 +18,7 @@
 
 # routes/media_to_mp3.py
 from flask import Blueprint, current_app
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.media.convert.media_to_mp3 import process_media_to_mp3
 from services.authentication import authenticate

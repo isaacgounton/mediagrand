@@ -23,7 +23,7 @@ from datetime import timedelta
 from whisper.utils import WriteSRT, WriteVTT
 from services.file_management import download_file
 import logging
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 # Set up logging
 logger = logging.getLogger(__name__)

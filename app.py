@@ -26,8 +26,8 @@ import time
 import logging
 from functools import wraps
 import importlib
-from version import BUILD_NUMBER
-from app_utils import log_job_status # Assuming log_job_status is here
+from config.version import BUILD_NUMBER
+from utils.app_utils import log_job_status # Assuming log_job_status is here
 
 def create_redis_connection(max_retries=5, retry_delay=2):
     """Create Redis connection with retry logic"""

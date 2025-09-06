@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, request, jsonify
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.v1.media.metadata import get_media_metadata
 from services.authentication import authenticate

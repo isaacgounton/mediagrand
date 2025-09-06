@@ -20,7 +20,7 @@ import os
 import ffmpeg
 import requests
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def process_media_to_mp3(media_url, job_id, bitrate='128k', sample_rate=None):
     """Convert media to MP3 format with specified bitrate and sample rate."""

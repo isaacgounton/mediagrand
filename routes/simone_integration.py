@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from services.simone.processor import process_video_to_blog, process_video_with_enhanced_features
 from services.authentication import authenticate
-from app_utils import queue_task_wrapper, validate_payload
+from utils.app_utils import queue_task_wrapper, validate_payload
 import os
 import logging
 

@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.authentication import authenticate
 from services.cloud_storage import upload_file

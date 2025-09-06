@@ -21,7 +21,7 @@ import subprocess
 import json
 import logging
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 # Set up logging
 logger = logging.getLogger(__name__)

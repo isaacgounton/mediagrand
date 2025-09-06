@@ -438,7 +438,7 @@ def admin_login_api():
         
         if username == admin_username and password == admin_password:
             # Get legacy API key for admin access
-            from config import API_KEY as LEGACY_KEY
+            from config.config import API_KEY as LEGACY_KEY
             
             # Generate secure token (JWT if available, HMAC fallback)
             token = generate_secure_token(admin_username, LEGACY_KEY)

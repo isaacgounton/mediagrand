@@ -20,8 +20,8 @@
 # Created new route: /v1/playwright/screenshot
 
 from flask import Blueprint, request, jsonify
-from app_utils import *
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import *
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 import os
 from services.v1.image.screenshot_webpage import take_screenshot

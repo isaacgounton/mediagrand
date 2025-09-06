@@ -15,7 +15,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from flask import Blueprint, request, jsonify
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.v1.image.convert.image_convert import process_image_convert_from_url, process_image_convert_from_file
 from services.authentication import authenticate

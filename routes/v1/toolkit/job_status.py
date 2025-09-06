@@ -4,7 +4,7 @@ import os
 import json
 import logging
 from flask import Blueprint, request
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 from services.enhanced_authentication import enhanced_authenticate, require_permission
 
 v1_toolkit_job_status_bp = Blueprint('v1_toolkit_job_status', __name__)

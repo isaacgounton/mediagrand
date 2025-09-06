@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 import os
 import yt_dlp

@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Isaac Gounton
 
 from flask import Blueprint, request, g
-from app_utils import queue_task_wrapper
+from utils.app_utils import queue_task_wrapper
 from services.enhanced_authentication import enhanced_authenticate, require_permission
 
 v1_toolkit_auth_bp = Blueprint('v1_toolkit_auth', __name__)

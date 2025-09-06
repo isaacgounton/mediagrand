@@ -24,7 +24,7 @@ import uuid
 import tempfile
 from services.file_management import download_file
 from services.cloud_storage import upload_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 # Set up logging
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ import json
 import logging # Added logging import
 
 import requests
-from config import OPENAI_MODEL, OPENAI_BASE_URL
+from config.config import OPENAI_MODEL, OPENAI_BASE_URL
 
 
 class Blogger:

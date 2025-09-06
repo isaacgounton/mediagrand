@@ -7,7 +7,7 @@ import requests
 from typing import List, Dict, Any, Optional, Tuple
 
 from services.simone.utils.prompts import get_social_media_prompt, get_topic_identification_prompt, get_x_thread_prompt
-from config import OPENAI_MODEL, OPENAI_BASE_URL
+from config.config import OPENAI_MODEL, OPENAI_BASE_URL
 
 
 class SocialMediaGenerator:

@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.audio_mixing import process_audio_mixing
 from services.authentication import authenticate

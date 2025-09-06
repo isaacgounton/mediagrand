@@ -203,7 +203,7 @@ def update_progress(job_id: str, progress_data: Dict[str, Any]) -> None:
         return  # Skip if no job_id provided
     
     try:
-        from app_utils import log_job_status
+        from utils.app_utils import log_job_status
         log_job_status(job_id, {
             'status': 'in_progress',
             'progress': progress_data,

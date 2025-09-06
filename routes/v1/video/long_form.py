@@ -10,7 +10,7 @@ from services.v1.ai.long_form_ai_service import LongFormAIService
 from services.v1.audio.speech import generate_tts
 from services.v1.audio.long_form_audio_mixer import LongFormAudioMixer
 from services.cloud_storage import upload_file
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
 
 long_form_bp = Blueprint('long_form_bp', __name__)

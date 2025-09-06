@@ -12,7 +12,7 @@ from services.v1.audio.speech import generate_tts # For voiceover
 from services.v1.video.merge_videos_with_audio import process_video_merge_with_audio # For merging video and audio
 from services.v1.video.caption_video import process_captioning_v1 # For captioning
 from services.cloud_storage import upload_file # For uploading final short
-from app_utils import validate_payload, queue_task_wrapper # Correct import for validate_payload
+from utils.app_utils import validate_payload, queue_task_wrapper # Correct import for validate_payload
 from services.authentication import authenticate
 
 shorts_bp = Blueprint('shorts_bp', __name__)

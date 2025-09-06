@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Isaac Gounton
 
 from flask import Blueprint, request, jsonify
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.v1.audio.convert.audio_convert import process_audio_convert_from_url, process_audio_convert_from_file
 from services.authentication import authenticate

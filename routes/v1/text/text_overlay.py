@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import logging
 from services.v1.text.text_overlay_service import TextOverlayService
-from app_utils import queue_task_wrapper
+from utils.app_utils import queue_task_wrapper
 import uuid
 
 text_overlay_bp = Blueprint('text_overlay', __name__)

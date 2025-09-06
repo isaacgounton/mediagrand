@@ -20,7 +20,7 @@ import os
 import ffmpeg
 import logging
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 

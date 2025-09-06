@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.video.split import split_video
 from services.authentication import authenticate

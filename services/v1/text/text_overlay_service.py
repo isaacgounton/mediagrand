@@ -5,7 +5,7 @@ import subprocess
 import logging
 from services.file_management import download_file
 from services.cloud_storage import upload_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 class TextOverlayService:
     def __init__(self):

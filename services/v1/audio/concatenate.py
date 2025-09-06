@@ -19,7 +19,7 @@
 import os
 import ffmpeg
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def process_audio_concatenate(media_urls, job_id, webhook_url=None):
     """Combine multiple audio files into one."""

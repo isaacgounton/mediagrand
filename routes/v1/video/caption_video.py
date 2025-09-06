@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, jsonify
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import logging
 from services.v1.video.caption_video import process_captioning_v1
 from services.authentication import authenticate

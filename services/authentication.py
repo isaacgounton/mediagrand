@@ -18,7 +18,7 @@
 
 from functools import wraps
 from flask import request, jsonify, has_request_context
-from config import API_KEY
+from config.config import API_KEY
 
 def authenticate(func):
     @wraps(func)

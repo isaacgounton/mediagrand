@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from app_utils import *
+from utils.app_utils import *
 from services.authentication import authenticate
 from services.v1.media.media_duration import get_media_duration_from_url
 import logging

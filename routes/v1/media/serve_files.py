@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory, current_app
 import os
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 import mimetypes
 
 v1_media_serve_files_bp = Blueprint('v1_media_serve_files', __name__, url_prefix='/v1/media/files')

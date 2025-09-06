@@ -24,7 +24,7 @@ import json
 import time
 import tempfile
 import logging
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 # No module-level variables needed for the simplified approach
 

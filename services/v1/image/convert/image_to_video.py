@@ -21,7 +21,7 @@ import subprocess
 import logging
 from services.file_management import download_file
 from PIL import Image
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 logger = logging.getLogger(__name__)
 
 def process_image_to_video(image_url, length, frame_rate, zoom_speed, job_id, webhook_url=None):

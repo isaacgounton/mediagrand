@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Ensure required directories exist
 def ensure_required_directories():
     """Ensure all required directories exist"""
-    from config import LOCAL_STORAGE_PATH
+    from config.config import LOCAL_STORAGE_PATH
     
     directories = [
         LOCAL_STORAGE_PATH,

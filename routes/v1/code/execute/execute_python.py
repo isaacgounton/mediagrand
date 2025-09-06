@@ -20,7 +20,7 @@ import os
 import logging
 from flask import Blueprint, request
 from services.authentication import authenticate
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 import subprocess
 import tempfile
 import json

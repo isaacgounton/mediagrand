@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.video.video_overlay import video_overlay
 from services.authentication import authenticate

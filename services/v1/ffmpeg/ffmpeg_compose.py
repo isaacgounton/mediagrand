@@ -18,7 +18,7 @@ import os
 import subprocess
 import json
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def get_extension_from_format(format_name):
     # Mapping of common format names to file extensions

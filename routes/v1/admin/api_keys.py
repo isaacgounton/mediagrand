@@ -21,7 +21,7 @@ def test_basic():
 @api_keys_bp.route('/v1/admin/debug', methods=['GET'])
 def debug_status():
     """Debug endpoint to check authentication and database status - NO AUTH for testing"""
-    from config import API_KEY as LEGACY_KEY
+    from config.config import API_KEY as LEGACY_KEY
     api_key = request.headers.get('X-API-Key')
     
     try:

@@ -19,7 +19,7 @@ import logging
 import requests
 from PIL import Image
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 from urllib.parse import urlparse
 import tempfile
 

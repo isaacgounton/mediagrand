@@ -1,5 +1,5 @@
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.audio.concatenate import process_audio_concatenate
 from services.authentication import authenticate

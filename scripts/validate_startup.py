@@ -194,7 +194,7 @@ def create_health_check_endpoint_test():
         
         # Test basic configuration
         with app.app_context():
-            from config import API_KEY, LOCAL_STORAGE_PATH
+            from config.config import API_KEY, LOCAL_STORAGE_PATH
             logger.info("✓ Configuration loads successfully")
         
         return True

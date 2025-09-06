@@ -22,7 +22,7 @@ import mimetypes # Added import
 from abc import ABC, abstractmethod
 from services.gcp_toolkit import upload_to_gcs
 from services.s3_toolkit import upload_to_s3
-from config import validate_env_vars
+from config.config import validate_env_vars
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)

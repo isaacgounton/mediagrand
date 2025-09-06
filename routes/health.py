@@ -17,8 +17,8 @@
 import os
 import logging
 from flask import Blueprint, jsonify
-from config import LOCAL_STORAGE_PATH
-from version import BUILD_NUMBER
+from config.config import LOCAL_STORAGE_PATH
+from config.version import BUILD_NUMBER
 
 health_bp = Blueprint('health', __name__)
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ def readiness_check():
     """
     try:
         # Basic readiness checks
-        from config import API_KEY
+        from config.config import API_KEY
         
         if not API_KEY:
             return jsonify({"status": "not ready", "reason": "API_KEY not configured"}), 503

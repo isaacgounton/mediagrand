@@ -19,7 +19,7 @@
 import os
 import ffmpeg
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def extract_thumbnail(video_url, job_id, second=0):
     """

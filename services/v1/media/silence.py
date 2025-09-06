@@ -26,7 +26,7 @@ import librosa
 import scipy.signal
 from typing import List, Dict, Any, Optional, Tuple
 from services.file_management import download_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 # Set up logging
 logger = logging.getLogger(__name__)

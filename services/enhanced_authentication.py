@@ -2,7 +2,7 @@
 
 from functools import wraps
 from flask import request, jsonify, has_request_context, g
-from config import API_KEY
+from config.config import API_KEY
 from models.api_keys import APIKeyManager
 import logging
 import time

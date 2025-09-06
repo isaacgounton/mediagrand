@@ -17,14 +17,14 @@
 
 
 from flask import Blueprint, request, jsonify
-from app_utils import *
+from utils.app_utils import *
 import logging
 import os
 import json
 from services.transcription import process_transcription
 from services.authentication import authenticate
 from services.cloud_storage import upload_file
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 transcribe_bp = Blueprint('transcribe', __name__)
 logger = logging.getLogger(__name__)

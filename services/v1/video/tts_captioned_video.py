@@ -21,7 +21,7 @@ import tempfile
 from services.file_management import download_file
 from services.v1.audio.speech import generate_tts
 from services.transcription import process_transcription
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 

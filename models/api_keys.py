@@ -6,7 +6,7 @@ import hashlib
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 class APIKeyManager:
     def __init__(self):

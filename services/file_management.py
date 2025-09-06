@@ -23,7 +23,7 @@ import time
 import logging
 from urllib.parse import urlparse, parse_qs
 import mimetypes
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def get_extension_from_url(url, is_cookie=False):
     """Extract file extension from URL or content type.

@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.media.silence import detect_silence, detect_silence_segments, analyze_audio_characteristics
 from services.authentication import authenticate

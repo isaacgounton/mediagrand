@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from models.api_keys import APIKeyManager
-from config import LOCAL_STORAGE_PATH
+from config.config import LOCAL_STORAGE_PATH
 
 def bootstrap_admin():
     """Initialize the API key management system with an admin user"""

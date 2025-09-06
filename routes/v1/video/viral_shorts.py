@@ -12,7 +12,7 @@ from services.v1.audio.speech import generate_tts
 from services.v1.audio.intelligent_audio_mixer import IntelligentAudioMixer
 from services.v1.ffmpeg.ffmpeg_compose import process_ffmpeg_compose
 from services.cloud_storage import upload_file
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
 
 viral_shorts_bp = Blueprint('viral_shorts_bp', __name__)

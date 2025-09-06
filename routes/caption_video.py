@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, current_app
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.caption_video import process_captioning
 from services.authentication import authenticate

@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, request, jsonify, current_app
-from app_utils import *
+from utils.app_utils import *
 from functools import wraps
 import os
 

@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
 from services.v1.audio.musicgen import MusicGenService
 import logging

@@ -24,7 +24,7 @@ from .config import TTS_CONFIG
 
 # Import LOCAL_STORAGE_PATH from the main config
 try:
-    from config import LOCAL_STORAGE_PATH
+    from config.config import LOCAL_STORAGE_PATH
 except ImportError:
     # Fallback if config is not available
     LOCAL_STORAGE_PATH = os.getenv('LOCAL_STORAGE_PATH', '/tmp')

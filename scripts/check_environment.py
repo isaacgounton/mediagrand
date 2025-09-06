@@ -38,7 +38,7 @@ def check_imports():
 def check_tts_config():
     """Check TTS configuration"""
     try:
-        from config import TTS_SERVER_URL
+        from config.config import TTS_SERVER_URL
         logger.info(f"✓ TTS Server URL is configured: {TTS_SERVER_URL}")
     except (ImportError, AttributeError):
         logger.error("✗ TTS Server URL is not configured in config.py")

@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.extract_keyframes import process_keyframe_extraction
 from services.authentication import authenticate

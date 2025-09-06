@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.video.concatenate import process_video_concatenate
 from services.authentication import authenticate

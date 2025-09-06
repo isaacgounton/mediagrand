@@ -9,7 +9,7 @@ from services.simone.utils.downloader import Downloader
 from services.v1.video.video_analysis import analyze_video_segments
 from services.ffmpeg_toolkit import clip_video
 from services.cloud_storage import upload_file
-from app_utils import validate_payload, queue_task_wrapper
+from utils.app_utils import validate_payload, queue_task_wrapper
 from services.authentication import authenticate
 
 clips_generator_bp = Blueprint('clips_generator_bp', __name__)

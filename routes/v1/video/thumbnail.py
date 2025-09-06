@@ -17,7 +17,7 @@
 
 
 from flask import Blueprint, jsonify
-from app_utils import *
+from utils.app_utils import *
 import logging
 from services.v1.video.thumbnail import extract_thumbnail
 from services.authentication import authenticate
