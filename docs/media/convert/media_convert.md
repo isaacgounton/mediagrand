@@ -1,12 +1,12 @@
-# Media Convert Endpoint Documentation
+# Media Format Conversion Endpoint Documentation
 
 ## 1. Overview
 
-The `/v1/media/convert` endpoint is part of the Flask API application and is responsible for converting media files (audio or video) from one format to another. This endpoint fits into the overall API structure as a part of the `v1` blueprint, which contains various media-related functionalities.
+The `/v1/media/format` endpoint is part of the Flask API application and is responsible for converting media files (audio or video) from one format to another. This endpoint fits into the overall API structure as a part of the `v1` blueprint, which contains various media-related functionalities.
 
 ## 2. Endpoint
 
-**URL Path:** `/v1/media/convert`
+**URL Path:** `/v1/media/format`
 **HTTP Method:** `POST`
 
 ## 3. Request
@@ -47,7 +47,7 @@ The request body must be a JSON object with the following properties:
 
 ```bash
 curl -X POST \
-  https://api.example.com/v1/media/convert \
+  https://api.example.com/v1/media/format \
   -H 'x-api-key: YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{

@@ -25,7 +25,11 @@
 * [Speech Processing](audio/speech.md)
 
 ## 🖼️ Image Operations
-* [Image to Video Conversion](image/convert/image_to_video.md)
+* [Image to Video Transformation](image/convert/image_to_video.md)
+* [Image Format Conversion](image/convert/image_convert.md)
+
+## 🎵 Audio Operations
+* [Audio Format Conversion](audio/convert/audio_convert.md)
 
 ## 📹 Media Operations
 * [Media Cutting](media/cut.md)
@@ -38,8 +42,8 @@
 * [Silence Detection](media/silence.md)
 
 ### Media Conversion
-* [General Media Conversion](media/convert/media_convert.md)
-* [Media to MP3](media/convert/media_to_mp3.md)
+* [Media Format Conversion](media/convert/media_convert.md)
+* [Media to MP3 Transformation](media/convert/media_to_mp3.md)
 
 ## 💻 Code Operations
 * [Python Code Execution](code/execute/execute_python.md)

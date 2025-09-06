@@ -1,12 +1,12 @@
-# Audio Convert Endpoint Documentation
+# Audio Format Conversion Endpoint Documentation
 
 ## 1. Overview
 
-The `/v1/audio/convert` endpoint is part of the Flask API application and is responsible for converting audio files from one format to another. This endpoint supports both file uploads and URL-based audio conversion, making it versatile for different use cases.
+The `/v1/audio/format` endpoint is part of the Flask API application and is responsible for converting audio files from one format to another. This endpoint supports both file uploads and URL-based audio conversion, making it versatile for different use cases.
 
 ## 2. Endpoint
 
-**URL Path:** `/v1/audio/convert`
+**URL Path:** `/v1/audio/format`
 **HTTP Method:** `POST`
 
 ## 3. Request Types
@@ -48,7 +48,7 @@ Convert an audio file from a publicly accessible URL.
 
 ```bash
 curl -X POST \
-  https://api.example.com/v1/audio/convert?format=mp3 \
+  https://api.example.com/v1/audio/format?format=mp3 \
   -H 'x-api-key: YOUR_API_KEY' \
   -F 'audio=@input.ogg'
 ```
@@ -66,7 +66,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  https://api.example.com/v1/audio/convert \
+  https://api.example.com/v1/audio/format \
   -H 'x-api-key: YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{

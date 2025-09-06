@@ -26,8 +26,7 @@ from services.cloud_storage import upload_file
 v1_image_convert_video_bp = Blueprint('v1_image_convert_video', __name__)
 logger = logging.getLogger(__name__)
 
-@v1_image_convert_video_bp.route('/v1/image/convert/video', methods=['POST'])
-@v1_image_convert_video_bp.route('/v1/image/transform/video', methods=['POST']) #depleft for backwards compatibility, do not use.
+@v1_image_convert_video_bp.route('/v1/image/to-video', methods=['POST'])
 @authenticate
 @validate_payload({
     "type": "object",
@@ -66,8 +65,8 @@ def image_to_video(job_id, data):
         logger.info(f"Job {job_id}: Converted video uploaded to cloud storage: {cloud_url}")
 
         # Return the cloud URL for the uploaded file
-        return cloud_url, "/v1/image/convert/video", 200
+        return cloud_url, "/v1/image/to-video", 200
         
     except Exception as e:
         logger.error(f"Job {job_id}: Error processing image to video: {str(e)}", exc_info=True)
-        return str(e), "/v1/image/convert/video", 500
+        return str(e), "/v1/image/to-video", 500

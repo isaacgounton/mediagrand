@@ -25,7 +25,7 @@ import os
 v1_media_convert_bp = Blueprint('v1_media_convert', __name__)
 logger = logging.getLogger(__name__)
 
-@v1_media_convert_bp.route('/v1/media/convert', methods=['POST'])
+@v1_media_convert_bp.route('/v1/media/format', methods=['POST'])
 @authenticate
 @validate_payload({
     "type": "object",
@@ -74,8 +74,8 @@ def convert_media_format(job_id, data):
         cloud_url = upload_file(output_file)
         logger.info(f"Job {job_id}: Converted media uploaded to cloud storage: {cloud_url}")
         
-        return cloud_url, "/v1/media/convert", 200
+        return cloud_url, "/v1/media/format", 200
 
     except Exception as e:
         logger.error(f"Job {job_id}: Error during media conversion process - {str(e)}")
-        return {"error": str(e)}, "/v1/media/convert", 500 
+        return {"error": str(e)}, "/v1/media/format", 500 

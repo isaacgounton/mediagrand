@@ -149,13 +149,15 @@ curl -X POST \
 | **Image to Video** | Transform images with cinematic effects | `/v1/image/to-video` |
 | **Font Management** | 70+ professional fonts available | `/v1/video/fonts` |
 | **Visual Effects** | Ken Burns, zoom, pan effects | *Integrated* |
-| **Image Processing** | Convert, resize, optimize images | `/v1/image/*` |
+| **Image Processing** | Convert, resize, optimize images | `/v1/image/format` |
 
 ### 🛠️ Media Tools
 | Feature | Description | Endpoint |
 |---------|-------------|----------|
 | **Media Download** | Download from YouTube, social media | `/v1/media/download` |
-| **Format Conversion** | Convert between media formats | `/v1/media/convert` |
+| **Format Conversion** | Convert between media formats | `/v1/media/format` |
+| **Audio Conversion** | Convert between audio formats | `/v1/audio/format` |
+| **Media to MP3** | Convert any media to MP3 audio | `/v1/media/to-mp3` |
 | **Metadata Extraction** | Analyze media properties | `/v1/media/metadata` |
 | **Silence Detection** | Find quiet segments in audio | `/v1/media/silence` |
 

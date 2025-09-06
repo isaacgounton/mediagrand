@@ -1,12 +1,12 @@
-# Image Convert Endpoint Documentation
+# Image Format Conversion Endpoint Documentation
 
 ## 1. Overview
 
-The `/v1/image/convert` endpoint is part of the Flask API application and is responsible for converting image files from one format to another. This endpoint supports both file uploads and URL-based image conversion, making it versatile for different use cases.
+The `/v1/image/format` endpoint is part of the Flask API application and is responsible for converting image files from one format to another. This endpoint supports both file uploads and URL-based image conversion, making it versatile for different use cases.
 
 ## 2. Endpoint
 
-**URL Path:** `/v1/image/convert`
+**URL Path:** `/v1/image/format`
 **HTTP Method:** `POST`
 
 ## 3. Request Types
@@ -48,7 +48,7 @@ Convert an image from a publicly accessible URL.
 
 ```bash
 curl -X POST \
-  https://api.example.com/v1/image/convert?format=webp \
+  https://api.example.com/v1/image/format?format=webp \
   -H 'x-api-key: YOUR_API_KEY' \
   -F 'image=@input.jpg'
 ```
@@ -66,7 +66,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  https://api.example.com/v1/image/convert \
+  https://api.example.com/v1/image/format \
   -H 'x-api-key: YOUR_API_KEY' \
   -H 'Content-Type: application/json' \
   -d '{

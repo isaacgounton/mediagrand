@@ -11,7 +11,7 @@ import os
 v1_audio_convert_bp = Blueprint('v1_audio_convert', __name__)
 logger = logging.getLogger(__name__)
 
-@v1_audio_convert_bp.route('/v1/audio/convert', methods=['POST'])
+@v1_audio_convert_bp.route('/v1/audio/format', methods=['POST'])
 @authenticate
 @queue_task_wrapper(bypass_queue=False)
 def convert_audio(job_id, data):
@@ -32,23 +32,23 @@ def handle_file_upload(job_id, data):
     output_format = request.args.get('format') or request.form.get('format')
     if not output_format:
         logger.error(f"Job {job_id}: No format specified")
-        return {"error": "Format parameter is required"}, "/v1/audio/convert", 400
+        return {"error": "Format parameter is required"}, "/v1/audio/format", 400
     
     # Validate format
     supported_formats = ['mp3', 'ogg', 'oga']
     if output_format.lower() not in supported_formats:
         logger.error(f"Job {job_id}: Unsupported format: {output_format}")
-        return {"error": f"Unsupported format: {output_format}. Supported formats: {supported_formats}"}, "/v1/audio/convert", 400
+        return {"error": f"Unsupported format: {output_format}. Supported formats: {supported_formats}"}, "/v1/audio/format", 400
     
     # Check if file was uploaded
     if 'audio' not in request.files:
         logger.error(f"Job {job_id}: No audio file uploaded")
-        return {"error": "No audio file uploaded"}, "/v1/audio/convert", 400
+        return {"error": "No audio file uploaded"}, "/v1/audio/format", 400
     
     file = request.files['audio']
     if file.filename == '':
         logger.error(f"Job {job_id}: No file selected")
-        return {"error": "No file selected"}, "/v1/audio/convert", 400
+        return {"error": "No file selected"}, "/v1/audio/format", 400
 
     logger.info(f"Job {job_id}: Received audio conversion request for file: {file.filename} to format: {output_format}")
 
@@ -57,7 +57,7 @@ def handle_file_upload(job_id, data):
         file_data = file.read()
         if not file_data:
             logger.error(f"Job {job_id}: Empty file uploaded")
-            return {"error": "Empty file uploaded"}, "/v1/audio/convert", 400
+            return {"error": "Empty file uploaded"}, "/v1/audio/format", 400
         
         output_file = process_audio_convert_from_file(
             file_data, 
@@ -70,11 +70,11 @@ def handle_file_upload(job_id, data):
         cloud_url = upload_file(output_file)
         logger.info(f"Job {job_id}: Converted audio uploaded to cloud storage: {cloud_url}")
         
-        return cloud_url, "/v1/audio/convert", 200
+        return cloud_url, "/v1/audio/format", 200
 
     except Exception as e:
         logger.error(f"Job {job_id}: Error during audio conversion process - {str(e)}")
-        return {"error": str(e)}, "/v1/audio/convert", 500
+        return {"error": str(e)}, "/v1/audio/format", 500
 
 @validate_payload({
     "type": "object",
@@ -107,8 +107,8 @@ def handle_url_conversion(job_id, data):
         cloud_url = upload_file(output_file)
         logger.info(f"Job {job_id}: Converted audio uploaded to cloud storage: {cloud_url}")
         
-        return cloud_url, "/v1/audio/convert", 200
+        return cloud_url, "/v1/audio/format", 200
 
     except Exception as e:
         logger.error(f"Job {job_id}: Error during audio conversion process - {str(e)}")
-        return {"error": str(e)}, "/v1/audio/convert", 500
+        return {"error": str(e)}, "/v1/audio/format", 500

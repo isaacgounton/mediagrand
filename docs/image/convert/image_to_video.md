@@ -2,11 +2,11 @@
 
 ## 1. Overview
 
-The `/v1/image/convert/video` endpoint is part of the Flask API application and is responsible for converting an image into a video file. This endpoint is registered in the `app.py` file under the `v1_image_convert_video_bp` blueprint, which is imported from the `routes.v1.image.convert.image_to_video` module.
+The `/v1/image/to-video` endpoint is part of the Flask API application and is responsible for converting an image into a video file. This endpoint is registered in the `app.py` file under the `v1_image_convert_video_bp` blueprint, which is imported from the `routes.v1.image.convert.image_to_video` module.
 
 ## 2. Endpoint
 
-**URL Path:** `/v1/image/convert/video`
+**URL Path:** `/v1/image/to-video`
 **HTTP Method:** `POST`
 
 ## 3. Request
@@ -64,7 +64,7 @@ curl -X POST \
      -H "x-api-key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"image_url": "https://example.com/image.jpg", "length": 10, "frame_rate": 24, "zoom_speed": 5, "webhook_url": "https://example.com/webhook", "id": "request-123"}' \
-     http://your-api-endpoint/v1/image/convert/video
+     http://your-api-endpoint/v1/image/to-video
 ```
 
 ## 4. Response
