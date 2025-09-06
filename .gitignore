@@ -66,3 +66,5 @@ cookies.txt
 
 # Ignore docs build
 /docs/_build/
+
+new.json

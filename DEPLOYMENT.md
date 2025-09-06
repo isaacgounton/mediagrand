@@ -37,9 +37,9 @@ mediagrand/
 - **Configuration**: Points to `docker/Dockerfile` for builds
 
 ### 2. Manual Docker Compose (Development)
-- **File used**: `/docker/docker-compose.yml`
-- **Usage**: `cd docker && docker-compose up`
-- **Benefits**: Keeps development files organized
+- **File used**: `/docker/docker-compose.dev.yml`
+- **Usage**: `cd docker && docker-compose -f docker-compose.dev.yml up`
+- **Benefits**: Keeps development files organized, exposes Redis on port 6380
 
 ### 3. Production Deployment
 - **File used**: `/docker/docker-compose.prod.yml`
@@ -84,7 +84,12 @@ sed -i 's/context: \./context: ../g' docker/docker-compose.yml
 
 ### Common Deployment Issues
 
-1. **File not found errors** (e.g., `run_services.sh: not found`)
+1. **Port conflicts** (e.g., `port is already allocated`)
+   - **Cause**: Redis port 6379 already in use on host
+   - **Solution**: Remove external port mapping for Redis in deployment
+   - **Note**: Redis only needs internal connectivity for the application
+
+2. **File not found errors** (e.g., `run_services.sh: not found`)
    - **Cause**: Dockerfile references moved to organized folders
    - **Solution**: Update Dockerfile paths to reflect new structure
    - **Example**: `COPY run_services.sh` → `COPY scripts/run_services.sh`

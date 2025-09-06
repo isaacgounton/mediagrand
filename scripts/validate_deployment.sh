@@ -41,6 +41,13 @@ else
     echo "❌ Dockerfile doesn't reference scripts/run_services.sh correctly"
 fi
 
+# Check if Redis port is not exposed (for deployment)
+if grep -q "6379:6379" docker-compose.yml; then
+    echo "⚠️  Redis port 6379 is exposed - may cause conflicts in deployment"
+else
+    echo "✅ Redis port not exposed externally (deployment ready)"
+fi
+
 echo ""
 echo "📝 Checking environment variables:"
 
