@@ -133,8 +133,6 @@ OPENAI_BASE_URL=https://openrouter.ai/api/v1
 PEXELS_API_KEY=your-pexels-key
 PIXABAY_API_KEY=your-pixabay-key
 
-# TTS configuration
-TTS_SERVER_URL=https://tts.mediagrand.com/api
 ```
 
 ## Development Workflow

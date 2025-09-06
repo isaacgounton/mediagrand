@@ -458,7 +458,6 @@ The following environment variables are required for the viral shorts endpoint:
 
 ### Optional Variables (with defaults)
 - `LOCAL_STORAGE_PATH`: Path for temporary file storage (default: `/app/data/tmp`)
-- `TTS_SERVER_URL`: URL for TTS service (default: `https://tts.mediagrand.com/api`)
 
 ### Example Configuration
 ```bash
@@ -468,7 +467,6 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 # Optional (with defaults shown)
 LOCAL_STORAGE_PATH=/app/data/tmp
-TTS_SERVER_URL=https://tts.mediagrand.com/api
 ```
 
 ## 9. Revolutionary Enhancements vs. Standard Processing

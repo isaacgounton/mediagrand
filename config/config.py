@@ -22,11 +22,6 @@ API_KEY = os.environ.get('API_KEY')
 if not API_KEY:
     raise ValueError("API_KEY environment variable is not set")
 
-# TTS Server configuration
-TTS_SERVER_URL = os.environ.get('TTS_SERVER_URL', 'https://tts.mediagrand.com/api')
-if not TTS_SERVER_URL.endswith('/'):
-    TTS_SERVER_URL += '/'
-
 # AI Model configuration for Simone (OpenAI-compatible)
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'google/gemma-3-12b-it:free')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')

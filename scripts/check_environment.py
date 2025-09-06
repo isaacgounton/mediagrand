@@ -35,20 +35,10 @@ def check_imports():
     else:
         logger.info("\nAll required packages are available!")
 
-def check_tts_config():
-    """Check TTS configuration"""
-    try:
-        from config.config import TTS_SERVER_URL
-        logger.info(f"✓ TTS Server URL is configured: {TTS_SERVER_URL}")
-    except (ImportError, AttributeError):
-        logger.error("✗ TTS Server URL is not configured in config.py")
-        sys.exit(1)
-
 def main():
     """Run all environment checks"""
     logger.info("Checking Python environment...")
     check_imports()
-    check_tts_config()
 
 if __name__ == "__main__":
     main()

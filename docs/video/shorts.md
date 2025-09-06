@@ -474,7 +474,6 @@ The following environment variables are required for the shorts endpoint to func
 - `OPENAI_MODEL`: AI model to use (default: `google/gemma-3-12b-it:free`)
 - `OPENAI_BASE_URL`: Base URL for OpenAI-compatible API (default: `https://openrouter.ai/api/v1`)
 - `LOCAL_STORAGE_PATH`: Path for temporary file storage (default: `/app/data/tmp`)
-- `TTS_SERVER_URL`: URL for TTS service (default: `https://tts.mediagrand.com/api`)
 
 ### Example Configuration
 ```bash
@@ -486,7 +485,6 @@ OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=google/gemma-3-12b-it:free
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 LOCAL_STORAGE_PATH=/app/data/tmp
-TTS_SERVER_URL=https://tts.mediagrand.com/api
 ```
 
 ## 9. Usage Notes
