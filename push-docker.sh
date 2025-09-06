@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# DahoPevi Docker Build and Push Script
+# MediaGrand Docker Build and Push Script
 # Usage: ./push-docker.sh [tag]
 
 set -e
 
 # Configuration
-IMAGE_NAME="isaacgounton/dahopevi"
+IMAGE_NAME="isaacgounton/mediagrand"
 DEFAULT_TAG="v1.0"
 TAG=${1:-$DEFAULT_TAG}
 
-echo "🚀 Building DahoPevi Docker Image"
+echo "🚀 Building MediaGrand Docker Image"
 echo "Image: $IMAGE_NAME:$TAG"
 echo "----------------------------------------"
 
@@ -29,7 +29,7 @@ echo "📤 Pushing to Docker Hub..."
 docker push $IMAGE_NAME:$TAG
 
 echo "✅ Successfully built and pushed $IMAGE_NAME:$TAG"
-echo "🌐 Available on Docker Hub: https://hub.docker.com/r/isaacgounton/dahopevi"
+echo "🌐 Available on Docker Hub: https://hub.docker.com/r/isaacgounton/mediagrand"
 
 # Test the image locally
 echo "🧪 Testing image locally..."

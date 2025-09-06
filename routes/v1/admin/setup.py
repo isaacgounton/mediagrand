@@ -18,13 +18,13 @@ def setup_page():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DahoPevi API Setup</title>
+    <title>MediaGrand API Setup</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-            <h1 class="text-3xl font-bold text-gray-800 mb-6">🚀 DahoPevi API Setup</h1>
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">🚀 MediaGrand API Setup</h1>
             
             <div class="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
                 <h2 class="text-lg font-semibold text-green-800 mb-2">✅ System Status</h2>

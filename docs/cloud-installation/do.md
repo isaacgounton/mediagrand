@@ -12,7 +12,7 @@ This guide walks you through deploying the No-Code Architects Toolkit API on Dig
 
 1. Sign in to your Digital Ocean account
 2. Create a new project or select an existing one
-3. This will organize your resources for the NCA Toolkit
+3. This will organize your resources for the MediaGrand
 
 ## Step 2: Create a Digital Ocean Space
 
@@ -79,7 +79,7 @@ Add the following environment variables exactly as shown (be careful with unders
 ### Using Postman
 
 1. Sign up for or log in to [Postman](https://www.postman.com/)
-2. Import the [NCA Toolkit Postman Collection](https://bit.ly/49Gkh61)
+2. Import the [MediaGrand Postman Collection](https://bit.ly/49Gkh61)
 3. Fork the collection to your workspace
 4. Create a new environment:
    - Name it "Digital Ocean" or similar
@@ -100,7 +100,7 @@ Add the following environment variables exactly as shown (be careful with unders
 
 ## Next Steps
 
-Now that you have successfully deployed the NCA Toolkit API, you can:
+Now that you have successfully deployed the MediaGrand API, you can:
 - Explore all the available endpoints in the Postman collection
 - Integrate the API with your applications
 - Consider securing your API key with a more complex value

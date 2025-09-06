@@ -15,5 +15,5 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-Routes package for DahoPevi API.
+Routes package for MediaGrand API.
 """

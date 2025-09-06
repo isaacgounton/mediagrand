@@ -1,4 +1,4 @@
-# DahoPevi API
+# MediaGrand API
 
 This API processes different types of media. It is built in Python using Flask.
 
@@ -90,7 +90,7 @@ For deployment with Coolify:
    API_KEY=your_api_key_here
    APP_DEBUG=false
    APP_DOMAIN=your-domain.com
-   APP_NAME=DahoPevi API
+   APP_NAME=MediaGrand API
    APP_URL=https://your-domain.com
    # Add other required environment variables
    ```

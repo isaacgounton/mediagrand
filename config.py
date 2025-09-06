@@ -23,7 +23,7 @@ if not API_KEY:
     raise ValueError("API_KEY environment variable is not set")
 
 # TTS Server configuration
-TTS_SERVER_URL = os.environ.get('TTS_SERVER_URL', 'https://tts.dahopevi.com/api')
+TTS_SERVER_URL = os.environ.get('TTS_SERVER_URL', 'https://tts.mediagrand.com/api')
 if not TTS_SERVER_URL.endswith('/'):
     TTS_SERVER_URL += '/'
 

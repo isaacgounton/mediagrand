@@ -15,7 +15,7 @@ from config import LOCAL_STORAGE_PATH
 def bootstrap_admin():
     """Initialize the API key management system with an admin user"""
     
-    print("🚀 Bootstrapping DahoPevi API Key Management System...")
+    print("🚀 Bootstrapping MediaGrand API Key Management System...")
     
     try:
         # Initialize the API key manager
@@ -33,7 +33,7 @@ def bootstrap_admin():
             # Create admin user
             user_id = api_manager.create_user(
                 username='admin',
-                email='admin@dahopevi.local'
+                email='admin@mediagrand.local'
             )
             print(f"✅ Created admin user (ID: {user_id})")
         

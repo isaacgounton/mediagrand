@@ -3,7 +3,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: dahopevi-redis
+    container_name: mediagrand-redis
     command: redis-server --bind 0.0.0.0 --protected-mode no --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
@@ -17,7 +17,7 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - dahopevi-network
+      - mediagrand-network
     logging:
       driver: json-file
       options:
@@ -25,7 +25,7 @@ services:
         max-file: "3"
 
   api:
-    image: isaacgounton/dahopevi:v1.0
+    image: isaacgounton/mediagrand:v1.0
     ports:
       - "8080:8080"
     environment:
@@ -50,10 +50,10 @@ services:
       S3_REGION: ${S3_REGION}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       WHISPER_CACHE_DIR: /opt/whisper_cache
-      TTS_SERVER_URL: ${TTS_SERVER_URL:-https://tts.dahopevi.com/api}
+      TTS_SERVER_URL: ${TTS_SERVER_URL:-https://tts.mediagrand.com/api}
     volumes:
       - whisper_models:/opt/whisper_cache
-      - dahopevi_data:/app/data
+      - mediagrand_data:/app/data
       - gcp-sa-credentials:/app/gcp-sa-credentials
       - tmp-assets:/tmp
     restart: unless-stopped
@@ -67,7 +67,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - dahopevi-network
+      - mediagrand-network
     logging:
       driver: json-file
       options:
@@ -77,7 +77,7 @@ services:
 volumes:
   whisper_models:
     driver: local
-  dahopevi_data:
+  mediagrand_data:
     driver: local
   gcp-sa-credentials:
     driver: local
@@ -87,5 +87,5 @@ volumes:
     driver: local
 
 networks:
-  dahopevi-network:
+  mediagrand-network:
     driver: bridge

@@ -27,7 +27,7 @@ def admin_login():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DahoPevi Admin Login</title>
+    <title>MediaGrand Admin Login</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -37,7 +37,7 @@ def admin_login():
             <div class="text-center">
                 <i class="fas fa-shield-alt text-6xl text-blue-600 mb-4"></i>
                 <h2 class="text-3xl font-extrabold text-gray-900">
-                    DahoPevi Admin
+                    MediaGrand Admin
                 </h2>
                 <p class="mt-2 text-sm text-gray-600">
                     API Key Management Dashboard
@@ -354,7 +354,7 @@ def generate_jwt_token(username, api_key):
         'api_key': api_key,
         'exp': now + datetime.timedelta(hours=24),  # 24 hour expiry
         'iat': now,
-        'iss': 'dahopevi-admin'
+        'iss': 'mediagrand-admin'
     }
     
     # Use JWT secret from environment

@@ -255,8 +255,8 @@ def create_app():
         r"/*": {
             "origins": [
                 "http://localhost:3000",
-                "https://shorts.dahopevi.com",
-                "http://shorts.dahopevi.com",
+                "https://shorts.mediagrand.com",
+                "http://shorts.mediagrand.com",
                 "http://localhost:*",
                 "https://localhost:*"
             ],
@@ -400,11 +400,11 @@ def create_app():
     def homepage():
         """Homepage showing API information and available endpoints"""
         return {
-            "message": "DahoPevi API",
+            "message": "MediaGrand API",
             "version": "1.0.0",
             "build": BUILD_NUMBER,
             "status": "healthy",
-            "description": "DahoPevi - Video & Audio Processing API",
+            "description": "MediaGrand - Video & Audio Processing API",
             "documentation": {
                 "url": "/docs",
                 "description": "API documentation and endpoints"
@@ -498,7 +498,7 @@ def create_app():
     def docs():
         """API documentation route"""
         return {
-            "title": "DahoPevi API Documentation",
+            "title": "MediaGrand API Documentation",
             "version": "1.0.0",
             "build": BUILD_NUMBER,
             "description": "Comprehensive video and audio processing API with transcription, conversion, and manipulation capabilities.",
@@ -533,7 +533,7 @@ def create_app():
                 }
             },
             "support": {
-                "github": "https://github.com/isaacgounton/dahopevi",
+                "github": "https://github.com/isaacgounton/mediagrand",
                 "contact": "isaac@etugrand.com"
             }
         }

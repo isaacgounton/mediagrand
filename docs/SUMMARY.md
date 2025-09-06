@@ -1,6 +1,6 @@
-# DahoPevi Documentation
+# MediaGrand Documentation
 
-* [Welcome to DahoPevi](README.md)
+* [Welcome to MediaGrand](README.md)
 
 ## 🎥 Video Operations
 

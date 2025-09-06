@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DahoPevi is a comprehensive Flask-based API for video and audio processing with AI capabilities. The application provides media transcription, format conversion, video editing, text-to-speech, and AI-powered content generation services.
+MediaGrand is a comprehensive Flask-based API for video and audio processing with AI capabilities. The application provides media transcription, format conversion, video editing, text-to-speech, and AI-powered content generation services.
 
 ## Development Commands
 
@@ -134,7 +134,7 @@ PEXELS_API_KEY=your-pexels-key
 PIXABAY_API_KEY=your-pixabay-key
 
 # TTS configuration
-TTS_SERVER_URL=https://tts.dahopevi.com/api
+TTS_SERVER_URL=https://tts.mediagrand.com/api
 ```
 
 ## Development Workflow

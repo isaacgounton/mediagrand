@@ -339,7 +339,7 @@ curl -X POST https://api.example.com/v1/simone/generate_x_thread \
 
 ### Required
 ```bash
-API_KEY=your_dahopevi_api_key_here
+API_KEY=your_mediagrand_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 

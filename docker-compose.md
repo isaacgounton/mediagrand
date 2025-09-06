@@ -113,7 +113,7 @@ Create an `.env` file and configure it accordingly:
 
 ```env
 # The name of your application.
-APP_NAME=NCAToolkit
+APP_NAME=MediaGrand
 
 # Debug mode setting. Set to `false` for production environments.
 APP_DEBUG=false

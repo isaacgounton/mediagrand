@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 @require_permission('read')
 @queue_task_wrapper(bypass_queue=True)
 def test_api(job_id, data=None):
-    logger.info(f"Job {job_id}: Testing DahoPevi API setup")
+    logger.info(f"Job {job_id}: Testing MediaGrand API setup")
     
     try:
         # Create test file
         test_filename = os.path.join(LOCAL_STORAGE_PATH, "success.txt")
         with open(test_filename, 'w') as f:
-            f.write("You have successfully installed the DahoPevi API, great job!")
+            f.write("You have successfully installed the MediaGrand API, great job!")
         
         # Upload file to cloud storage
         upload_url = upload_file(test_filename)

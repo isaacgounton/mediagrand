@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DahoPevi API Startup Validation Script
+MediaGrand API Startup Validation Script
 
 This script validates the environment and configuration before starting the application
 to prevent runtime crashes and provide helpful error messages.
@@ -204,7 +204,7 @@ def create_health_check_endpoint_test():
 
 def main():
     """Main validation function."""
-    logger.info("DahoPevi API Startup Validation")
+    logger.info("MediaGrand API Startup Validation")
     logger.info("=" * 40)
     
     checks = [

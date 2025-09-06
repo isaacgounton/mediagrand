@@ -63,7 +63,7 @@ class APIKeyManager:
     
     def generate_api_key(self) -> Tuple[str, str]:
         """Generate a new API key and return (full_key, hash)"""
-        prefix = "dahopevi"
+        prefix = "mediagrand"
         key_body = secrets.token_urlsafe(32)
         full_key = f"{prefix}_{key_body}"
         key_hash = hashlib.sha256(full_key.encode()).hexdigest()

@@ -1,4 +1,4 @@
-# DAHOPEVI - AI-Powered Media Processing API
+# MEDIAGRAND - AI-Powered Media Processing API
 
   A comprehensive Python-based API for video processing,
   audio manipulation, and AI-powered media generation. Built
@@ -18,7 +18,7 @@
 
   ```bash
   # Run with Docker
-  docker run -p 8080:8080 isaacgounton/dahopevi:latest
+  docker run -p 8080:8080 isaacgounton/mediagrand:latest
 
   # Or with Redis (recommended)
   docker-compose up

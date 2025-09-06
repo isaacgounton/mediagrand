@@ -1,6 +1,6 @@
 # Google Cloud Run Installation Guide
 
-Deploy DahoPevi on Google Cloud Run for optimal scaling and cost-effectiveness. This guide will help you set up your environment quickly and efficiently.
+Deploy MediaGrand on Google Cloud Run for optimal scaling and cost-effectiveness. This guide will help you set up your environment quickly and efficiently.
 
 ## Prerequisites
 
@@ -14,12 +14,12 @@ Deploy DahoPevi on Google Cloud Run for optimal scaling and cost-effectiveness. 
 
 ```bash
 # Create new project (via CLI)
-gcloud projects create dahopevi-project
+gcloud projects create mediagrand-project
 
 # Or use GCP Console:
 # 1. Open 'Select Project' dropdown
 # 2. Click 'New Project'
-# 3. Name it 'dahopevi-project'
+# 3. Name it 'mediagrand-project'
 ```
 
 ### 2. Enable Required APIs
@@ -33,11 +33,11 @@ From GCP Console > APIs & Services > Enable APIs:
 
 ```bash
 # Via CLI
-gcloud storage buckets create gs://dahopevi-media
+gcloud storage buckets create gs://mediagrand-media
 
 # Or via Console:
 # Storage > Create Bucket
-# Name: dahopevi-media
+# Name: mediagrand-media
 # Location: Choose nearest region
 # Access Control: Uniform
 ```
@@ -46,32 +46,32 @@ gcloud storage buckets create gs://dahopevi-media
 
 ```bash
 # Create service account
-gcloud iam service-accounts create dahopevi-service \
-  --display-name="DahoPevi Service Account"
+gcloud iam service-accounts create mediagrand-service \
+  --display-name="MediaGrand Service Account"
 
 # Grant permissions
-gcloud projects add-iam-policy-binding dahopevi-project \
-  --member="serviceAccount:dahopevi-service@dahopevi-project.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding mediagrand-project \
+  --member="serviceAccount:mediagrand-service@mediagrand-project.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 
 # Download key
 gcloud iam service-accounts keys create key.json \
-  --iam-account=dahopevi-service@dahopevi-project.iam.gserviceaccount.com
+  --iam-account=mediagrand-service@mediagrand-project.iam.gserviceaccount.com
 ```
 
 ### 5. Deploy to Cloud Run
 
 ```bash
 # Deploy service
-gcloud run deploy dahopevi \
-  --image=isaacgounton/dahopevi:latest \
+gcloud run deploy mediagrand \
+  --image=isaacgounton/mediagrand:latest \
   --platform=managed \
   --memory=16Gi \
   --cpu=4 \
   --port=8080 \
   --allow-unauthenticated \
   --set-env-vars="API_KEY=your-api-key" \
-  --set-env-vars="GCP_BUCKET_NAME=dahopevi-media" \
+  --set-env-vars="GCP_BUCKET_NAME=mediagrand-media" \
   --set-env-vars="GCP_SA_CREDENTIALS=$(cat key.json | tr -d '\n')"
 ```
 
@@ -90,7 +90,7 @@ Maximum Instances: 5 (Adjust based on load)
 
 ```bash
 API_KEY=your-secure-key
-GCP_BUCKET_NAME=dahopevi-media
+GCP_BUCKET_NAME=mediagrand-media
 GCP_SA_CREDENTIALS='{contents-of-key.json}'
 ```
 
@@ -113,19 +113,19 @@ GCP_SA_CREDENTIALS='{contents-of-key.json}'
 1. **Deployment Failures**
    ```bash
    # Check service status
-   gcloud run services describe dahopevi
+   gcloud run services describe mediagrand
    ```
 
 2. **Permission Errors**
    ```bash
    # Verify service account roles
-   gcloud projects get-iam-policy dahopevi-project
+   gcloud projects get-iam-policy mediagrand-project
    ```
 
 3. **Memory/CPU Issues**
    ```bash
    # View service metrics
-   gcloud run services describe dahopevi --format='yaml(status)'
+   gcloud run services describe mediagrand --format='yaml(status)'
    ```
 
 ### Health Checks
@@ -139,7 +139,7 @@ Monitor your deployment:
 
 1. Get your service URL:
 ```bash
-gcloud run services describe dahopevi --format='value(status.url)'
+gcloud run services describe mediagrand --format='value(status.url)'
 ```
 
 2. Test an endpoint:
@@ -155,4 +155,4 @@ curl -X POST "${SERVICE_URL}/v1/toolkit/test" \
 - Configure custom domains
 - Implement CI/CD pipelines
 
-Need help? Join our [DahoPevi Community](https://www.skool.com/no-code-architects) for support.
+Need help? Join our [MediaGrand Community](https://www.skool.com/no-code-architects) for support.

@@ -1,8 +1,8 @@
-# NCA Toolkit Test API Endpoint
+# MediaGrand Test API Endpoint
 
 ## 1. Overview
 
-The `/v1/toolkit/test` endpoint is a part of the NCA Toolkit API and is designed to test the API setup. It creates a temporary file, uploads it to cloud storage, and then returns the upload URL. This endpoint serves as a simple test to ensure that the API is properly configured and can perform basic file operations and cloud storage interactions.
+The `/v1/toolkit/test` endpoint is a part of the MediaGrand API and is designed to test the API setup. It creates a temporary file, uploads it to cloud storage, and then returns the upload URL. This endpoint serves as a simple test to ensure that the API is properly configured and can perform basic file operations and cloud storage interactions.
 
 ## 2. Endpoint
 

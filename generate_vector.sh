@@ -13,8 +13,8 @@ for file in $(find . -type f \( -iname "*.md" -o -iname "*.txt" -o -name "*.py" 
     -not -name "media_to_mp3.py" \
     -not -name "transcribe_media.py" \
     -not -name "transcription.py"); do
-    echo "File: $file" >> "NCA Toolkit API Vector Doc.txt"
-    echo -e "\n\n" >> "NCA Toolkit API Vector Doc.txt"
-    cat "$file" >> "NCA Toolkit API Vector Doc.txt"
-    echo -e "\n\n" >> "NCA Toolkit API Vector Doc.txt"
+    echo "File: $file" >> "MediaGrand API Vector Doc.txt"
+    echo -e "\n\n" >> "MediaGrand API Vector Doc.txt"
+    cat "$file" >> "MediaGrand API Vector Doc.txt"
+    echo -e "\n\n" >> "MediaGrand API Vector Doc.txt"
 done
