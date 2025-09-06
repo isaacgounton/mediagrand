@@ -436,6 +436,7 @@ def create_app():
                         "merge": "/v1/video/merge",
                         "extract_frame": "/v1/video/extract-frame",
                         "tts_captioned": "/v1/video/tts-captioned",
+                        "fonts": "/v1/video/fonts",
                         "shorts": "/v1/video/shorts", # Add the new shorts endpoint
                         "viral_shorts": "/v1/video/viral-shorts", # Add the viral shorts endpoint
                         "generate_clips": "/v1/video/generate-clips", # Add the clips generator endpoint
