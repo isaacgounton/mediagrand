@@ -183,7 +183,7 @@ bash scripts/install_music.sh
 
 3. Set environment variables:
 ```bash
-export PEXELS_API_KEY="your-pexels-api-key"
+export API_KEY="your-api-key"
 ```
 
 ### Usage
@@ -278,18 +278,7 @@ python scripts/validate_startup.py
 docker-compose logs app
 ```
 
-#### 2. Video Search APIs Not Working
-
-**Symptom**: Background videos not found, using default placeholder videos
-
-**Solutions**:
-- **Optional**: Video search APIs (Pexels, Pixabay) are optional
-- Set `PEXELS_API_KEY` and/or `PIXABAY_API_KEY` if you want background video search
-- Get API keys from:
-  - Pexels: https://www.pexels.com/api/
-  - Pixabay: https://pixabay.com/api/docs/
-
-#### 3. Permission Denied Errors
+#### 2. Permission Denied Errors
 
 **Symptom**: Cannot write to `/tmp/jobs` or other directories
 
@@ -305,7 +294,7 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-#### 4. Missing Placeholder Assets
+#### 3. Missing Placeholder Assets
 
 **Symptom**: Errors about missing placeholder.mp4 or default.wav
 
@@ -318,7 +307,7 @@ python scripts/create_placeholders.py
 docker-compose build --no-cache
 ```
 
-#### 5. FFmpeg Not Found
+#### 4. FFmpeg Not Found
 
 **Symptom**: ffmpeg or ffprobe command not found
 
@@ -338,7 +327,7 @@ brew install ffmpeg
 # Download from https://ffmpeg.org/download.html
 ```
 
-#### 6. Memory Issues
+#### 5. Memory Issues
 
 **Symptom**: Container runs out of memory during video processing
 
@@ -354,7 +343,7 @@ services:
           memory: 4G
 ```
 
-#### 7. Slow Build Times
+#### 6. Slow Build Times
 
 **Symptom**: Docker build takes 30+ minutes
 
@@ -376,7 +365,6 @@ cp .env.example .env
 - `API_KEY`: Your API authentication key
 
 **Optional** (for enhanced functionality):
-- `PEXELS_API_KEY`: For background video search
 - `PIXABAY_API_KEY`: For background video search  
 - `S3_*` or `GCP_*`: For cloud storage
 
@@ -394,12 +382,6 @@ curl -H "X-API-Key: your-api-key" http://localhost:8080/v1/toolkit/authenticate
 # Check application logs
 docker-compose logs -f app
 ```
-
-## Contributing
-
-1. Choose royalty-free music files
-2. Add them to `storage/music/` with appropriate mood prefixes
-3. Test with different voice and music combinations
 
 ## License
 

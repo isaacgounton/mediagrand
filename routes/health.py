@@ -63,15 +63,12 @@ def health_check():
                 health_status["warnings"].append(f"Directory not writable: {dir_path}")
         
         # Check video API configuration
-        pexels_configured = bool(os.getenv('PEXELS_API_KEY'))
         pixabay_configured = bool(os.getenv('PIXABAY_API_KEY'))
         
-        if pexels_configured:
-            health_status["configuration"]["video_apis_available"].append("pexels")
         if pixabay_configured:
             health_status["configuration"]["video_apis_available"].append("pixabay")
         
-        if not pexels_configured and not pixabay_configured:
+        if not pixabay_configured:
             health_status["services"]["video_apis"] = "degraded"
             health_status["warnings"].append("No video search APIs configured - using default videos only")
         

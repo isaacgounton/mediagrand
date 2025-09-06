@@ -130,7 +130,6 @@ OPENAI_MODEL=google/gemma-3-12b-it:free
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 
 # Video search APIs
-PEXELS_API_KEY=your-pexels-key
 PIXABAY_API_KEY=your-pixabay-key
 
 ```

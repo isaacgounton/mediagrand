@@ -43,16 +43,11 @@ def check_optional_services():
     logger.info("Checking optional services...")
     
     # Video search APIs
-    pexels_key = os.getenv('PEXELS_API_KEY')
     pixabay_key = os.getenv('PIXABAY_API_KEY')
     
-    if not pexels_key and not pixabay_key:
-        logger.warning("⚠ No video search APIs configured (PEXELS_API_KEY, PIXABAY_API_KEY)")
+    if not pixabay_key:
+        logger.warning("⚠ PIXABAY_API_KEY not configured - Video search unavailable")
         logger.warning("  Background video search will be unavailable - using default videos only")
-    elif not pexels_key:
-        logger.warning("⚠ PEXELS_API_KEY not configured - Pexels video search unavailable")
-    elif not pixabay_key:
-        logger.warning("⚠ PIXABAY_API_KEY not configured - Pixabay video search unavailable")
     else:
         logger.info("✓ Video search APIs configured")
     
