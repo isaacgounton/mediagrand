@@ -1,9 +1,0 @@
-title: MediaGrand Documentation
-description: Comprehensive documentation for MediaGrand - a powerful suite of tools for media processing, code execution, and cloud operations.
-
-root: .
-structure:
-  readme: README.md
-  summary: docs/SUMMARY.md
-
-redirects: {}
