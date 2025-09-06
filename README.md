@@ -1,46 +1,171 @@
-# MediaGrand API
+# 🎬 MediaGrand API
 
-This API processes different types of media. It is built in Python using Flask.
+> **Professional Media Processing & Video Generation Platform**
 
-## Features
+A powerful, self-contained API for creating professional videos, processing media, and generating content at scale. Built with Python Flask and optimized for production deployment.
 
-### Audio
-- **Concatenate Audio**: Combines multiple audio files into a single audio file.
+## ✨ What MediaGrand Does
 
-### Code
-- **Execute Python Code**: Executes Python code remotely and returns the execution results.
+MediaGrand transforms how you create and process media content:
 
-### FFmpeg
-- **Compose Media**: Provides a flexible interface to FFmpeg for complex media processing operations.
+### 🎥 **Automated Video Creation**
+- **TTS Captioned Videos**: Convert text to professional videos with AI voice-over, captions, and cinematic effects
+- **Viral Short Videos**: AI-powered compilation of viral moments from long-form content
+- **Custom Video Processing**: Cut, trim, concatenate, and enhance videos with professional effects
 
-### Image
-- **Convert Image to Video**: Transforms a static image into a video with custom duration and zoom effects.
+### 🎙️ **Voice & Audio Processing**
+- **Text-to-Speech**: Generate natural-sounding voice-overs in multiple languages using local edge-TTS
+- **Audio Transcription**: Convert speech to text with high accuracy
+- **Audio Enhancement**: Process, convert, and optimize audio files
 
-### Media
-- **Convert Media**: Converts media files from one format to another with customizable codec options.
-- **Convert to MP3**: Converts various media formats specifically to MP3 audio.
-- **Download Media**: Downloads media content from various online sources using yt-dlp.
-- **Feedback**: Provides a web interface for collecting and displaying feedback on media content.
-- **Transcribe Media**: Transcribes or translates audio/video content from a provided media URL.
-- **Detect Silence**: Detects silence intervals in a given media file.
-- **Extract Metadata**: Extracts comprehensive metadata from media files including format, codecs, resolution, and bitrates.
+### 🖼️ **Image & Visual Effects**
+- **Image-to-Video**: Transform static images into dynamic videos with Ken Burns effect, zoom, and pan
+- **Advanced Typography**: Professional caption styling with 70+ fonts, shadows, strokes, and positioning
+- **Visual Effects**: Cinematic image effects for professional content creation
 
-### S3
-- **Upload to S3**: Uploads files to Amazon S3 storage by streaming directly from a URL.
+### 📊 **Media Intelligence**
+- **Content Analysis**: Extract metadata, detect silence, analyze media properties
+- **AI Content Generation**: Generate scripts, descriptions, and content using integrated AI models
+- **Batch Processing**: Handle multiple files and operations efficiently
 
-### Toolkit
-- **Authenticate**: Provides a simple authentication mechanism to validate API keys.
-- **Test**: Verifies that the API is properly installed and functioning.
-- **Job Status**: Retrieves the status of a specific job by its ID.
-- **Jobs Status**: Retrieves the status of all jobs within a specified time range.
+## 🚀 Quick Start
 
-### Video
-- **Caption Video**: Adds customizable captions to videos with various styling options.
-- **Concatenate Videos**: Combines multiple videos into a single continuous video file.
-- **Extract Thumbnail**: Extracts a thumbnail image from a specific timestamp in a video.
-- **Cut Video**: Cuts specified segments from a video file with optional encoding settings.
-- **Split Video**: Splits a video into multiple segments based on specified start and end times.
-- **Trim Video**: Trims a video by keeping only the content between specified start and end times.
+### Option 1: Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/isaacgounton/mediagrand.git
+cd mediagrand
+
+# Copy environment template
+cp .env.example .env
+
+# Edit .env and set your API_KEY
+nano .env
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Test the API
+curl -H "X-API-Key: your-api-key" http://localhost:8080/v1/toolkit/test
+```
+
+### Option 2: Local Development
+
+```bash
+# Clone and setup
+git clone https://github.com/isaacgounton/mediagrand.git
+cd mediagrand
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+cp .env.example .env
+# Edit .env with your settings
+
+# Run the application
+python app.py
+```
+
+## 📖 API Examples
+
+### Create a Professional Video with Voice-Over
+
+```bash
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "background_url": "https://example.com/background.jpg",
+    "text": "Welcome to our amazing product demonstration",
+    "width": 1080,
+    "height": 1920,
+    "image_effect": "ken_burns",
+    "caption_font_name": "Arial",
+    "caption_font_size": 120,
+    "caption_font_bold": true,
+    "caption_font_color": "#FFFFFF",
+    "caption_position": "bottom"
+  }' \
+  http://localhost:8080/v1/video/tts-captioned
+```
+
+### Generate Viral Short Videos
+
+```bash
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_url": "https://example.com/long-video.mp4",
+    "style": "viral_compilation",
+    "duration": 60,
+    "segments": 5
+  }' \
+  http://localhost:8080/v1/video/viral-shorts
+```
+
+### Convert Text to Speech
+
+```bash
+curl -X POST \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello, this is a professional voice-over",
+    "voice": "en-US-AriaNeural",
+    "speed": 1.0
+  }' \
+  http://localhost:8080/v1/audio/speech
+```
+
+## 🎯 Core Features
+
+### 🎬 Video Generation & Processing
+| Feature | Description | Endpoint |
+|---------|-------------|----------|
+| **TTS Captioned Videos** | Create videos with AI voice-over, captions, and effects | `/v1/video/tts-captioned` |
+| **Viral Short Videos** | AI-powered viral moment compilation | `/v1/video/viral-shorts` |
+| **Long-form Videos** | Professional long-form content generation | `/v1/video/long-form` |
+| **Video Editing** | Cut, trim, concatenate, split videos | `/v1/video/*` |
+| **Caption Videos** | Add stylized captions to existing videos | `/v1/video/caption` |
+
+### 🎙️ Audio & Voice
+| Feature | Description | Endpoint |
+|---------|-------------|----------|
+| **Text-to-Speech** | Generate voice-overs with local edge-TTS | `/v1/audio/speech` |
+| **Voice Discovery** | List available voices and languages | `/v1/audio/speech/voices` |
+| **Audio Processing** | Convert, concatenate, enhance audio | `/v1/audio/*` |
+| **Transcription** | Convert speech to text | `/v1/media/transcribe` |
+
+### 🖼️ Image & Visual Effects
+| Feature | Description | Endpoint |
+|---------|-------------|----------|
+| **Image to Video** | Transform images with cinematic effects | `/v1/image/to-video` |
+| **Font Management** | 70+ professional fonts available | `/v1/video/fonts` |
+| **Visual Effects** | Ken Burns, zoom, pan effects | *Integrated* |
+| **Image Processing** | Convert, resize, optimize images | `/v1/image/*` |
+
+### 🛠️ Media Tools
+| Feature | Description | Endpoint |
+|---------|-------------|----------|
+| **Media Download** | Download from YouTube, social media | `/v1/media/download` |
+| **Format Conversion** | Convert between media formats | `/v1/media/convert` |
+| **Metadata Extraction** | Analyze media properties | `/v1/media/metadata` |
+| **Silence Detection** | Find quiet segments in audio | `/v1/media/silence` |
+
+### ☁️ Storage & Integration
+| Feature | Description | Endpoint |
+|---------|-------------|----------|
+| **Cloud Storage** | Upload to S3, Google Cloud | `/v1/s3/upload` |
+| **Webhook Support** | Real-time processing notifications | *All endpoints* |
+| **Job Management** | Track processing status | `/v1/toolkit/jobs` |
+| **Authentication** | Secure API access | `/v1/toolkit/authenticate` |
 
 ## Getting Started
 
